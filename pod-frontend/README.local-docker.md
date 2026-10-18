@@ -3,8 +3,7 @@
 This setup runs:
 - Angular frontend from this repository on port 4200
 - Java backend from ../cad-slicer-engine on port 8080
-- Postgres by default
-- Optional RabbitMQ + MinIO with the `full` profile
+- Postgres
 
 ## Prerequisites
 - Docker Desktop running
@@ -22,13 +21,6 @@ This starts the minimal stack for local quote/slicer API work.
 It validates that the Spring backend boots cleanly with Postgres and serves HTTP.
 It also installs `bambu-studio-cli` directly into the backend container so the existing slicing service can execute it locally.
 
-## Start (Full Infra)
-If you also want queue and object storage locally:
-
-```powershell
-docker compose -f docker-compose.local.yml --profile full up --build
-```
-
 ## Stop
 ```powershell
 docker compose -f docker-compose.local.yml down
@@ -37,8 +29,6 @@ docker compose -f docker-compose.local.yml down
 ## Access
 - Frontend: http://localhost:4200
 - Backend: http://localhost:8080
-- RabbitMQ UI (profile `full`): http://localhost:15672
-- MinIO Console (profile `full`): http://localhost:9001
 
 ## Sample Models For Local Tests
 The backend container mounts the frontend sample models read-only at `/workspace/public`.
