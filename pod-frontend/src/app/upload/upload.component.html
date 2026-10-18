@@ -99,12 +99,20 @@
                                         <dd>{{ q.currency }} {{ q.setupFeeChf | number:'1.2-2' }}</dd>
                                     </div>
                                     <div>
-                                        <dt>Druckzeit je Stueck</dt>
-                                        <dd>{{ printTimeLabel() }}</dd>
+                                        <dt>Druckzeit gesamt</dt>
+                                        <dd>{{ totalPrintTimeLabel() }}</dd>
                                     </div>
                                     <div>
-                                        <dt>Material</dt>
-                                        <dd>{{ q.filamentGrams | number:'1.0-1' }} g {{ q.filament }}</dd>
+                                        <dt>Druckzeit je Stueck</dt>
+                                        <dd>{{ unitPrintTimeLabel() }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Druckplatten</dt>
+                                        <dd>{{ q.plateCount }} x Bambu Lab A1</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Material gesamt</dt>
+                                        <dd>{{ q.totalFilamentGrams | number:'1.0-1' }} g {{ q.filament }}</dd>
                                     </div>
                                     <div>
                                         <dt>Abmessungen</dt>
@@ -122,6 +130,7 @@
 
                                 <p class="estimate-note">
                                     Berechnet vom Slicer-Backend ({{ q.machineProfile }}, {{ q.layerHeightMm }} mm Schichthoehe).
+                                    Alle {{ q.quantity }} Stueck werden gemeinsam auf {{ q.plateCount }} Platte(n) angeordnet und als Batch gedruckt.
                                 </p>
                             }
                         }

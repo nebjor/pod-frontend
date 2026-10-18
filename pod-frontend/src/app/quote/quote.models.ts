@@ -22,9 +22,17 @@ export interface QuoteResponse {
     quantity: number;
     machineProfile: string;
     layerHeightMm: number;
+    /** Plates the whole batch occupies. */
+    plateCount: number;
+    /** Effective print time per unit (batch total divided by quantity). */
     printTimeSeconds: number;
+    /** Print time for the whole batch, all plates. */
+    totalPrintTimeSeconds: number;
     filamentLengthMm: number;
+    /** Material per unit. */
     filamentGrams: number;
+    /** Material for the whole batch. */
+    totalFilamentGrams: number;
     boundingBoxMm: BoundingBoxMm;
     triangleCount: number;
     machineCostChf: number;

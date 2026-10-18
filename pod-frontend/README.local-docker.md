@@ -61,7 +61,10 @@ backend (`proxy.conf.js`, target from `BACKEND_URL`), so no CORS configuration i
 | `GET /api/quotes/sample?fileName=3DBenchy.stl&filament=PLA&quality=medium&quantity=1` | Quote a bundled sample model |
 | `GET /api/quotes/options` | Filaments, qualities and limits the backend accepts |
 
-Supported values: filament `PLA` or `PETG`, quality `coarse` (0.24 mm), `medium` (0.20 mm), `high` (0.12 mm).
+Supported values: filament `PLA` or `PETG`, quality `coarse` (0.24 mm), `medium` (0.20 mm), `high` (0.12 mm),
+quantity 1 to 20. The whole quantity is sliced as one batch: the CLI clones the model, arranges the copies and
+spills onto further plates when they do not fit, so the quote reflects batch printing (about 18% less machine
+time for 10 Benchys than 10 single prints). Slicing takes roughly one second per copy.
 Pricing inputs live in the backend `application.yml` under `quote.*`.
 
 ```powershell

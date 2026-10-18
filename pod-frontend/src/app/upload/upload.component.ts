@@ -96,7 +96,8 @@ export class UploadComponent {
         const file = this.selectedFile();
         return file ? Math.round((file.size / (1024 * 1024)) * 100) / 100 : 0;
     });
-    readonly printTimeLabel = computed(() => formatPrintDuration(this.quote()?.printTimeSeconds ?? 0));
+    readonly unitPrintTimeLabel = computed(() => formatPrintDuration(this.quote()?.printTimeSeconds ?? 0));
+    readonly totalPrintTimeLabel = computed(() => formatPrintDuration(this.quote()?.totalPrintTimeSeconds ?? 0));
     readonly canSubmitOrder = computed(
         () => this.quoteState() === 'ready' && this.quote() !== null && this.formStatus() === 'VALID'
     );
