@@ -53,7 +53,9 @@ export class ModelViewerComponent implements AfterViewInit, OnChanges, OnDestroy
       return;
     }
 
-    this.initThreeJs();
+    if (!this.initThreeJs()) {
+      return;
+    }
     if (this.modelUrl) {
       this.loadModel(this.modelUrl);
     }
@@ -76,13 +78,22 @@ export class ModelViewerComponent implements AfterViewInit, OnChanges, OnDestroy
     }
   }
 
-  private initThreeJs() {
+  /** Sets up renderer, lights and controls; false when the browser cannot provide WebGL. */
+  private initThreeJs(): boolean {
     const container = this.viewerContainer.nativeElement;
 
     this.camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
     this.camera.up.set(0, 0, 1);
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    // Browsers without WebGL (and jsdom in unit tests) cannot create a context; the page must
+    // still work without the 3D preview, so report the failure instead of throwing.
+    try {
+      this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    } catch (error) {
+      console.warn('WebGL is not available, the 3D preview is disabled.', error);
+      this.setLoadingState('error');
+      return false;
+    }
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     this.renderer.setPixelRatio(window.devicePixelRatio);
     container.appendChild(this.renderer.domElement);
@@ -120,6 +131,7 @@ export class ModelViewerComponent implements AfterViewInit, OnChanges, OnDestroy
 
     this.animate();
     window.addEventListener('resize', this.onResize);
+    return true;
   }
 
   private loadModel(modelUrl: string) {
