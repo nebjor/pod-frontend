@@ -31,16 +31,17 @@ services:
       - "8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: local
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/slicercore
-      SPRING_DATASOURCE_USERNAME: sliceruser
-      SPRING_DATASOURCE_PASSWORD: slicerpassword
+      # Variable names match the backend's .env.example.
+      DB_URL: jdbc:postgresql://postgres:5432/slicercore
+      DB_USERNAME: sliceruser
+      DB_PASSWORD: slicerpassword
       SLICER_BINARY_PATH: bambu-studio-cli
-      SPRING_RABBITMQ_LISTENER_SIMPLE_AUTO_STARTUP: "false"
-      SPRING_RABBITMQ_LISTENER_DIRECT_AUTO_STARTUP: "false"
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_PORT: "5672"
-      SPRING_RABBITMQ_USERNAME: guest
-      SPRING_RABBITMQ_PASSWORD: guest
+      # Messaging stays off; the quote path is synchronous. Enable with the `full` profile when needed.
+      APP_MESSAGING_ENABLED: "false"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USERNAME: slicer_mq
+      RABBITMQ_PASSWORD: slicer_mq_pass
       S3_ENDPOINT: http://minio:9000
       S3_ACCESS_KEY: minioadmin
       S3_SECRET_KEY: minioadmin
