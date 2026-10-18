@@ -1,0 +1,49 @@
+<section class="hero-section">
+    <div class="content-left">
+        <div class="button-group">
+            <button mat-raised-button class="primary-btn" (click)="goToUpload()">
+                Modell hochladen & Preis erhalten
+            </button>
+        </div>
+    </div>
+
+    <div class="content-right">
+        <div class="viewer-wrapper">
+            <app-model-viewer modelUrl="/3DBenchy.glb" sourceUpAxis="y" [autoRotate]="true"
+                [autoRotateSpeed]="1.25"></app-model-viewer>
+        </div>
+    </div>
+</section>
+
+<section class="how-it-works" id="how-it-works">
+    <p class="kicker">Schnell und planbar</p>
+    <h2>Von Datei zu Bauteil in deinem Tempo</h2>
+    <p class="intro">
+        Du konfigurierst nur das Wesentliche. Wir halten den Prozess schlank, transparent und production-ready.
+    </p>
+
+    <div class="steps-grid">
+        <article class="step-card">
+            <span class="step-number">1</span>
+            <h3>Datei bereitstellen</h3>
+            <p>Zieh dein STL- oder 3MF-Modell in den Upload und kontrolliere es direkt in der 3D-Vorschau.</p>
+        </article>
+
+        <article class="step-card">
+            <span class="step-number">2</span>
+            <h3>Spezifikation festlegen</h3>
+            <p>Waehle Material, Farbe und Qualitaetsstufe passend zu Funktion, Optik und Budget.</p>
+        </article>
+
+        <article class="step-card">
+            <span class="step-number">3</span>
+            <h3>Freigeben und starten</h3>
+            <p>Nach deiner Freigabe startet die Produktion innerhalb von 24h und dein Teil geht danach in den Versand.
+            </p>
+        </article>
+    </div>
+
+    <div class="steps-cta">
+        <button mat-raised-button class="primary-btn" (click)="goToUpload()">Modell hochladen & Preis erhalten</button>
+    </div>
+</section>

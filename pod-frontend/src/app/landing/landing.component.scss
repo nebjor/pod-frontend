@@ -1,0 +1,195 @@
+.hero-section {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 4rem 1rem;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 3rem;
+    align-items: center;
+
+    @media (min-width: 1024px) {
+        grid-template-columns: 1fr 1fr;
+        padding: 6rem 2rem;
+    }
+}
+
+.content-left {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+
+    .subtitle {
+        color: #db2777;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-size: 0.875rem;
+        margin: 0;
+    }
+
+    h1 {
+        font-size: 3.5rem;
+        line-height: 1.1;
+        font-weight: 900;
+        margin: 0;
+        letter-spacing: -1px;
+
+        @media (min-width: 768px) {
+            font-size: 4.5rem;
+        }
+
+        .highlight {
+            color: #db2777;
+        }
+    }
+
+    .description {
+        font-size: 1.125rem;
+        color: #cbd5e1;
+        line-height: 1.6;
+        max-width: 500px;
+        margin: 0;
+    }
+
+    .button-group {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+
+        .primary-btn {
+            background-color: var(--accent-500);
+            color: #062417;
+            padding: 1.5rem 2rem;
+            border-radius: 12px;
+            font-size: 1rem;
+        }
+
+        .secondary-btn {
+            color: var(--text-100);
+            border-color: var(--border-650);
+            padding: 1.5rem 2rem;
+            border-radius: 12px;
+            font-size: 1rem;
+        }
+    }
+}
+
+.content-right {
+    .viewer-wrapper {
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        background: linear-gradient(145deg, var(--surface-800), var(--bg-900));
+        border: 1px solid var(--border-700);
+        border-radius: 1.5rem;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+    }
+
+    .viewer-placeholder {
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        background: linear-gradient(135deg, var(--surface-800), var(--bg-900));
+        border: 1px solid var(--border-700);
+        border-radius: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-300);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+
+        .icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+    }
+}
+
+.how-it-works {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 5rem;
+    text-align: center;
+
+    @media (min-width: 1024px) {
+        padding: 2rem 2rem 6rem;
+    }
+
+    .kicker {
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 0.12rem;
+        font-weight: 700;
+        color: var(--accent-300);
+    }
+
+    h2 {
+        margin: 0.75rem 0 0;
+        font-size: clamp(2rem, 4.5vw, 3.4rem);
+        color: var(--text-100);
+        line-height: 1.08;
+    }
+
+    .intro {
+        margin: 1rem auto 0;
+        max-width: 70ch;
+        color: var(--text-300);
+        font-size: 1.15rem;
+        line-height: 1.5;
+    }
+}
+
+.steps-grid {
+    margin-top: 2rem;
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr;
+
+    @media (min-width: 900px) {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+.step-card {
+    padding: 1.2rem;
+    text-align: left;
+    border-radius: 1rem;
+    border: 1px solid var(--border-700);
+    background: linear-gradient(180deg, rgba(19, 39, 58, 0.96), rgba(12, 26, 38, 0.96));
+
+    h3 {
+        margin: 0.85rem 0 0;
+        color: var(--text-100);
+        font-size: 1.4rem;
+    }
+
+    p {
+        margin: 0.6rem 0 0;
+        color: var(--text-300);
+        line-height: 1.5;
+    }
+}
+
+.step-number {
+    display: inline-grid;
+    place-items: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: 999px;
+    background: linear-gradient(180deg, var(--accent-300), var(--accent-500));
+    color: #0a2317;
+    font-weight: 800;
+}
+
+.steps-cta {
+    margin-top: 1.8rem;
+
+    .primary-btn {
+        background-color: var(--accent-500);
+        color: #062417;
+        padding: 1rem 2rem;
+        border-radius: 12px;
+        font-size: 1rem;
+        font-weight: 700;
+    }
+}

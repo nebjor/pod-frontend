@@ -1,0 +1,167 @@
+<section class="upload-page">
+    <header class="upload-header">
+        <p class="kicker">UPLOAD TERMINAL</p>
+        <h1>Modell hochladen</h1>
+        <p class="subtext">Ziehe deine STL oder 3MF Datei in die Zone oder klicke in die Mitte, um eine Datei
+            auszuwaehlen.</p>
+    </header>
+
+    @if (!modelUrl()) {
+        <label class="dropzone" [class.dragging]="isDragging()" (dragover)="onDragOver($event)"
+            (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
+            <input type="file" accept=".stl,.3mf" aria-label="STL oder 3MF Datei auswaehlen"
+                (change)="onFileInputChange($event)" />
+
+            <div class="dropzone-content">
+                <p class="drop-title">DROP FILE</p>
+                <p class="drop-hint">oder klicken zum Auswaehlen</p>
+                <p class="drop-types">STL / 3MF</p>
+            </div>
+        </label>
+    } @else {
+        <section class="post-upload-layout">
+            <section class="preview-card">
+                <div class="viewer-shell">
+                    @if (isModelLoading()) {
+                        <div class="viewer-loading">
+                            <p>Lade Modell... {{ modelLoadProgress() }}%</p>
+                            <div class="loading-track">
+                                <div class="loading-fill" [style.width.%]="modelLoadProgress()"></div>
+                            </div>
+                        </div>
+                    }
+
+                    <app-model-viewer [modelUrl]="modelUrl()" [modelFormat]="modelFormat()" sourceUpAxis="z"
+                        [autoRotate]="true" [autoRotateSpeed]="1.1" (loadStateChange)="onModelLoadStateChange($event)"
+                        (loadProgress)="onModelLoadProgress($event)">
+                    </app-model-viewer>
+                </div>
+
+                <div class="file-meta">
+                    <span>{{ selectedFileName() }}</span>
+                    <span>{{ selectedFileSizeMb() }} MB</span>
+                </div>
+            </section>
+
+            <section class="order-card order-card-animated">
+                <h2>2. Konfiguration</h2>
+
+                <form [formGroup]="orderForm" class="order-form">
+                    <label>
+                        Filament
+                        <select formControlName="filament">
+                            @for (option of filamentOptions; track option.code) {
+                                <option [value]="option.code">{{ option.label }}</option>
+                            }
+                        </select>
+                    </label>
+
+                    <label>
+                        Qualitaet
+                        <select formControlName="quality">
+                            @for (option of qualityOptions; track option.code) {
+                                <option [value]="option.code">{{ option.label }}</option>
+                            }
+                        </select>
+                    </label>
+
+                    <label>
+                        Menge
+                        <input formControlName="quantity" type="number" min="1" [max]="maxQuantity" />
+                    </label>
+                </form>
+
+                <div class="estimate" [class.inactive]="quoteState() !== 'ready'" aria-live="polite">
+                    @switch (quoteState()) {
+                        @case ('loading') {
+                            <p class="estimate-line estimate-status">
+                                <span class="spinner" aria-hidden="true"></span>
+                                Slicer berechnet dein Angebot...
+                            </p>
+                        }
+                        @case ('error') {
+                            <p class="estimate-line estimate-error">{{ quoteError() }}</p>
+                            <button type="button" class="retry-btn" (click)="requestQuote()">Erneut berechnen</button>
+                        }
+                        @case ('ready') {
+                            @if (quote(); as q) {
+                                <p class="estimate-line estimate-total">
+                                    Preis gesamt: <strong>{{ q.currency }} {{ q.totalPriceChf | number:'1.2-2' }}</strong>
+                                </p>
+
+                                <dl class="quote-details">
+                                    <div>
+                                        <dt>Stueckpreis</dt>
+                                        <dd>{{ q.currency }} {{ q.unitPriceChf | number:'1.2-2' }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Einrichtung</dt>
+                                        <dd>{{ q.currency }} {{ q.setupFeeChf | number:'1.2-2' }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Druckzeit je Stueck</dt>
+                                        <dd>{{ printTimeLabel() }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Material</dt>
+                                        <dd>{{ q.filamentGrams | number:'1.0-1' }} g {{ q.filament }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Abmessungen</dt>
+                                        <dd>
+                                            {{ q.boundingBoxMm.widthMm | number:'1.0-1' }} x
+                                            {{ q.boundingBoxMm.depthMm | number:'1.0-1' }} x
+                                            {{ q.boundingBoxMm.heightMm | number:'1.0-1' }} mm
+                                        </dd>
+                                    </div>
+                                    <div>
+                                        <dt>Lieferzeit</dt>
+                                        <dd>{{ q.leadTimeDays }} Tage</dd>
+                                    </div>
+                                </dl>
+
+                                <p class="estimate-note">
+                                    Berechnet vom Slicer-Backend ({{ q.machineProfile }}, {{ q.layerHeightMm }} mm Schichthoehe).
+                                </p>
+                            }
+                        }
+                        @default {
+                            <p class="estimate-line">Lade ein Modell hoch, um ein Angebot zu erhalten.</p>
+                        }
+                    }
+                </div>
+
+                <section class="checkout-overview" [class.inactive]="!canSubmitOrder()">
+                    <h3>3. Uebersicht / Bestellung</h3>
+                    <p>
+                        Datei: <strong>{{ selectedFileName() || 'Noch keine Datei' }}</strong>
+                    </p>
+                    <p>
+                        Filament: <strong>{{ orderForm.controls.filament.value }}</strong> · Qualitaet:
+                        <strong>{{ orderForm.controls.quality.value }}</strong> · Menge:
+                        <strong>{{ orderForm.controls.quantity.value }}</strong>
+                    </p>
+
+                    <div class="checkout-actions">
+                        <button type="button" class="order-btn ghost-btn" [disabled]="!canSubmitOrder()"
+                            (click)="onAddToCartAndUploadAnother()">
+                            In den Warenkorb + weiteres Modell hochladen
+                        </button>
+                        <button type="button" class="order-btn" [disabled]="!canSubmitOrder()"
+                            (click)="onDirectCheckout()">
+                            Direkt bestellen
+                        </button>
+                    </div>
+
+                    @if (cartNotice()) {
+                        <p class="cart-note">{{ cartNotice() }}</p>
+                    }
+                </section>
+            </section>
+        </section>
+    }
+
+    @if (errorMessage()) {
+        <p class="error" role="alert">{{ errorMessage() }}</p>
+    }
+</section>
