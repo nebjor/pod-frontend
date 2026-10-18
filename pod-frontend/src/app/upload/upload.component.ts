@@ -13,6 +13,7 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject, catchError, debounceTime, map, of, switchMap } from 'rxjs';
+import { CartService } from '../cart/cart.service';
 import { ModelViewerComponent } from '../model-viewer/model-viewer.component';
 import { ColorOption, FilamentCode, FilamentOption, QualityCode, QuoteResponse } from '../quote/quote.models';
 import { QuoteService, describeQuoteError } from '../quote/quote.service';
@@ -97,6 +98,7 @@ export function formatPrintDuration(totalSeconds: number): string {
 export class UploadComponent {
     private readonly router = inject(Router);
     private readonly quoteService = inject(QuoteService);
+    private readonly cart = inject(CartService);
     private readonly destroyRef = inject(DestroyRef);
     private readonly quoteJobs = new Subject<QuoteJob>();
 
@@ -277,20 +279,34 @@ export class UploadComponent {
     }
 
     onAddToCartAndUploadAnother() {
-        if (!this.canSubmitOrder()) {
+        if (!this.putInCart()) {
             return;
         }
 
-        this.cartNotice.set('Modell wurde zum lokalen Warenkorb hinzugefuegt. Lade jetzt ein weiteres Modell hoch.');
+        this.cartNotice.set('Modell liegt im Warenkorb. Lade ein weiteres Modell hoch oder geh zur Kasse.');
         this.resetModel();
     }
 
     onDirectCheckout() {
-        if (!this.canSubmitOrder()) {
+        if (!this.putInCart()) {
             return;
         }
 
-        this.router.navigate(['/checkout'], { state: { quote: this.quote(), color: this.selectedColor() } });
+        this.router.navigate(['/checkout']);
+    }
+
+    /** Hands the configured model and its quote to the checkout; one item per order in v1. */
+    private putInCart(): boolean {
+        const file = this.selectedFile();
+        const quote = this.quote();
+        const color = this.selectedColor();
+        if (!this.canSubmitOrder() || !file || !quote || !color) {
+            return false;
+        }
+
+        const { filament, quality, quantity } = this.orderForm.getRawValue();
+        this.cart.set({ file, filament, color, quality, quantity: Number(quantity), quote });
+        return true;
     }
 
     private handleFile(file: File) {
