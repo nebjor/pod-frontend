@@ -27,17 +27,32 @@ export class QuoteService {
     }
 }
 
+/** Shape of the RFC 9457 problem details the backend returns. */
+interface QuoteProblem {
+    detail?: unknown;
+    retryAfterSeconds?: unknown;
+    supportEmail?: unknown;
+}
+
 /** Turns an HTTP failure into a message the upload page can show. */
 export function describeQuoteError(error: unknown): string {
     if (error instanceof HttpErrorResponse) {
+        const problem = (error.error ?? null) as QuoteProblem | null;
+
         if (error.status === 0) {
             return 'Backend nicht erreichbar. Laeuft der Slicer-Service?';
         }
         if (error.status === 413) {
             return 'Die Datei ist zu gross fuer eine Online-Berechnung (max. 50 MB).';
         }
+        if (error.status === 429) {
+            return `Limit erreicht. Probier es ${formatRetry(problem?.retryAfterSeconds)} noch einmal.${supportHint(problem?.supportEmail)}`;
+        }
+        if (error.status === 503) {
+            return `Der Slicer ist gerade ausgelastet. Probier es ${formatRetry(problem?.retryAfterSeconds)} noch einmal.`;
+        }
 
-        const detail = (error.error as { detail?: unknown } | null)?.detail;
+        const detail = problem?.detail;
         if (typeof detail === 'string' && detail.length > 0) {
             return detail;
         }
@@ -46,4 +61,21 @@ export function describeQuoteError(error: unknown): string {
     }
 
     return 'Angebot konnte nicht berechnet werden.';
+}
+
+function formatRetry(retryAfterSeconds: unknown): string {
+    const seconds = typeof retryAfterSeconds === 'number' ? Math.ceil(retryAfterSeconds) : 0;
+    if (seconds <= 0) {
+        return 'spaeter';
+    }
+    if (seconds < 90) {
+        return `in ${seconds} Sekunden`;
+    }
+    return `in ${Math.ceil(seconds / 60)} Minuten`;
+}
+
+function supportHint(supportEmail: unknown): string {
+    return typeof supportEmail === 'string' && supportEmail.length > 0
+        ? ` Falls es eilt, schreib an ${supportEmail}.`
+        : '';
 }

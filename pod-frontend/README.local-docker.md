@@ -67,6 +67,24 @@ spills onto further plates when they do not fit, so the quote reflects batch pri
 time for 10 Benchys than 10 single prints). Slicing takes roughly one second per copy.
 Pricing inputs live in the backend `application.yml` under `quote.*`.
 
+### Protection against runaway slicing
+- At most two slicer processes run at once (`slicer.capacity.max-concurrent`); a request that
+  cannot get a slot within 20 s gets `503` with `Retry-After`.
+- Each client address may start 10 slicer runs per minute and 100 per hour (`rate-limit.*`);
+  beyond that the API answers `429` with `Retry-After`, `retryAfterSeconds` and, when
+  `SUPPORT_EMAIL` is set, `supportEmail` in the problem details. The upload page shows both.
+- Finished quotes are cached for an hour by model hash and parameters, so repeated requests
+  do not start the slicer and do not count against the limit.
+- Limits live in memory: restarting the backend resets them. With `ADMIN_TOKEN` set, one client
+  or all clients can be reset without a restart:
+
+```powershell
+curl.exe -X POST -H "X-Admin-Token: $env:ADMIN_TOKEN" "http://localhost:8080/api/admin/rate-limits/reset?clientKey=172.18.0.4"
+```
+
+Behind a reverse proxy set `rate-limit.trust-forwarded-headers=true` so clients are keyed by
+`X-Forwarded-For`; otherwise every user would share the proxy's address.
+
 ```powershell
 curl.exe -F "file=@public/3DBenchy.stl" -F "filament=PETG" -F "quality=high" -F "quantity=2" http://localhost:8080/api/quotes
 ```

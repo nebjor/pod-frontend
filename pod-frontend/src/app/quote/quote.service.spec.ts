@@ -77,6 +77,16 @@ describe('QuoteService', () => {
         const badRequest = new HttpErrorResponse({ status: 400, error: { detail: 'Only .stl and .3mf files are supported.' } });
         expect(describeQuoteError(badRequest)).toBe('Only .stl and .3mf files are supported.');
 
+        const limited = new HttpErrorResponse({
+            status: 429,
+            error: { detail: 'Rate limit reached', retryAfterSeconds: 42, supportEmail: 'help@example.com' }
+        });
+        expect(describeQuoteError(limited)).toBe('Limit erreicht. Probier es in 42 Sekunden noch einmal. Falls es eilt, schreib an help@example.com.');
+        expect(describeQuoteError(new HttpErrorResponse({ status: 429, error: { retryAfterSeconds: 1800 } })))
+            .toBe('Limit erreicht. Probier es in 30 Minuten noch einmal.');
+        expect(describeQuoteError(new HttpErrorResponse({ status: 503, error: { retryAfterSeconds: 20 } })))
+            .toContain('ausgelastet');
+
         expect(describeQuoteError(new HttpErrorResponse({ status: 0 }))).toContain('nicht erreichbar');
         expect(describeQuoteError(new HttpErrorResponse({ status: 413 }))).toContain('zu gross');
         expect(describeQuoteError(new HttpErrorResponse({ status: 500 }))).toContain('HTTP 500');

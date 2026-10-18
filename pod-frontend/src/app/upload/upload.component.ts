@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signa
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subject, catchError, debounceTime, map, of, switchMap } from 'rxjs';
+import { Subject, catchError, debounceTime, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 import { ModelViewerComponent } from '../model-viewer/model-viewer.component';
 import { FilamentCode, QualityCode, QuoteResponse } from '../quote/quote.models';
 import { QuoteService, describeQuoteError } from '../quote/quote.service';
@@ -17,6 +17,18 @@ interface QuoteJob {
     filament: FilamentCode;
     quality: QualityCode;
     quantity: number;
+    /** Set by an explicit retry so an identical job is sent again. */
+    force: boolean;
+}
+
+/**
+ * Every slicer run costs seconds of CPU and counts against the client's rate limit, so the
+ * form waits until the user stops changing values before it asks the backend.
+ */
+export const QUOTE_DEBOUNCE_MS = 800;
+
+function quoteJobKey(job: QuoteJob): string {
+    return `${job.file.name}|${job.file.size}|${job.file.lastModified}|${job.filament}|${job.quality}|${job.quantity}`;
 }
 
 interface QuoteOutcome {
@@ -105,7 +117,8 @@ export class UploadComponent {
     constructor() {
         this.quoteJobs
             .pipe(
-                debounceTime(250),
+                debounceTime(QUOTE_DEBOUNCE_MS),
+                distinctUntilChanged((previous, next) => !next.force && quoteJobKey(previous) === quoteJobKey(next)),
                 switchMap((job) =>
                     this.quoteService.requestQuote(job.file, job).pipe(
                         map((quote): QuoteOutcome => ({ quote, error: '' })),
@@ -168,8 +181,11 @@ export class UploadComponent {
         this.modelLoadProgress.set(progress);
     }
 
-    /** Sends the current file and configuration to the backend slicer. Safe to call repeatedly. */
-    requestQuote() {
+    /**
+     * Sends the current file and configuration to the backend slicer. Unchanged jobs are
+     * dropped unless {@code force} is set, which the retry button uses.
+     */
+    requestQuote(force = false) {
         const file = this.selectedFile();
         if (!file || this.orderForm.invalid) {
             return;
@@ -178,7 +194,7 @@ export class UploadComponent {
         const { filament, quality, quantity } = this.orderForm.getRawValue();
         this.quoteState.set('loading');
         this.quoteError.set('');
-        this.quoteJobs.next({ file, filament, quality, quantity: Number(quantity) });
+        this.quoteJobs.next({ file, filament, quality, quantity: Number(quantity), force });
     }
 
     onAddToCartAndUploadAnother() {

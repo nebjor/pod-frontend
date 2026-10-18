@@ -81,7 +81,7 @@
                         }
                         @case ('error') {
                             <p class="estimate-line estimate-error">{{ quoteError() }}</p>
-                            <button type="button" class="retry-btn" (click)="requestQuote()">Erneut berechnen</button>
+                            <button type="button" class="retry-btn" (click)="requestQuote(true)">Erneut berechnen</button>
                         }
                         @case ('ready') {
                             @if (quote(); as q) {

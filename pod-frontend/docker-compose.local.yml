@@ -46,6 +46,10 @@ services:
       S3_SECRET_KEY: minioadmin
       S3_BUCKET_NAME: slicer-files
       SAMPLE_MODELS_DIR: /workspace/public
+      # Shown to clients that hit the quote rate limit; set in your shell or a .env file.
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:-}
+      # Enables POST /api/admin/rate-limits/reset when set.
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
     depends_on:
       postgres:
         condition: service_healthy
