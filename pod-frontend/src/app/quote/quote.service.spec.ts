@@ -7,6 +7,7 @@ import { QUOTE_API_URL, QuoteService, describeQuoteError } from './quote.service
 const sampleQuote: QuoteResponse = {
     fileName: 'cube.stl',
     filament: 'PETG',
+    color: { code: 'white', label: 'White', hex: '#f2f2f2' },
     quality: 'high',
     quantity: 3,
     machineProfile: 'Bambu Lab A1 0.4 nozzle',
@@ -47,7 +48,7 @@ describe('QuoteService', () => {
         let received: QuoteResponse | undefined;
 
         service
-            .requestQuote(file, { filament: 'PETG', quality: 'high', quantity: 3 })
+            .requestQuote(file, { filament: 'PETG', color: 'white', quality: 'high', quantity: 3 })
             .subscribe((quote) => (received = quote));
 
         const request = http.expectOne(QUOTE_API_URL);
@@ -55,6 +56,7 @@ describe('QuoteService', () => {
 
         const body = request.request.body as FormData;
         expect(body.get('filament')).toBe('PETG');
+        expect(body.get('color')).toBe('white');
         expect(body.get('quality')).toBe('high');
         expect(body.get('quantity')).toBe('3');
         expect((body.get('file') as File).name).toBe('cube.stl');

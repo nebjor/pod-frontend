@@ -21,6 +21,8 @@ export class ModelViewerComponent implements AfterViewInit, OnChanges, OnDestroy
   @ViewChild('viewerContainer') viewerContainer!: ElementRef<HTMLDivElement>;
   @Input() modelUrl?: string;
   @Input() modelFormat?: 'glb' | 'gltf' | 'stl' | '3mf';
+  /** CSS colour applied to the model material, e.g. the filament colour being ordered. */
+  @Input() modelColor?: string;
   @Input() autoRotate = false;
   @Input() autoRotateSpeed = 1;
   @Input() sourceUpAxis: 'x' | 'y' | 'z' = 'z';
@@ -63,6 +65,10 @@ export class ModelViewerComponent implements AfterViewInit, OnChanges, OnDestroy
 
   ngOnChanges(changes: SimpleChanges) {
     const nextModelUrl = changes['modelUrl']?.currentValue;
+
+    if (changes['modelColor'] && this.modelColor) {
+      this.brandMaterial.color.set(this.modelColor);
+    }
 
     if (!this.isBrowser || !this.renderer) {
       return;

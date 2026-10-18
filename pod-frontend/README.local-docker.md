@@ -57,7 +57,7 @@ backend (`proxy.conf.js`, target from `BACKEND_URL`), so no CORS configuration i
 
 | Endpoint | Purpose |
 |---|---|
-| `POST /api/quotes` (multipart: `file`, `filament`, `quality`, `quantity`) | Quote an uploaded STL/3MF |
+| `POST /api/quotes` (multipart: `file`, `filament`, `color`, `quality`, `quantity`) | Quote an uploaded STL/3MF |
 | `GET /api/quotes/sample?fileName=3DBenchy.stl&filament=PLA&quality=medium&quantity=1` | Quote a bundled sample model |
 | `GET /api/quotes/options` | Filaments, qualities and limits the backend accepts |
 
@@ -66,6 +66,12 @@ quantity 1 to 20. The whole quantity is sliced as one batch: the CLI clones the 
 spills onto further plates when they do not fit, so the quote reflects batch printing (about 18% less machine
 time for 10 Benchys than 10 single prints). Slicing takes roughly one second per copy.
 Pricing inputs live in the backend `application.yml` under `quote.*`.
+
+Colours come from the backend catalogue (`catalog.colors` in the backend `application.yml`,
+currently PLA in black, white, red and green and PETG in black and white) and are listed per
+filament by `GET /api/quotes/options`. The upload page shows them as swatches, tints the 3D
+preview and sends the chosen `color`; the backend rejects colours not stocked for the filament.
+Colour never changes the slice or the price, so switching it is always a cache hit.
 
 ### Protection against runaway slicing
 - At most two slicer processes run at once (`slicer.capacity.max-concurrent`); a request that

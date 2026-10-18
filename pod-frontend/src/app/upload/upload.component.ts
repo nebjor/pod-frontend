@@ -1,11 +1,20 @@
 import { DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import {
+    ChangeDetectionStrategy,
+    Component,
+    DestroyRef,
+    afterNextRender,
+    computed,
+    effect,
+    inject,
+    signal
+} from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subject, catchError, debounceTime, distinctUntilChanged, map, of, switchMap } from 'rxjs';
+import { Subject, catchError, debounceTime, map, of, switchMap } from 'rxjs';
 import { ModelViewerComponent } from '../model-viewer/model-viewer.component';
-import { FilamentCode, QualityCode, QuoteResponse } from '../quote/quote.models';
+import { ColorOption, FilamentCode, FilamentOption, QualityCode, QuoteResponse } from '../quote/quote.models';
 import { QuoteService, describeQuoteError } from '../quote/quote.service';
 
 type UploadFormat = 'stl' | '3mf';
@@ -15,20 +24,9 @@ type ModelLoadState = 'idle' | 'loading' | 'loaded' | 'error';
 interface QuoteJob {
     file: File;
     filament: FilamentCode;
+    color: string;
     quality: QualityCode;
     quantity: number;
-    /** Set by an explicit retry so an identical job is sent again. */
-    force: boolean;
-}
-
-/**
- * Every slicer run costs seconds of CPU and counts against the client's rate limit, so the
- * form waits until the user stops changing values before it asks the backend.
- */
-export const QUOTE_DEBOUNCE_MS = 800;
-
-function quoteJobKey(job: QuoteJob): string {
-    return `${job.file.name}|${job.file.size}|${job.file.lastModified}|${job.filament}|${job.quality}|${job.quantity}`;
 }
 
 interface QuoteOutcome {
@@ -38,10 +36,37 @@ interface QuoteOutcome {
 
 export const MAX_ORDER_QUANTITY = 20;
 
-/** Options the backend currently slices with (Bambu Lab A1 profiles). */
-export const FILAMENT_OPTIONS: ReadonlyArray<{ code: FilamentCode; label: string }> = [
-    { code: 'PLA', label: 'PLA' },
-    { code: 'PETG', label: 'PETG' }
+/**
+ * Every slicer run costs seconds of CPU and counts against the client's rate limit, so the
+ * form waits until the user stops changing values before it asks the backend.
+ */
+export const QUOTE_DEBOUNCE_MS = 800;
+
+/**
+ * Used until the backend catalogue has loaded, and when it cannot be reached. The backend
+ * validates the final selection either way.
+ */
+export const FALLBACK_FILAMENTS: ReadonlyArray<FilamentOption> = [
+    {
+        code: 'PLA',
+        label: 'PLA',
+        profileName: 'Bambu PLA Basic @BBL A1',
+        colors: [
+            { code: 'black', label: 'Black', hex: '#1f1f1f' },
+            { code: 'white', label: 'White', hex: '#f2f2f2' },
+            { code: 'red', label: 'Red', hex: '#d62828' },
+            { code: 'green', label: 'Green', hex: '#2a9d8f' }
+        ]
+    },
+    {
+        code: 'PETG',
+        label: 'PETG',
+        profileName: 'Bambu PETG Basic @BBL A1',
+        colors: [
+            { code: 'black', label: 'Black', hex: '#1f1f1f' },
+            { code: 'white', label: 'White', hex: '#f2f2f2' }
+        ]
+    }
 ];
 
 export const QUALITY_OPTIONS: ReadonlyArray<{ code: QualityCode; label: string }> = [
@@ -75,7 +100,10 @@ export class UploadComponent {
     private readonly destroyRef = inject(DestroyRef);
     private readonly quoteJobs = new Subject<QuoteJob>();
 
-    readonly filamentOptions = FILAMENT_OPTIONS;
+    /** Key of the last job sent; colour is excluded because it never changes the slice. */
+    private lastRequestedKey = '';
+
+    readonly filamentOptions = signal<ReadonlyArray<FilamentOption>>(FALLBACK_FILAMENTS);
     readonly qualityOptions = QUALITY_OPTIONS;
     readonly maxQuantity = MAX_ORDER_QUANTITY;
 
@@ -94,6 +122,7 @@ export class UploadComponent {
 
     readonly orderForm = new FormGroup({
         filament: new FormControl<FilamentCode>('PLA', { nonNullable: true, validators: [Validators.required] }),
+        color: new FormControl('black', { nonNullable: true, validators: [Validators.required] }),
         quality: new FormControl<QualityCode>('medium', { nonNullable: true, validators: [Validators.required] }),
         quantity: new FormControl(1, {
             nonNullable: true,
@@ -102,6 +131,21 @@ export class UploadComponent {
     });
 
     private readonly formStatus = toSignal(this.orderForm.statusChanges, { initialValue: this.orderForm.status });
+    readonly selectedFilament = toSignal(this.orderForm.controls.filament.valueChanges, {
+        initialValue: this.orderForm.controls.filament.value
+    });
+    readonly selectedColorCode = toSignal(this.orderForm.controls.color.valueChanges, {
+        initialValue: this.orderForm.controls.color.value
+    });
+
+    /** Colours stocked for the selected filament. */
+    readonly availableColors = computed<ReadonlyArray<ColorOption>>(
+        () => this.filamentOptions().find((option) => option.code === this.selectedFilament())?.colors ?? []
+    );
+    readonly selectedColor = computed<ColorOption | undefined>(() => {
+        const colors = this.availableColors();
+        return colors.find((color) => color.code === this.selectedColorCode()) ?? colors[0];
+    });
 
     readonly selectedFileName = computed(() => this.selectedFile()?.name ?? '');
     readonly selectedFileSizeMb = computed(() => {
@@ -118,7 +162,6 @@ export class UploadComponent {
         this.quoteJobs
             .pipe(
                 debounceTime(QUOTE_DEBOUNCE_MS),
-                distinctUntilChanged((previous, next) => !next.force && quoteJobKey(previous) === quoteJobKey(next)),
                 switchMap((job) =>
                     this.quoteService.requestQuote(job.file, job).pipe(
                         map((quote): QuoteOutcome => ({ quote, error: '' })),
@@ -131,6 +174,32 @@ export class UploadComponent {
 
         this.orderForm.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.requestQuote());
         this.destroyRef.onDestroy(() => this.releaseModelUrl());
+
+        // A filament switch may drop the chosen colour; fall back to the first stocked one.
+        effect(() => {
+            const colors = this.availableColors();
+            const current = this.selectedColorCode();
+            if (colors.length > 0 && !colors.some((color) => color.code === current)) {
+                this.orderForm.controls.color.setValue(colors[0].code);
+            }
+        });
+
+        // The catalogue is fetched in the browser only; the page is prerendered on the server.
+        afterNextRender(() => {
+            this.quoteService
+                .loadOptions()
+                .pipe(takeUntilDestroyed(this.destroyRef))
+                .subscribe({
+                    next: (options) => {
+                        if (options.filaments.length > 0) {
+                            this.filamentOptions.set(options.filaments);
+                        }
+                    },
+                    error: () => {
+                        // Keep the fallback list; the backend validates the final selection anyway.
+                    }
+                });
+        });
     }
 
     onDragOver(event: DragEvent) {
@@ -182,8 +251,8 @@ export class UploadComponent {
     }
 
     /**
-     * Sends the current file and configuration to the backend slicer. Unchanged jobs are
-     * dropped unless {@code force} is set, which the retry button uses.
+     * Sends the current file and configuration to the backend slicer. Jobs whose slice-relevant
+     * values are unchanged are dropped unless {@code force} is set, which the retry button uses.
      */
     requestQuote(force = false) {
         const file = this.selectedFile();
@@ -192,9 +261,19 @@ export class UploadComponent {
         }
 
         const { filament, quality, quantity } = this.orderForm.getRawValue();
+        const key = `${file.name}|${file.size}|${file.lastModified}|${filament}|${quality}|${quantity}`;
+        if (!force && key === this.lastRequestedKey) {
+            return;
+        }
+
+        // Right after a filament switch the form may still hold a colour the new filament does
+        // not come in; selectedColor() already falls back to a stocked one.
+        const color = this.selectedColor()?.code ?? this.orderForm.controls.color.value;
+
+        this.lastRequestedKey = key;
         this.quoteState.set('loading');
         this.quoteError.set('');
-        this.quoteJobs.next({ file, filament, quality, quantity: Number(quantity), force });
+        this.quoteJobs.next({ file, filament, color, quality, quantity: Number(quantity) });
     }
 
     onAddToCartAndUploadAnother() {
@@ -211,7 +290,7 @@ export class UploadComponent {
             return;
         }
 
-        this.router.navigate(['/checkout'], { state: { quote: this.quote() } });
+        this.router.navigate(['/checkout'], { state: { quote: this.quote(), color: this.selectedColor() } });
     }
 
     private handleFile(file: File) {
@@ -257,6 +336,7 @@ export class UploadComponent {
         this.quoteState.set('idle');
         this.isModelLoading.set(false);
         this.modelLoadProgress.set(0);
+        this.lastRequestedKey = '';
     }
 
     private releaseModelUrl() {

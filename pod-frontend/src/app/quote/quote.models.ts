@@ -5,8 +5,17 @@ export type QualityCode = 'coarse' | 'medium' | 'high';
 
 export interface QuoteRequestParams {
     filament: FilamentCode;
+    /** Colour code from the filament's `colors` list; it does not affect time or price. */
+    color: string;
     quality: QualityCode;
     quantity: number;
+}
+
+export interface ColorOption {
+    code: string;
+    label: string;
+    /** CSS colour for swatches and the 3D preview. */
+    hex: string;
 }
 
 export interface BoundingBoxMm {
@@ -18,6 +27,7 @@ export interface BoundingBoxMm {
 export interface QuoteResponse {
     fileName: string;
     filament: string;
+    color: ColorOption;
     quality: string;
     quantity: number;
     machineProfile: string;
@@ -48,6 +58,7 @@ export interface FilamentOption {
     code: string;
     label: string;
     profileName: string;
+    colors: ColorOption[];
 }
 
 export interface QualityOption {

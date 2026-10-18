@@ -31,8 +31,9 @@
                         </div>
                     }
 
-                    <app-model-viewer [modelUrl]="modelUrl()" [modelFormat]="modelFormat()" sourceUpAxis="z"
-                        [autoRotate]="true" [autoRotateSpeed]="1.1" (loadStateChange)="onModelLoadStateChange($event)"
+                    <app-model-viewer [modelUrl]="modelUrl()" [modelFormat]="modelFormat()"
+                        [modelColor]="selectedColor()?.hex" sourceUpAxis="z" [autoRotate]="true"
+                        [autoRotateSpeed]="1.1" (loadStateChange)="onModelLoadStateChange($event)"
                         (loadProgress)="onModelLoadProgress($event)">
                     </app-model-viewer>
                 </div>
@@ -50,7 +51,7 @@
                     <label>
                         Filament
                         <select formControlName="filament">
-                            @for (option of filamentOptions; track option.code) {
+                            @for (option of filamentOptions(); track option.code) {
                                 <option [value]="option.code">{{ option.label }}</option>
                             }
                         </select>
@@ -69,6 +70,19 @@
                         Menge
                         <input formControlName="quantity" type="number" min="1" [max]="maxQuantity" />
                     </label>
+
+                    <fieldset class="color-field">
+                        <legend>Farbe</legend>
+                        <div class="swatches">
+                            @for (color of availableColors(); track color.code) {
+                                <label class="swatch" [class.selected]="selectedColor()?.code === color.code">
+                                    <input type="radio" formControlName="color" [value]="color.code" />
+                                    <span class="swatch-dot" [style.background]="color.hex" aria-hidden="true"></span>
+                                    <span class="swatch-label">{{ color.label }}</span>
+                                </label>
+                            }
+                        </div>
+                    </fieldset>
                 </form>
 
                 <div class="estimate" [class.inactive]="quoteState() !== 'ready'" aria-live="polite">
@@ -115,6 +129,13 @@
                                         <dd>{{ q.totalFilamentGrams | number:'1.0-1' }} g {{ q.filament }}</dd>
                                     </div>
                                     <div>
+                                        <dt>Farbe</dt>
+                                        <dd class="color-value">
+                                            <span class="swatch-dot small" [style.background]="selectedColor()?.hex" aria-hidden="true"></span>
+                                            {{ selectedColor()?.label }}
+                                        </dd>
+                                    </div>
+                                    <div>
                                         <dt>Abmessungen</dt>
                                         <dd>
                                             {{ q.boundingBoxMm.widthMm | number:'1.0-1' }} x
@@ -146,7 +167,8 @@
                         Datei: <strong>{{ selectedFileName() || 'Noch keine Datei' }}</strong>
                     </p>
                     <p>
-                        Filament: <strong>{{ orderForm.controls.filament.value }}</strong> · Qualitaet:
+                        Filament: <strong>{{ orderForm.controls.filament.value }}</strong> · Farbe:
+                        <strong>{{ selectedColor()?.label }}</strong> · Qualitaet:
                         <strong>{{ orderForm.controls.quality.value }}</strong> · Menge:
                         <strong>{{ orderForm.controls.quantity.value }}</strong>
                     </p>

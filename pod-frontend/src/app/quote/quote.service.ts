@@ -15,6 +15,7 @@ export class QuoteService {
         const body = new FormData();
         body.append('file', file, file.name);
         body.append('filament', params.filament);
+        body.append('color', params.color);
         body.append('quality', params.quality);
         body.append('quantity', String(params.quantity));
 
