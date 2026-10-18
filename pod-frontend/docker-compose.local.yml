@@ -27,6 +27,8 @@ services:
       - ../../cad-slicer-engine:/app
       - ./public:/workspace/public:ro
       - maven_cache:/root/.m2
+      # Model files of placed orders, kept outside the source tree (ADR 0003).
+      - order_files:/data/order-files
     ports:
       - "8080:8080"
     environment:
@@ -37,6 +39,7 @@ services:
       DB_PASSWORD: slicerpassword
       SLICER_BINARY_PATH: bambu-studio-cli
       SAMPLE_MODELS_DIR: /workspace/public
+      ORDER_FILES_DIR: /data/order-files
       # Shown to clients that hit the quote rate limit; set in your shell or a .env file.
       SUPPORT_EMAIL: ${SUPPORT_EMAIL:-}
       # Enables POST /api/admin/rate-limits/reset when set.
@@ -65,3 +68,4 @@ volumes:
   frontend_node_modules:
   maven_cache:
   postgres_data:
+  order_files:

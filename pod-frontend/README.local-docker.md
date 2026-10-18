@@ -63,6 +63,25 @@ filament by `GET /api/quotes/options`. The upload page shows them as swatches, t
 preview and sends the chosen `color`; the backend rejects colours not stocked for the filament.
 Colour never changes the slice or the price, so switching it is always a cache hit.
 
+## Orders API
+The checkout page turns the quote into an order. The backend recomputes the price from the
+uploaded model (the customer's number is only checked), stores the model under a UUID in the
+`order_files` volume and keeps the full price breakdown on the order.
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /api/orders` (multipart: `file`, print parameters, `expectedTotalChf`, customer fields) | Place an order, `201` with the order |
+| `GET /api/orders/settings` | Shipping flat rate, VAT switch, quote validity, shipping countries |
+| `GET /api/orders/{number}?email=` | Look up an order with the customer's e-mail |
+
+`400` carries an `errors` map per field, `409` the recomputed quote when the price changed.
+Commercial settings live in the backend `application.yml` under `orders.*` (shipping CHF 9.00,
+VAT off, 14 days price validity, 90 days retention, shipping to CH).
+
+```powershell
+curl.exe -F "file=@public/3DBenchy.stl" -F "filament=PLA" -F "color=red" -F "quality=medium" -F "quantity=2" -F "expectedTotalChf=11.00" -F "customerName=Anna Muster" -F "email=anna@example.com" -F "street=Bahnhofstrasse 1" -F "postalCode=8001" -F "city=Zuerich" -F "country=CH" http://localhost:8080/api/orders
+```
+
 ### Protection against runaway slicing
 - At most two slicer processes run at once (`slicer.capacity.max-concurrent`); a request that
   cannot get a slot within 20 s gets `503` with `Retry-After`.
