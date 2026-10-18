@@ -1,0 +1,111 @@
+:host {
+    display: block;
+    width: 100%;
+}
+
+.site-footer {
+    margin-top: 2rem;
+    background: linear-gradient(180deg, #102334, #0b1824);
+    border-top: 1px solid var(--border-700);
+    color: var(--text-200);
+}
+
+.footer-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 2.75rem 1.5rem 2rem;
+}
+
+.footer-top {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1fr 1fr;
+    gap: 2rem;
+
+    @media (max-width: 1024px) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    @media (max-width: 640px) {
+        grid-template-columns: 1fr;
+    }
+}
+
+.brand {
+    margin: 0;
+    font-size: 2rem;
+    line-height: 1;
+    letter-spacing: 0.04rem;
+    color: var(--accent-450);
+    font-weight: 900;
+}
+
+.brand-copy {
+    margin: 1rem 0 0;
+    font-size: 1.05rem;
+    line-height: 1.45;
+    color: var(--text-300);
+}
+
+.link-column h3 {
+    margin: 0 0 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08rem;
+    font-size: 1.05rem;
+    color: var(--text-100);
+}
+
+.link-column ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.7rem;
+}
+
+.link-column li {
+    color: var(--text-200);
+    font-size: 1.1rem;
+}
+
+.revoke-btn {
+    margin-top: 1rem;
+    border: 1px solid var(--border-650);
+    border-radius: 0.75rem;
+    background: #1e3447;
+    color: var(--text-100);
+    padding: 0.6rem 1rem;
+    font: inherit;
+    font-weight: 700;
+}
+
+.price-note {
+    margin: 2.2rem 0 0;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--border-700);
+    color: var(--text-300);
+    font-size: 1.05rem;
+
+    span {
+        color: var(--accent-300);
+        font-weight: 700;
+    }
+}
+
+.footer-bottom {
+    margin-top: 1.1rem;
+    padding-top: 1.4rem;
+    border-top: 1px solid var(--border-700);
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    color: var(--text-200);
+    font-size: 1.05rem;
+
+    @media (max-width: 640px) {
+        flex-direction: column;
+    }
+}
+
+.footer-bottom p {
+    margin: 0;
+}
