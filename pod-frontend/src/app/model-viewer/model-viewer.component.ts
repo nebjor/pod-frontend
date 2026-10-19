@@ -120,7 +120,8 @@ export class ModelViewerComponent implements AfterViewInit, OnChanges, OnDestroy
     keyLight.position.set(120, -80, 180);
     this.scene.add(keyLight);
 
-    const fillLight = new THREE.DirectionalLight(0xf9a8d4, 1.2);
+    // Neutral fill: a tinted fill light colours the shadow side of dark models.
+    const fillLight = new THREE.DirectionalLight(0xffffff, 1.0);
     fillLight.position.set(-140, 120, 90);
     this.scene.add(fillLight);
 
