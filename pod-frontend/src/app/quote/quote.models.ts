@@ -1,6 +1,6 @@
 /** Mirrors the JSON contract of the cad-slicer-engine quote API (`/api/quotes`). */
 
-export type FilamentCode = 'PLA' | 'PETG';
+export type FilamentCode = 'PLA' | 'PETG' | 'PCTG';
 export type QualityCode = 'coarse' | 'medium' | 'high';
 
 export interface QuoteRequestParams {

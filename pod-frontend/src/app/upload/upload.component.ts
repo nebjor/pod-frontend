@@ -53,20 +53,30 @@ export const FALLBACK_FILAMENTS: ReadonlyArray<FilamentOption> = [
         label: 'PLA',
         profileName: 'Bambu PLA Basic @BBL A1',
         colors: [
-            { code: 'black', label: 'Black', hex: '#1f1f1f' },
-            { code: 'white', label: 'White', hex: '#f2f2f2' },
+            { code: 'black', label: 'Charcoal Black (matt)', hex: '#2b2b2b' },
+            { code: 'white', label: 'Cotton White (matt)', hex: '#f1ede3' },
+            { code: 'gold', label: 'Gold', hex: '#d4a017' },
+            { code: 'green', label: 'Green', hex: '#1f9d4a' },
             { code: 'red', label: 'Red', hex: '#d62828' },
-            { code: 'green', label: 'Green', hex: '#2a9d8f' }
+            { code: 'blue', label: 'Blue', hex: '#1f4fd6' },
+            { code: 'silk-neon-city', label: 'Silk Neon City (pink / violet / blue)', hex: '#c94fb4' },
+            { code: 'silk-blue-hawaii', label: 'Silk Blue Hawaii (cyan / green)', hex: '#35b8c6' }
         ]
     },
     {
         code: 'PETG',
         label: 'PETG',
-        profileName: 'Bambu PETG Basic @BBL A1',
+        profileName: 'PolyLite PETG @BBL A1',
         colors: [
             { code: 'black', label: 'Black', hex: '#1f1f1f' },
             { code: 'white', label: 'White', hex: '#f2f2f2' }
         ]
+    },
+    {
+        code: 'PCTG',
+        label: 'PCTG (transparent)',
+        profileName: 'Generic PCTG @BBL A1',
+        colors: [{ code: 'transparent', label: 'Transparent', hex: '#dde8ef' }]
     }
 ];
 
