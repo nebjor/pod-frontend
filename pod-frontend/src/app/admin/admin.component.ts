@@ -13,6 +13,7 @@ export const STATUS_LABELS: Record<OrderStatus, string> = {
     NEW: 'Neu, unbezahlt',
     PAID: 'Bezahlt',
     IN_REVIEW: 'In Pruefung',
+    APPROVED: 'Freigegeben',
     PRINTING: 'Im Druck',
     SHIPPED: 'Versendet',
     CANCELLED: 'Storniert'
@@ -22,7 +23,8 @@ export const TRANSITION_LABELS: Record<OrderStatus, string> = {
     NEW: 'Zurueck auf neu',
     PAID: 'Als bezahlt markieren',
     IN_REVIEW: 'Pruefung starten',
-    PRINTING: 'Freigeben und drucken',
+    APPROVED: 'Freigeben',
+    PRINTING: 'Druck starten',
     SHIPPED: 'Als versendet markieren',
     CANCELLED: 'Stornieren'
 };
@@ -43,7 +45,7 @@ export class AdminComponent {
 
     readonly statusLabels = STATUS_LABELS;
     readonly transitionLabels = TRANSITION_LABELS;
-    readonly statusOptions: OrderStatus[] = ['NEW', 'PAID', 'IN_REVIEW', 'PRINTING', 'SHIPPED', 'CANCELLED'];
+    readonly statusOptions: OrderStatus[] = ['NEW', 'PAID', 'IN_REVIEW', 'APPROVED', 'PRINTING', 'SHIPPED', 'CANCELLED'];
 
     readonly state = signal<ListState>('checking');
     readonly orders = signal<AdminOrder[]>([]);

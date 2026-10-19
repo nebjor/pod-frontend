@@ -2,7 +2,7 @@
 
 import { FilamentCode, QualityCode, QuoteResponse } from '../quote/quote.models';
 
-export type OrderStatus = 'NEW' | 'PAID' | 'IN_REVIEW' | 'PRINTING' | 'SHIPPED' | 'CANCELLED';
+export type OrderStatus = 'NEW' | 'PAID' | 'IN_REVIEW' | 'APPROVED' | 'PRINTING' | 'SHIPPED' | 'CANCELLED';
 
 export interface CustomerDetails {
     customerName: string;
