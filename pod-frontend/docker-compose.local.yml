@@ -40,6 +40,9 @@ services:
       SLICER_BINARY_PATH: bambu-studio-cli
       SAMPLE_MODELS_DIR: /workspace/public
       ORDER_FILES_DIR: /data/order-files
+      # Payment pages redirect back to this origin; "mock" until the Stripe account is live.
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
+      PUBLIC_BASE_URL: http://localhost:4200
       # Shown to clients that hit the quote rate limit; set in your shell or a .env file.
       SUPPORT_EMAIL: ${SUPPORT_EMAIL:-}
       # Enables POST /api/admin/rate-limits/reset when set.

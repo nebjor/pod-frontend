@@ -75,6 +75,14 @@ uploaded model (the customer's number is only checked), stores the model under a
 | `GET /api/orders/{number}?email=` | Look up an order with the customer's e-mail |
 
 `400` carries an `errors` map per field, `409` the recomputed quote when the price changed.
+
+### Payment
+Placing an order starts a payment session; the response carries `paymentUrl` and the checkout
+sends the customer there. With `PAYMENT_PROVIDER=mock` (the default until the Stripe account is
+live) that page is the shop's own `/pay/mock`, which confirms through
+`POST /api/payments/mock/{session}/complete`; the success page `/checkout/success` then polls
+the order until it is `PAID`. Stripe will be a second gateway behind the same interface, with
+its webhook as the only way to confirm. `PUBLIC_BASE_URL` must be the origin customers see.
 Commercial settings live in the backend `application.yml` under `orders.*` (shipping CHF 9.00,
 VAT off, 14 days price validity, 90 days retention, shipping to CH).
 
