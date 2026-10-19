@@ -3,7 +3,14 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { QuoteResponse } from '../quote/quote.models';
 import { describeQuoteError } from '../quote/quote.service';
-import { OrderFailure, OrderRequestParams, OrderResponse, OrderSettings } from './order.models';
+import {
+    LAST_ORDER_STORAGE_KEY,
+    LastOrderReference,
+    OrderFailure,
+    OrderRequestParams,
+    OrderResponse,
+    OrderSettings
+} from './order.models';
 
 export const ORDER_API_URL = '/api/orders';
 
@@ -32,6 +39,39 @@ export class OrderService {
 
     loadSettings(): Observable<OrderSettings> {
         return this.http.get<OrderSettings>(`${ORDER_API_URL}/settings`);
+    }
+
+    /** Looks an order up; the backend only answers with the matching customer e-mail. */
+    find(orderNumber: string, email: string): Observable<OrderResponse> {
+        return this.http.get<OrderResponse>(`${ORDER_API_URL}/${encodeURIComponent(orderNumber)}`, {
+            params: { email }
+        });
+    }
+
+    /** Mock provider only: confirms the payment the way a real provider's webhook would. */
+    completeMockPayment(sessionId: string): Observable<{ orderNumber: string; status: string }> {
+        return this.http.post<{ orderNumber: string; status: string }>(
+            `/api/payments/mock/${encodeURIComponent(sessionId)}/complete`,
+            null
+        );
+    }
+}
+
+/** Remembers which order the customer is paying for, so the success page can look it up. */
+export function rememberLastOrder(reference: LastOrderReference) {
+    try {
+        sessionStorage.setItem(LAST_ORDER_STORAGE_KEY, JSON.stringify(reference));
+    } catch {
+        // Storage can be unavailable (private mode); the success page then asks for the e-mail.
+    }
+}
+
+export function recallLastOrder(): LastOrderReference | null {
+    try {
+        const raw = sessionStorage.getItem(LAST_ORDER_STORAGE_KEY);
+        return raw ? (JSON.parse(raw) as LastOrderReference) : null;
+    } catch {
+        return null;
     }
 }
 

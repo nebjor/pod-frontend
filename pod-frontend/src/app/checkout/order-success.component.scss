@@ -1,0 +1,122 @@
+.success-page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 2rem 1rem 4rem;
+    color: var(--text-200);
+    font-family: 'Courier New', 'Lucida Console', monospace;
+}
+
+.success-header {
+    margin-bottom: 1.5rem;
+
+    .kicker {
+        margin: 0 0 0.5rem;
+        color: var(--accent-300);
+        letter-spacing: 0.2rem;
+        font-size: 0.75rem;
+    }
+
+    h1 {
+        margin: 0;
+        font-size: clamp(1.8rem, 3vw, 2.8rem);
+        color: var(--text-100);
+        text-transform: uppercase;
+    }
+}
+
+.card {
+    padding: 1rem;
+    border-radius: 14px;
+    border: 1px solid var(--border-700);
+    background: linear-gradient(180deg, rgba(19, 39, 58, 0.92), rgba(11, 24, 36, 0.95));
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
+
+    h2 {
+        margin: 0 0 0.8rem;
+        color: var(--text-100);
+        font-size: 1.15rem;
+        letter-spacing: 0.04rem;
+    }
+}
+
+.status {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0 0 0.8rem;
+    color: var(--text-100);
+}
+
+.spinner {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid rgba(140, 200, 179, 0.25);
+    border-top-color: var(--accent-300);
+    animation: spinnerTurn 800ms linear infinite;
+}
+
+@keyframes spinnerTurn {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.details {
+    margin: 0;
+    display: grid;
+    gap: 0.35rem;
+
+    div {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.3rem 0;
+        border-bottom: 1px dashed rgba(53, 84, 107, 0.6);
+    }
+
+    dt {
+        color: var(--text-300);
+        font-size: 0.85rem;
+    }
+
+    dd {
+        margin: 0;
+        color: var(--text-100);
+        text-align: right;
+        font-size: 0.9rem;
+    }
+
+    .total dd {
+        color: var(--accent-300);
+        font-size: 1.05rem;
+    }
+}
+
+.note {
+    margin: 0.75rem 0 0;
+    color: var(--text-300);
+    font-size: 0.82rem;
+    line-height: 1.5;
+
+    a {
+        color: var(--accent-300);
+    }
+}
+
+.order-btn {
+    display: block;
+    box-sizing: border-box;
+    margin-top: 1rem;
+    width: 100%;
+    border: 1px solid #47755f;
+    border-radius: 10px;
+    padding: 0.8rem 1rem;
+    background: linear-gradient(180deg, var(--accent-450), var(--accent-500));
+    color: #082315;
+    text-transform: uppercase;
+    letter-spacing: 0.08rem;
+    font: inherit;
+    text-align: center;
+    text-decoration: none;
+}

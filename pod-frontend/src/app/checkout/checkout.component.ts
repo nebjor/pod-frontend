@@ -2,10 +2,10 @@ import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, afterNextRender, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { CartService } from '../cart/cart.service';
 import { OrderResponse, OrderSettings } from '../order/order.models';
-import { OrderService, describeOrderError } from '../order/order.service';
+import { OrderService, describeOrderError, rememberLastOrder } from '../order/order.service';
 import { formatPrintDuration } from '../upload/upload.component';
 
 type CheckoutState = 'idle' | 'submitting' | 'placed';
@@ -30,6 +30,7 @@ export const FALLBACK_ORDER_SETTINGS: OrderSettings = {
 export class CheckoutComponent {
     private readonly cart = inject(CartService);
     private readonly orderService = inject(OrderService);
+    private readonly router = inject(Router);
     private readonly destroyRef = inject(DestroyRef);
 
     readonly item = this.cart.item;
@@ -106,6 +107,10 @@ export class CheckoutComponent {
                     this.order.set(order);
                     this.state.set('placed');
                     this.cart.clear();
+                    rememberLastOrder({ orderNumber: order.orderNumber, email: order.customerEmail });
+                    if (order.paymentUrl) {
+                        this.goToPayment(order.paymentUrl);
+                    }
                 },
                 error: (error: unknown) => {
                     this.state.set('idle');
@@ -130,5 +135,20 @@ export class CheckoutComponent {
     acceptNewPrice() {
         this.priceChangedTo.set(null);
         this.submit();
+    }
+
+    /**
+     * The mock provider's page is a route of this app; a real provider's page is another
+     * origin and needs a full navigation.
+     */
+    private goToPayment(url: string) {
+        const origin = typeof window === 'undefined' ? '' : window.location.origin;
+        if (url.startsWith('/')) {
+            void this.router.navigateByUrl(url);
+        } else if (origin && url.startsWith(origin + '/')) {
+            void this.router.navigateByUrl(url.slice(origin.length));
+        } else {
+            window.location.assign(url);
+        }
     }
 }

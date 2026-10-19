@@ -39,6 +39,7 @@ export interface OrderResponse {
     status: OrderStatus;
     createdAt: string;
     quoteExpiresAt: string;
+    paidAt: string | null;
     customerName: string;
     customerEmail: string;
     fileName: string;
@@ -53,7 +54,17 @@ export interface OrderResponse {
     totals: OrderTotals;
     /** Present when no VAT is charged. */
     vatNote: string | null;
+    /** Hosted payment page to send the customer to; null once paid. */
+    paymentUrl: string | null;
 }
+
+/** Remembered in sessionStorage between checkout, payment page and success page. */
+export interface LastOrderReference {
+    orderNumber: string;
+    email: string;
+}
+
+export const LAST_ORDER_STORAGE_KEY = 'pod.lastOrder';
 
 export interface OrderSettings {
     currency: string;

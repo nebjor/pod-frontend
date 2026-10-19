@@ -1,0 +1,106 @@
+.pay-page {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 2rem 1rem 4rem;
+    color: var(--text-200);
+    font-family: 'Courier New', 'Lucida Console', monospace;
+}
+
+.pay-header {
+    margin-bottom: 1.5rem;
+
+    .kicker {
+        margin: 0 0 0.5rem;
+        color: var(--accent-300);
+        letter-spacing: 0.2rem;
+        font-size: 0.75rem;
+    }
+
+    h1 {
+        margin: 0;
+        font-size: clamp(1.8rem, 3vw, 2.8rem);
+        color: var(--text-100);
+        text-transform: uppercase;
+    }
+}
+
+.card {
+    padding: 1rem;
+    border-radius: 14px;
+    border: 1px solid var(--border-700);
+    background: linear-gradient(180deg, rgba(19, 39, 58, 0.92), rgba(11, 24, 36, 0.95));
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
+}
+
+.hint {
+    margin: 0 0 1rem;
+    padding: 0.75rem;
+    border: 1px dashed var(--accent-300);
+    border-radius: 10px;
+    color: var(--text-200);
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+.details {
+    margin: 0 0 1rem;
+    display: grid;
+    gap: 0.35rem;
+
+    div {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.3rem 0;
+        border-bottom: 1px dashed rgba(53, 84, 107, 0.6);
+    }
+
+    dt {
+        color: var(--text-300);
+        font-size: 0.85rem;
+    }
+
+    dd {
+        margin: 0;
+        color: var(--text-100);
+    }
+
+    .total dd {
+        color: var(--accent-300);
+        font-size: 1.1rem;
+    }
+}
+
+.actions {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.order-btn {
+    width: 100%;
+    border: 1px solid #47755f;
+    border-radius: 10px;
+    padding: 0.8rem 1rem;
+    background: linear-gradient(180deg, var(--accent-450), var(--accent-500));
+    color: #082315;
+    text-transform: uppercase;
+    letter-spacing: 0.08rem;
+    font: inherit;
+    cursor: pointer;
+
+    &:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+}
+
+.ghost-btn {
+    background: transparent;
+    border-color: var(--border-650);
+    color: var(--text-100);
+}
+
+.error {
+    margin: 0.8rem 0 0;
+    color: #d99898;
+}
