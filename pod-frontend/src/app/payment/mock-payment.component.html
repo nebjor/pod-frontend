@@ -1,0 +1,29 @@
+<section class="pay-page">
+    <header class="pay-header">
+        <p class="kicker">ZAHLUNG · TESTMODUS</p>
+        <h1>Bezahlen</h1>
+    </header>
+
+    <section class="card">
+        <p class="hint">
+            Diese Seite vertritt die Zahlungsseite des Anbieters, bis das Stripe-Konto freigeschaltet ist.
+            Es wird kein Geld bewegt.
+        </p>
+
+        <dl class="details">
+            <div><dt>Bestellung</dt><dd>{{ orderNumber() }}</dd></div>
+            <div class="total"><dt>Betrag</dt><dd>{{ currency() }} {{ amount() | number:'1.2-2' }}</dd></div>
+        </dl>
+
+        <div class="actions">
+            <button type="button" class="order-btn" [disabled]="paying() || !session()" (click)="pay()">
+                @if (paying()) { Zahlung wird bestaetigt... } @else { Zahlung simulieren }
+            </button>
+            <button type="button" class="order-btn ghost-btn" [disabled]="paying()" (click)="cancel()">Abbrechen</button>
+        </div>
+
+        @if (errorMessage()) {
+            <p class="error" role="alert">{{ errorMessage() }}</p>
+        }
+    </section>
+</section>

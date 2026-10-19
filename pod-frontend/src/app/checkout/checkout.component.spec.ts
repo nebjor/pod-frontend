@@ -1,9 +1,9 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { CartItem, CartService } from '../cart/cart.service';
-import { OrderResponse } from '../order/order.models';
+import { LAST_ORDER_STORAGE_KEY, OrderResponse } from '../order/order.models';
 import { OrderService } from '../order/order.service';
 import { QuoteResponse } from '../quote/quote.models';
 import { CheckoutComponent, FALLBACK_ORDER_SETTINGS } from './checkout.component';
@@ -50,7 +50,9 @@ const placedOrder: OrderResponse = {
     totalPrintTimeSeconds: 3903,
     totalFilamentGrams: 23.1,
     totals: { setupFee: 5, unitPrice: 3, itemsTotal: 11, shipping: 9, vatRate: 0, vatAmount: 0, total: 20, currency: 'CHF' },
-    vatNote: 'No VAT charged: the seller is not VAT registered.'
+    vatNote: 'No VAT charged: the seller is not VAT registered.',
+    paidAt: null,
+    paymentUrl: '/pay/mock?session=mock_1&order=POD-1000&amount=20.00&currency=CHF'
 };
 
 function cartItem(): CartItem {
@@ -69,6 +71,7 @@ describe('CheckoutComponent', () => {
     let component: CheckoutComponent;
     let cart: CartService;
     let placeOrder: ReturnType<typeof vi.fn>;
+    let navigateByUrl: ReturnType<typeof vi.spyOn>;
 
     beforeEach(async () => {
         placeOrder = vi.fn(() => of(placedOrder));
@@ -85,6 +88,7 @@ describe('CheckoutComponent', () => {
     });
 
     function create() {
+        navigateByUrl = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
         fixture = TestBed.createComponent(CheckoutComponent);
         component = fixture.componentInstance;
         fixture.detectChanges();
@@ -127,7 +131,7 @@ describe('CheckoutComponent', () => {
         expect(component.customerForm.touched).toBe(true);
     });
 
-    it('places the order with the quote parameters and shows the order number', () => {
+    it('places the order with the quote parameters and continues to the payment page', () => {
         const item = cartItem();
         cart.set(item);
         create();
@@ -150,6 +154,11 @@ describe('CheckoutComponent', () => {
         expect(component.state()).toBe('placed');
         expect(component.order()?.orderNumber).toBe('POD-1000');
         expect(cart.item()).toBeNull();
+        expect(navigateByUrl).toHaveBeenCalledWith('/pay/mock?session=mock_1&order=POD-1000&amount=20.00&currency=CHF');
+        expect(JSON.parse(sessionStorage.getItem(LAST_ORDER_STORAGE_KEY) ?? '{}')).toEqual({
+            orderNumber: 'POD-1000',
+            email: 'anna@example.com'
+        });
     });
 
     it('shows backend field errors next to the form', () => {

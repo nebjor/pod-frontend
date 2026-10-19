@@ -14,8 +14,16 @@ export const routes: Routes = [
         loadComponent: () => import('./upload/upload.component').then((m) => m.UploadComponent)
     },
     {
+        path: 'checkout/success',
+        loadComponent: () => import('./checkout/order-success.component').then((m) => m.OrderSuccessComponent)
+    },
+    {
         path: 'checkout',
         loadComponent: () => import('./checkout/checkout.component').then((m) => m.CheckoutComponent)
+    },
+    {
+        path: 'pay/mock',
+        loadComponent: () => import('./payment/mock-payment.component').then((m) => m.MockPaymentComponent)
     },
     { path: '**', redirectTo: '' }
 ];
