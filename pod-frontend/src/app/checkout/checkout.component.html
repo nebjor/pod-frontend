@@ -1,0 +1,117 @@
+<section class="checkout-page">
+    <header class="checkout-header">
+        <p class="kicker">CHECKOUT</p>
+        <h1>Bestellung</h1>
+    </header>
+
+    @if (state() === 'placed' && order(); as o) {
+        <section class="card placed" aria-live="polite">
+            <h2>Danke, deine Bestellung ist eingegangen.</h2>
+            <p class="order-number">Bestellnummer <strong>{{ o.orderNumber }}</strong></p>
+            <dl class="details">
+                <div><dt>Modell</dt><dd>{{ o.fileName }}</dd></div>
+                <div><dt>Konfiguration</dt><dd>{{ o.quantity }} x {{ o.filament }} {{ o.colorLabel }}, {{ o.quality }}</dd></div>
+                <div><dt>Positionen</dt><dd>{{ o.totals.currency }} {{ o.totals.itemsTotal | number:'1.2-2' }}</dd></div>
+                <div><dt>Versand</dt><dd>{{ o.totals.currency }} {{ o.totals.shipping | number:'1.2-2' }}</dd></div>
+                <div class="total"><dt>Gesamt</dt><dd>{{ o.totals.currency }} {{ o.totals.total | number:'1.2-2' }}</dd></div>
+            </dl>
+            @if (o.vatNote) {
+                <p class="note">Keine MWST, da nicht MWST-pflichtig.</p>
+            }
+            <p class="note">
+                Der Preis ist bis {{ priceValidUntil() }} gueltig. Eine Bestaetigung geht an
+                <strong>{{ o.customerEmail }}</strong>. Die Bezahlung folgt im naechsten Schritt des Shops.
+            </p>
+            <a class="order-btn link-btn" routerLink="/upload">Weiteres Modell hochladen</a>
+        </section>
+    } @else if (!item()) {
+        <section class="card empty">
+            <p>Es liegt kein Modell im Warenkorb.</p>
+            <a class="order-btn link-btn" routerLink="/upload">Modell hochladen und Preis erhalten</a>
+        </section>
+    } @else if (item(); as cartItem) {
+        <section class="checkout-layout">
+            <section class="card summary">
+                <h2>1. Dein Modell</h2>
+                <dl class="details">
+                    <div><dt>Datei</dt><dd>{{ cartItem.file.name }}</dd></div>
+                    <div><dt>Filament</dt><dd>{{ cartItem.filament }}</dd></div>
+                    <div>
+                        <dt>Farbe</dt>
+                        <dd>
+                            <span class="swatch-dot" [style.background]="cartItem.color.hex" aria-hidden="true"></span>
+                            {{ cartItem.color.label }}
+                        </dd>
+                    </div>
+                    <div><dt>Qualitaet</dt><dd>{{ cartItem.quality }}</dd></div>
+                    <div><dt>Menge</dt><dd>{{ cartItem.quantity }}</dd></div>
+                    <div><dt>Druckzeit gesamt</dt><dd>{{ printTimeLabel() }}</dd></div>
+                    <div><dt>Positionen</dt><dd>{{ settings().currency }} {{ itemsTotal() | number:'1.2-2' }}</dd></div>
+                    <div><dt>Versand (Pauschale)</dt><dd>{{ settings().currency }} {{ shipping() | number:'1.2-2' }}</dd></div>
+                    <div class="total"><dt>Gesamt</dt><dd>{{ settings().currency }} {{ total() | number:'1.2-2' }}</dd></div>
+                </dl>
+                @if (!settings().vatEnabled) {
+                    <p class="note">Keine MWST, da nicht MWST-pflichtig.</p>
+                }
+                <p class="note">Versand nur innerhalb der Schweiz. Der Preis bleibt {{ settings().quoteValidityDays }} Tage gueltig.</p>
+            </section>
+
+            <section class="card">
+                <h2>2. Lieferadresse</h2>
+                <form [formGroup]="customerForm" class="customer-form" (ngSubmit)="submit()" novalidate>
+                    <label>
+                        Name
+                        <input formControlName="customerName" type="text" autocomplete="name" />
+                        @if (fieldError('customerName')) { <span class="field-error">{{ fieldError('customerName') }}</span> }
+                    </label>
+                    <label>
+                        E-Mail
+                        <input formControlName="email" type="email" autocomplete="email" />
+                        @if (fieldError('email')) { <span class="field-error">{{ fieldError('email') }}</span> }
+                    </label>
+                    <label class="wide">
+                        Strasse und Nummer
+                        <input formControlName="street" type="text" autocomplete="street-address" />
+                        @if (fieldError('street')) { <span class="field-error">{{ fieldError('street') }}</span> }
+                    </label>
+                    <label>
+                        PLZ
+                        <input formControlName="postalCode" type="text" autocomplete="postal-code" inputmode="numeric" />
+                        @if (fieldError('postalCode')) { <span class="field-error">{{ fieldError('postalCode') }}</span> }
+                    </label>
+                    <label>
+                        Ort
+                        <input formControlName="city" type="text" autocomplete="address-level2" />
+                        @if (fieldError('city')) { <span class="field-error">{{ fieldError('city') }}</span> }
+                    </label>
+                    <label>
+                        Land
+                        <select formControlName="country">
+                            @for (country of settings().shipToCountries; track country) {
+                                <option [value]="country">{{ country === 'CH' ? 'Schweiz' : country }}</option>
+                            }
+                        </select>
+                    </label>
+
+                    @if (priceChangedTo() !== null) {
+                        <div class="price-changed" role="alert">
+                            <p>
+                                Der Preis wurde neu berechnet: <strong>{{ settings().currency }} {{ itemsTotal() | number:'1.2-2' }}</strong>
+                                fuer die Positionen, gesamt {{ settings().currency }} {{ total() | number:'1.2-2' }}.
+                            </p>
+                            <button type="button" class="order-btn" (click)="acceptNewPrice()">Neuen Preis annehmen und bestellen</button>
+                        </div>
+                    } @else {
+                        <button type="submit" class="order-btn" [disabled]="state() === 'submitting'">
+                            @if (state() === 'submitting') { Bestellung wird angelegt... } @else { Kostenpflichtig bestellen }
+                        </button>
+                    }
+
+                    @if (errorMessage()) {
+                        <p class="error" role="alert">{{ errorMessage() }}</p>
+                    }
+                </form>
+            </section>
+        </section>
+    }
+</section>
