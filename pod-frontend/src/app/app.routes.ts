@@ -25,5 +25,9 @@ export const routes: Routes = [
         path: 'pay/mock',
         loadComponent: () => import('./payment/mock-payment.component').then((m) => m.MockPaymentComponent)
     },
+    {
+        path: 'admin',
+        loadComponent: () => import('./admin/admin.component').then((m) => m.AdminComponent)
+    },
     { path: '**', redirectTo: '' }
 ];
