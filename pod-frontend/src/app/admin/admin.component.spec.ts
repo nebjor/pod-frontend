@@ -46,7 +46,7 @@ describe('AdminComponent', () => {
     beforeEach(async () => {
         sessionStorage.clear();
         listOrders = vi.fn(() => of([paidOrder]));
-        setStatus = vi.fn((_: string, status: string) => of({ ...paidOrder, status, allowedTransitions: ['CANCELLED', 'PRINTING'] }));
+        setStatus = vi.fn((_: string, status: string) => of({ ...paidOrder, status, allowedTransitions: ['APPROVED', 'CANCELLED'] }));
 
         await TestBed.configureTestingModule({
             imports: [AdminComponent],
@@ -95,7 +95,7 @@ describe('AdminComponent', () => {
 
         expect(setStatus).toHaveBeenCalledWith('POD-1000', 'IN_REVIEW');
         expect(component.selected()?.status).toBe('IN_REVIEW');
-        expect(component.selected()?.allowedTransitions).toEqual(['CANCELLED', 'PRINTING']);
+        expect(component.selected()?.allowedTransitions).toEqual(['APPROVED', 'CANCELLED']);
         expect(component.notice()).toContain('In Pruefung');
     });
 
