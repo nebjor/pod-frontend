@@ -1,0 +1,139 @@
+<section class="admin-page">
+    <header class="admin-header">
+        <div>
+            <p class="kicker">ADMIN</p>
+            <h1>Bestellungen</h1>
+        </div>
+        @if (state() !== 'login' && state() !== 'checking') {
+            <div class="header-actions">
+                <button type="button" class="ghost-btn" (click)="resetRateLimits()">Rate-Limits zuruecksetzen</button>
+                <button type="button" class="ghost-btn" (click)="logout()">Abmelden</button>
+            </div>
+        }
+    </header>
+
+    @switch (state()) {
+        @case ('checking') {
+            <p class="status">Pruefe Anmeldung...</p>
+        }
+        @case ('login') {
+            <section class="card login-card">
+                <h2>Anmelden</h2>
+                <form [formGroup]="loginForm" (ngSubmit)="login()" class="login-form" novalidate>
+                    <label>
+                        Benutzername
+                        <input formControlName="username" type="text" autocomplete="username" />
+                    </label>
+                    <label>
+                        Passwort
+                        <input formControlName="password" type="password" autocomplete="current-password" />
+                    </label>
+                    <button type="submit" class="order-btn">Anmelden</button>
+                </form>
+                @if (errorMessage()) {
+                    <p class="error" role="alert">{{ errorMessage() }}</p>
+                }
+            </section>
+        }
+        @default {
+            <section class="toolbar">
+                <label>
+                    Status
+                    <select [value]="filter()" (change)="setFilter($any($event.target).value)">
+                        <option value="">Alle</option>
+                        @for (status of statusOptions; track status) {
+                            <option [value]="status">{{ statusLabels[status] }}</option>
+                        }
+                    </select>
+                </label>
+                <button type="button" class="ghost-btn" (click)="load()">Aktualisieren</button>
+                @if (notice()) {
+                    <span class="notice" aria-live="polite">{{ notice() }}</span>
+                }
+            </section>
+
+            @if (errorMessage()) {
+                <p class="error" role="alert">{{ errorMessage() }}</p>
+            }
+
+            @if (state() === 'loading') {
+                <p class="status">Lade Bestellungen...</p>
+            } @else if (orders().length === 0) {
+                <p class="status">Keine Bestellungen.</p>
+            } @else {
+                <div class="table-wrap">
+                    <table class="orders">
+                        <thead>
+                            <tr>
+                                <th>Nummer</th>
+                                <th>Datum</th>
+                                <th>Kunde</th>
+                                <th>Modell</th>
+                                <th>Konfiguration</th>
+                                <th class="num">Gesamt</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (order of orders(); track order.orderNumber) {
+                                <tr [class.selected]="selectedNumber() === order.orderNumber" (click)="select(order.orderNumber)">
+                                    <td>{{ order.orderNumber }}</td>
+                                    <td>{{ order.createdAt | date:'dd.MM.yyyy HH:mm' }}</td>
+                                    <td>{{ order.customerName }}</td>
+                                    <td class="file">{{ order.fileName }}</td>
+                                    <td>{{ order.quantity }} x {{ order.filament }} {{ order.colorLabel }}, {{ order.quality }}</td>
+                                    <td class="num">{{ order.totals.currency }} {{ order.totals.total | number:'1.2-2' }}</td>
+                                    <td><span class="badge" [class]="'badge status-' + order.status.toLowerCase()">{{ statusLabels[order.status] }}</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            @if (selected(); as order) {
+                <section class="card detail">
+                    <h2>{{ order.orderNumber }} · {{ statusLabels[order.status] }}</h2>
+
+                    <div class="detail-grid">
+                        <dl class="details">
+                            <div><dt>Kunde</dt><dd>{{ order.customerName }}</dd></div>
+                            <div><dt>E-Mail</dt><dd>{{ order.customerEmail }}</dd></div>
+                            <div><dt>Adresse</dt><dd>{{ order.street }}, {{ order.postalCode }} {{ order.city }} ({{ order.country }})</dd></div>
+                            <div><dt>Bestellt</dt><dd>{{ order.createdAt | date:'dd.MM.yyyy HH:mm' }}</dd></div>
+                            <div><dt>Bezahlt</dt><dd>{{ order.paidAt ? (order.paidAt | date:'dd.MM.yyyy HH:mm') : 'offen' }} @if (order.paymentProvider) { ({{ order.paymentProvider }}) }</dd></div>
+                            <div><dt>Preis gueltig bis</dt><dd>{{ order.quoteExpiresAt | date:'dd.MM.yyyy' }}</dd></div>
+                            @if (order.deleteAfter) {
+                                <div><dt>Loeschung nach</dt><dd>{{ order.deleteAfter | date:'dd.MM.yyyy' }}</dd></div>
+                            }
+                        </dl>
+                        <dl class="details">
+                            <div><dt>Modell</dt><dd>{{ order.fileName }} ({{ order.fileSizeBytes / 1048576 | number:'1.1-1' }} MB)</dd></div>
+                            <div><dt>Filament</dt><dd>{{ order.filament }} {{ order.colorLabel }}</dd></div>
+                            <div><dt>Qualitaet</dt><dd>{{ order.quality }} ({{ order.layerHeightMm }} mm)</dd></div>
+                            <div><dt>Menge</dt><dd>{{ order.quantity }} auf {{ order.plateCount }} Platte(n)</dd></div>
+                            <div><dt>Druckzeit gesamt</dt><dd>{{ selectedPrintTime() }}</dd></div>
+                            <div><dt>Material gesamt</dt><dd>{{ order.totalFilamentGrams | number:'1.0-1' }} g</dd></div>
+                            <div><dt>Positionen</dt><dd>{{ order.totals.currency }} {{ order.totals.itemsTotal | number:'1.2-2' }}</dd></div>
+                            <div><dt>Versand</dt><dd>{{ order.totals.currency }} {{ order.totals.shipping | number:'1.2-2' }}</dd></div>
+                            <div class="total"><dt>Gesamt</dt><dd>{{ order.totals.currency }} {{ order.totals.total | number:'1.2-2' }}</dd></div>
+                        </dl>
+                    </div>
+
+                    <div class="actions">
+                        <button type="button" class="order-btn" (click)="download(order)">Modell herunterladen</button>
+                        @for (next of order.allowedTransitions; track next) {
+                            <button type="button" class="order-btn" [class.ghost-btn]="next === 'CANCELLED'"
+                                [disabled]="busy()" (click)="transition(order, next)">
+                                {{ transitionLabels[next] }}
+                            </button>
+                        }
+                    </div>
+                    @if (order.status === 'PAID' || order.status === 'IN_REVIEW') {
+                        <p class="note">Vor der Freigabe das Modell in Bambu Studio oeffnen: Orientierung, Stuetzen, Haftung pruefen.</p>
+                    }
+                </section>
+            }
+        }
+    }
+</section>

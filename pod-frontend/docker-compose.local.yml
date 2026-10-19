@@ -45,8 +45,9 @@ services:
       PUBLIC_BASE_URL: http://localhost:4200
       # Shown to clients that hit the quote rate limit; set in your shell or a .env file.
       SUPPORT_EMAIL: ${SUPPORT_EMAIL:-}
-      # Enables POST /api/admin/rate-limits/reset when set.
-      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+      # Owner login for /admin; a blank password keeps the admin API closed.
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     depends_on:
       postgres:
         condition: service_healthy

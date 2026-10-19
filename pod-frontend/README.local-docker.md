@@ -98,11 +98,21 @@ curl.exe -F "file=@public/3DBenchy.stl" -F "filament=PLA" -F "color=red" -F "qua
   `SUPPORT_EMAIL` is set, `supportEmail` in the problem details. The upload page shows both.
 - Finished quotes are cached for an hour by model hash and parameters, so repeated requests
   do not start the slicer and do not count against the limit.
-- Limits live in memory: restarting the backend resets them. With `ADMIN_TOKEN` set, one client
-  or all clients can be reset without a restart:
+- Limits live in memory: restarting the backend resets them. The admin area has a button to
+  reset them without a restart (`POST /api/admin/rate-limits/reset`, owner login required).
+
+## Admin area
+`http://localhost:4200/admin` is the owner's view: order list with status filter, details with
+address and payment, download of the uploaded model, and buttons that move an order along
+`NEW → PAID → IN_REVIEW → PRINTING → SHIPPED` (or cancel it). Shipping starts the 90-day
+retention clock.
+
+Login is HTTP Basic against `/api/admin/**` with `ADMIN_USERNAME` / `ADMIN_PASSWORD` from the
+environment; the browser keeps the credentials for the tab only. With a blank password the
+admin API answers `401` to everyone. Set it in your shell before starting the stack:
 
 ```powershell
-curl.exe -X POST -H "X-Admin-Token: $env:ADMIN_TOKEN" "http://localhost:8080/api/admin/rate-limits/reset?clientKey=172.18.0.4"
+$env:ADMIN_PASSWORD = "choose-something-long"; docker compose -f docker-compose.local.yml up -d backend
 ```
 
 Behind a reverse proxy set `rate-limit.trust-forwarded-headers=true` so clients are keyed by
