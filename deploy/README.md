@@ -68,15 +68,28 @@ the backup taken before the update instead of rolling the code back alone.
 
 ## Restore from backup
 
+The dump is plain SQL without `DROP` statements, so it must go into an empty schema: restoring
+over existing tables fails on "already exists" and silently skips rows. Rehearsed 2026-10-20
+(1 order, 4 migrations, 1 order file restored identically).
+
 ```bash
 cd /opt/3dburg/pod-frontend/deploy
+STAMP=<stamp>   # e.g. 20261020-173535, from ls /var/backups/3dburg
+PSQL="docker compose -f docker-compose.prod.yml exec -T postgres psql -U sliceruser -d slicercore"
+
 docker compose -f docker-compose.prod.yml stop backend
-gunzip -c /var/backups/3dburg/db-<stamp>.sql.gz \
-  | docker compose -f docker-compose.prod.yml exec -T postgres psql -U sliceruser -d slicercore
-docker run --rm -v 3dburg_order_files:/data -v /var/backups/3dburg:/backup alpine:3.20 \
-  sh -c "rm -rf /data/* && tar xzf /backup/order-files-<stamp>.tar.gz -C /data"
+$PSQL -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'
+gunzip -c /var/backups/3dburg/db-$STAMP.sql.gz | $PSQL -v ON_ERROR_STOP=1 -q && echo "DB RESTORED"
+docker run --rm -v 3dburg_order_files:/data -v /var/backups/3dburg:/backup alpine:3.20   sh -c "rm -rf /data/* && tar xzf /backup/order-files-$STAMP.tar.gz -C /data"
 docker compose -f docker-compose.prod.yml start backend
+
+# Verify: order count and file count must match the state the backup was taken from.
+$PSQL -tAc 'select count(*) from orders'
+docker run --rm -v 3dburg_order_files:/data:ro alpine:3.20 sh -c 'ls /data | wc -l'
 ```
+
+If the restore fails half-way nothing is lost: the backup file is untouched and the backend
+recreates an empty schema through Flyway on its next start, so fix the cause and run it again.
 
 Restoring a backup that predates an erasure brings personal data back; run the retention sweep
 afterwards (it runs nightly, or restart the backend and wait for the cron) and re-apply any
