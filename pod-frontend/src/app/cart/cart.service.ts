@@ -1,12 +1,12 @@
 import { Injectable, signal } from '@angular/core';
-import { ColorOption, FilamentCode, QualityCode, QuoteResponse } from '../quote/quote.models';
+import { ColorOption, QuoteResponse } from '../quote/quote.models';
 
 /** One configured model with its quote, handed from the upload page to the checkout. */
 export interface CartItem {
     file: File;
-    filament: FilamentCode;
+    filament: string;
     color: ColorOption;
-    quality: QualityCode;
+    quality: string;
     quantity: number;
     quote: QuoteResponse;
 }
