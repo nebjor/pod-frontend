@@ -1,8 +1,16 @@
-/** Mirrors the JSON contract of the cad-slicer-engine orders API (`/api/orders`). */
-
+/**
+ * Orders API models (`/api/orders`). Response shapes are aliases of the generated contract in
+ * `src/app/api/openapi.d.ts`; request parameters and error shapes are hand-written.
+ */
+import type { components } from '../api/openapi';
 import { QuoteResponse } from '../quote/quote.models';
 
-export type OrderStatus = 'NEW' | 'PAID' | 'IN_REVIEW' | 'APPROVED' | 'PRINTING' | 'SHIPPED' | 'CANCELLED';
+type Schemas = components['schemas'];
+
+export type OrderStatus = Schemas['OrderResponse']['status'];
+export type OrderTotals = Schemas['OrderTotals'];
+export type OrderResponse = Schemas['OrderResponse'];
+export type OrderSettings = Schemas['OrderSettingsResponse'];
 
 export interface CustomerDetails {
     customerName: string;
@@ -23,41 +31,6 @@ export interface OrderRequestParams extends CustomerDetails {
     expectedTotalChf: number;
 }
 
-export interface OrderTotals {
-    setupFee: number;
-    unitPrice: number;
-    itemsTotal: number;
-    shipping: number;
-    vatRate: number;
-    vatAmount: number;
-    total: number;
-    currency: string;
-}
-
-export interface OrderResponse {
-    orderNumber: string;
-    status: OrderStatus;
-    createdAt: string;
-    quoteExpiresAt: string;
-    paidAt: string | null;
-    customerName: string;
-    customerEmail: string;
-    fileName: string;
-    filament: string;
-    colorCode: string;
-    colorLabel: string;
-    quality: string;
-    quantity: number;
-    plateCount: number;
-    totalPrintTimeSeconds: number;
-    totalFilamentGrams: number;
-    totals: OrderTotals;
-    /** Present when no VAT is charged. */
-    vatNote: string | null;
-    /** Hosted payment page to send the customer to; null once paid. */
-    paymentUrl: string | null;
-}
-
 /** Remembered in sessionStorage between checkout, payment page and success page. */
 export interface LastOrderReference {
     orderNumber: string;
@@ -65,15 +38,6 @@ export interface LastOrderReference {
 }
 
 export const LAST_ORDER_STORAGE_KEY = 'pod.lastOrder';
-
-export interface OrderSettings {
-    currency: string;
-    shippingFlatChf: number;
-    vatEnabled: boolean;
-    vatRate: number;
-    quoteValidityDays: number;
-    shipToCountries: string[];
-}
 
 /** 409 from the backend: the quote was recomputed and differs from what the customer saw. */
 export interface PriceChanged {

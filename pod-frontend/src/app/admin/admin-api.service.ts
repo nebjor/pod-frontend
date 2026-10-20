@@ -1,40 +1,12 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { OrderStatus, OrderTotals } from '../order/order.models';
+import type { components } from '../api/openapi';
+import { OrderStatus } from '../order/order.models';
 import { ADMIN_API_PREFIX } from './admin-auth.interceptor';
 
-/** Mirrors the backend's AdminOrderResponse. */
-export interface AdminOrder {
-    orderNumber: string;
-    status: OrderStatus;
-    allowedTransitions: OrderStatus[];
-    createdAt: string;
-    quoteExpiresAt: string;
-    paidAt: string | null;
-    shippedAt: string | null;
-    deleteAfter: string | null;
-    customerName: string;
-    customerEmail: string;
-    street: string;
-    postalCode: string;
-    city: string;
-    country: string;
-    fileName: string;
-    fileSizeBytes: number;
-    filament: string;
-    colorCode: string;
-    colorLabel: string;
-    quality: string;
-    quantity: number;
-    machineProfile: string;
-    layerHeightMm: number;
-    plateCount: number;
-    totalPrintTimeSeconds: number;
-    totalFilamentGrams: number;
-    totals: OrderTotals;
-    paymentProvider: string | null;
-}
+/** The owner's view of an order, as the backend publishes it. */
+export type AdminOrder = components['schemas']['AdminOrderResponse'];
 
 @Injectable({ providedIn: 'root' })
 export class AdminApiService {
