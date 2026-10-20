@@ -1,5 +1,5 @@
 /**
- * Generated from /v3/api-docs of the cad-slicer-engine backend by scripts/generate-api-types.mjs.
+ * Generated from target/openapi.json of the cad-slicer-engine backend by scripts/generate-api-types.mjs.
  * Do not edit by hand; run `npm run api:types` against a running backend instead.
  */
 export interface paths {
@@ -93,6 +93,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["resetRateLimit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["upload"];
         delete?: never;
         options?: never;
         head?: never;
@@ -269,6 +285,8 @@ export interface components {
             code: string;
             hex: string;
             label: string;
+            /** Format: double */
+            pricePerKgChf: number;
         };
         FilamentOption: {
             code: string;
@@ -395,6 +413,12 @@ export interface components {
         StatusChange: {
             /** @enum {string} */
             status: "NEW" | "PAID" | "IN_REVIEW" | "APPROVED" | "PRINTING" | "SHIPPED" | "CANCELLED";
+        };
+        UploadedModel: {
+            fileName: string;
+            modelId: string;
+            /** Format: int64 */
+            sizeBytes: number;
         };
     };
     responses: never;
@@ -544,6 +568,33 @@ export interface operations {
             };
         };
     };
+    upload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UploadedModel"];
+                };
+            };
+        };
+    };
     placeOrder: {
         parameters: {
             query?: never;
@@ -645,6 +696,7 @@ export interface operations {
             query?: {
                 color?: string;
                 filament?: string;
+                modelId?: string;
                 quality?: string;
                 quantity?: number;
             };

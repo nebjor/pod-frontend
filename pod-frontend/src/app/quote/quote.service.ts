@@ -1,19 +1,46 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
-import { QuoteOptions, QuoteRequestParams, QuoteResponse } from './quote.models';
+import { Observable, filter, map } from 'rxjs';
+import { QuoteOptions, QuoteRequestParams, QuoteResponse, UploadedModel } from './quote.models';
 
-/** Relative path; the dev server proxies `/api` to the Spring backend (see proxy.conf.js). */
+/** Relative paths; the dev server proxies `/api` to the Spring backend (see proxy.conf.js). */
 export const QUOTE_API_URL = '/api/quotes';
+export const MODEL_API_URL = '/api/models';
+
+/** What an upload reports: progress while the bytes go out, then the model the backend keeps. */
+export type UploadEvent = { kind: 'progress'; percent: number } | { kind: 'done'; model: UploadedModel };
 
 @Injectable({ providedIn: 'root' })
 export class QuoteService {
     private readonly http = inject(HttpClient);
 
-    /** Uploads the model and lets the backend slice and price it. */
-    requestQuote(file: File, params: QuoteRequestParams): Observable<QuoteResponse> {
+    /**
+     * Uploads the model once; the backend keeps it for a while so that quotes reference it by
+     * id instead of sending the file again.
+     */
+    uploadModel(file: File): Observable<UploadEvent> {
         const body = new FormData();
         body.append('file', file, file.name);
+
+        return this.http.post<UploadedModel>(MODEL_API_URL, body, { reportProgress: true, observe: 'events' }).pipe(
+            map((event): UploadEvent | null => {
+                if (event.type === HttpEventType.UploadProgress) {
+                    const percent = event.total ? Math.round((event.loaded / event.total) * 100) : 0;
+                    return { kind: 'progress', percent };
+                }
+                if (event.type === HttpEventType.Response && event.body) {
+                    return { kind: 'done', model: event.body };
+                }
+                return null;
+            }),
+            filter((event): event is UploadEvent => event !== null)
+        );
+    }
+
+    /** Lets the backend slice and price a model it already keeps. */
+    requestQuote(modelId: string, params: QuoteRequestParams): Observable<QuoteResponse> {
+        const body = new FormData();
+        body.append('modelId', modelId);
         body.append('filament', params.filament);
         body.append('color', params.color);
         body.append('quality', params.quality);
@@ -33,6 +60,15 @@ interface QuoteProblem {
     detail?: unknown;
     retryAfterSeconds?: unknown;
     supportEmail?: unknown;
+}
+
+/** True when the backend no longer keeps the model and it has to be uploaded again. */
+export function isModelExpired(error: unknown): boolean {
+    if (!(error instanceof HttpErrorResponse) || error.status !== 404) {
+        return false;
+    }
+    const problem = (error.error ?? null) as { code?: unknown } | null;
+    return problem?.code === 'model-expired';
 }
 
 /** Turns an HTTP failure into a message the upload page can show. */

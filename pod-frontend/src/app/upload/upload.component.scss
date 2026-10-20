@@ -296,6 +296,12 @@
     gap: 0.5rem;
 }
 
+.swatch-price {
+    font-size: 0.78rem;
+    color: var(--text-300);
+    white-space: nowrap;
+}
+
 .swatch {
     position: relative;
     display: inline-flex;
@@ -370,8 +376,9 @@
     }
 }
 
-.estimate.inactive {
-    opacity: 0.55;
+.estimate .quote-body.stale {
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
 }
 
 .estimate-total {

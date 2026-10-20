@@ -96,6 +96,7 @@
                                     <input type="radio" formControlName="color" [value]="color.code" />
                                     <span class="swatch-dot" [style.background]="color.hex" aria-hidden="true"></span>
                                     <span class="swatch-label">{{ color.label }}</span>
+                                    <span class="swatch-price">CHF {{ color.pricePerKgChf | number:'1.0-0' }}/kg</span>
                                 </label>
                             }
                         </div>
@@ -103,86 +104,99 @@
                 </form>
 
                 <div class="estimate" [class.inactive]="quoteState() !== 'ready'" aria-live="polite">
-                    @switch (quoteState()) {
-                        @case ('loading') {
-                            <p class="estimate-line estimate-status">
-                                <span class="spinner" aria-hidden="true"></span>
-                                Slicer berechnet dein Angebot...
-                            </p>
-                        }
-                        @case ('error') {
-                            <p class="estimate-line estimate-error">{{ quoteError() }}</p>
-                            <button type="button" class="retry-btn" (click)="requestQuote(true)">Erneut berechnen</button>
-                        }
-                        @case ('ready') {
-                            @if (quote(); as q) {
-                                <p class="estimate-line estimate-total">
-                                    Preis gesamt: <strong>{{ q.currency }} {{ q.totalPriceChf | number:'1.2-2' }}</strong>
-                                </p>
-
-                                <dl class="quote-details">
-                                    <div>
-                                        <dt>Stueckpreis</dt>
-                                        <dd>{{ q.currency }} {{ q.unitPriceChf | number:'1.2-2' }}</dd>
-                                    </div>
-                                    <div>
-                                        <dt>Einrichtung</dt>
-                                        <dd>{{ q.currency }} {{ q.setupFeeChf | number:'1.2-2' }}</dd>
-                                    </div>
-                                    <div>
-                                        <dt>Druckzeit gesamt</dt>
-                                        <dd>{{ totalPrintTimeLabel() }}</dd>
-                                    </div>
-                                    <div>
-                                        <dt>Druckzeit je Stueck</dt>
-                                        <dd>{{ unitPrintTimeLabel() }}</dd>
-                                    </div>
-                                    <div>
-                                        <dt>Druckplatten</dt>
-                                        <dd>{{ q.plateCount }} x Bambu Lab A1</dd>
-                                    </div>
-                                    <div>
-                                        <dt>Material gesamt</dt>
-                                        <dd>{{ q.totalFilamentGrams | number:'1.0-1' }} g {{ q.filament }}</dd>
-                                    </div>
-                                    <div>
-                                        <dt>Materialkosten</dt>
-                                        <dd>{{ q.currency }} {{ q.materialCostChf | number:'1.2-2' }}</dd>
-                                    </div>
-                                    <div>
-                                        <dt>Maschinenzeit</dt>
-                                        <dd>{{ q.currency }} {{ q.machineCostChf | number:'1.2-2' }}</dd>
-                                    </div>
-                                    <div>
-                                        <dt>Farbe</dt>
-                                        <dd class="color-value">
-                                            <span class="swatch-dot small" [style.background]="selectedColor()?.hex" aria-hidden="true"></span>
-                                            {{ selectedColor()?.label }}
-                                        </dd>
-                                    </div>
-                                    <div>
-                                        <dt>Abmessungen</dt>
-                                        <dd>
-                                            {{ q.boundingBoxMm.widthMm | number:'1.0-1' }} x
-                                            {{ q.boundingBoxMm.depthMm | number:'1.0-1' }} x
-                                            {{ q.boundingBoxMm.heightMm | number:'1.0-1' }} mm
-                                        </dd>
-                                    </div>
-                                    <div>
-                                        <dt>Lieferzeit</dt>
-                                        <dd>{{ q.leadTimeDays }} Tage</dd>
-                                    </div>
-                                </dl>
-
-                                <p class="estimate-note">
-                                    Berechnet vom Slicer-Backend ({{ q.machineProfile }}, {{ q.layerHeightMm }} mm Schichthoehe).
-                                    Alle {{ q.quantity }} Stueck werden gemeinsam auf {{ q.plateCount }} Platte(n) angeordnet und als Batch gedruckt.
+                    @if (uploadState() === 'uploading') {
+                        <p class="estimate-line estimate-status">
+                            <span class="spinner" aria-hidden="true"></span>
+                            Modell wird hochgeladen... {{ uploadProgress() }}%
+                        </p>
+                    } @else {
+                        @switch (quoteState()) {
+                            @case ('loading') {
+                                <p class="estimate-line estimate-status">
+                                    <span class="spinner" aria-hidden="true"></span>
+                                    @if (quote()) {
+                                        Preis wird neu berechnet...
+                                    } @else {
+                                        Slicer berechnet dein Angebot...
+                                    }
                                 </p>
                             }
+                            @case ('error') {
+                                <p class="estimate-line estimate-error">{{ quoteError() }}</p>
+                                <button type="button" class="retry-btn" (click)="requestQuote(true)">Erneut berechnen</button>
+                            }
+                            @case ('idle') {
+                                <p class="estimate-line">Lade ein Modell hoch, um ein Angebot zu erhalten.</p>
+                            }
                         }
-                        @default {
-                            <p class="estimate-line">Lade ein Modell hoch, um ein Angebot zu erhalten.</p>
-                        }
+                    }
+
+                    <!-- The last quote stays visible, dimmed, while a new one is computed. -->
+                    @if (quote(); as q) {
+                        <div class="quote-body" [class.stale]="quoteState() !== 'ready'">
+                        <p class="estimate-line estimate-total">
+                            Preis gesamt: <strong>{{ q.currency }} {{ q.totalPriceChf | number:'1.2-2' }}</strong>
+                        </p>
+
+                        <dl class="quote-details">
+                            <div>
+                                <dt>Stueckpreis</dt>
+                                <dd>{{ q.currency }} {{ q.unitPriceChf | number:'1.2-2' }}</dd>
+                            </div>
+                            <div>
+                                <dt>Einrichtung</dt>
+                                <dd>{{ q.currency }} {{ q.setupFeeChf | number:'1.2-2' }}</dd>
+                            </div>
+                            <div>
+                                <dt>Druckzeit gesamt</dt>
+                                <dd>{{ totalPrintTimeLabel() }}</dd>
+                            </div>
+                            <div>
+                                <dt>Druckzeit je Stueck</dt>
+                                <dd>{{ unitPrintTimeLabel() }}</dd>
+                            </div>
+                            <div>
+                                <dt>Druckplatten</dt>
+                                <dd>{{ q.plateCount }} x Bambu Lab A1</dd>
+                            </div>
+                            <div>
+                                <dt>Material gesamt</dt>
+                                <dd>{{ q.totalFilamentGrams | number:'1.0-1' }} g {{ q.filament }}</dd>
+                            </div>
+                            <div>
+                                <dt>Materialkosten</dt>
+                                <dd>{{ q.currency }} {{ q.materialCostChf | number:'1.2-2' }}</dd>
+                            </div>
+                            <div>
+                                <dt>Maschinenzeit</dt>
+                                <dd>{{ q.currency }} {{ q.machineCostChf | number:'1.2-2' }}</dd>
+                            </div>
+                            <div>
+                                <dt>Farbe</dt>
+                                <dd class="color-value">
+                                    <span class="swatch-dot small" [style.background]="selectedColor()?.hex" aria-hidden="true"></span>
+                                    {{ selectedColor()?.label }}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt>Abmessungen</dt>
+                                <dd>
+                                    {{ q.boundingBoxMm.widthMm | number:'1.0-1' }} x
+                                    {{ q.boundingBoxMm.depthMm | number:'1.0-1' }} x
+                                    {{ q.boundingBoxMm.heightMm | number:'1.0-1' }} mm
+                                </dd>
+                            </div>
+                            <div>
+                                <dt>Lieferzeit</dt>
+                                <dd>{{ q.leadTimeDays }} Tage</dd>
+                            </div>
+                        </dl>
+
+                        <p class="estimate-note">
+                            Berechnet vom Slicer-Backend ({{ q.machineProfile }}, {{ q.layerHeightMm }} mm Schichthoehe).
+                            Alle {{ q.quantity }} Stueck werden gemeinsam auf {{ q.plateCount }} Platte(n) angeordnet und als Batch gedruckt.
+                        </p>
+                        </div>
                     }
                 </div>
 
