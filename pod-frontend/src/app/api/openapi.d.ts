@@ -285,6 +285,8 @@ export interface components {
             code: string;
             hex: string;
             label: string;
+            /** Format: double */
+            pricePerKgChf: number;
         };
         FilamentOption: {
             code: string;

@@ -296,6 +296,12 @@
     gap: 0.5rem;
 }
 
+.swatch-price {
+    font-size: 0.78rem;
+    color: var(--text-300);
+    white-space: nowrap;
+}
+
 .swatch {
     position: relative;
     display: inline-flex;
