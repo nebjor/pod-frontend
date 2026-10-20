@@ -19,7 +19,7 @@
     gap: 1.5rem;
 
     .subtitle {
-        color: #db2777;
+        color: var(--accent-300);
         font-weight: bold;
         text-transform: uppercase;
         letter-spacing: 1px;
@@ -39,7 +39,7 @@
         }
 
         .highlight {
-            color: #db2777;
+            color: var(--accent-450);
         }
     }
 

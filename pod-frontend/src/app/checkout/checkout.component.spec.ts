@@ -101,7 +101,8 @@ describe('CheckoutComponent', () => {
             street: 'Bahnhofstrasse 1',
             postalCode: '8001',
             city: 'Zürich',
-            country: 'CH'
+            country: 'CH',
+            termsAccepted: true
         });
     }
 
@@ -119,6 +120,18 @@ describe('CheckoutComponent', () => {
         expect(component.itemsTotal()).toBe(11);
         expect(component.shipping()).toBe(9);
         expect(component.total()).toBe(20);
+    });
+
+    it('does not submit without the terms accepted', () => {
+        cart.set(cartItem());
+        create();
+        fillAddress();
+        component.customerForm.controls.termsAccepted.setValue(false);
+
+        component.submit();
+
+        expect(placeOrder).not.toHaveBeenCalled();
+        expect(component.customerForm.controls.termsAccepted.touched).toBe(true);
     });
 
     it('does not submit an incomplete address', () => {

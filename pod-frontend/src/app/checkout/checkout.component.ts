@@ -48,7 +48,8 @@ export class CheckoutComponent {
         street: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(160)] }),
         postalCode: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(16)] }),
         city: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(120)] }),
-        country: new FormControl('CH', { nonNullable: true, validators: [Validators.required] })
+        country: new FormControl('CH', { nonNullable: true, validators: [Validators.required] }),
+        termsAccepted: new FormControl(false, { nonNullable: true, validators: [Validators.requiredTrue] })
     });
 
     readonly itemsTotal = computed(() => this.item()?.quote.totalPriceChf ?? 0);
@@ -91,7 +92,7 @@ export class CheckoutComponent {
         this.fieldErrors.set({});
         this.priceChangedTo.set(null);
 
-        const customer = this.customerForm.getRawValue();
+        const { termsAccepted: _accepted, ...customer } = this.customerForm.getRawValue();
         this.orderService
             .placeOrder(item.file, {
                 ...customer,

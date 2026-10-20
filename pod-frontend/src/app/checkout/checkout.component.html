@@ -93,6 +93,21 @@
                         </select>
                     </label>
 
+                    <label class="terms">
+                        <input formControlName="termsAccepted" type="checkbox" />
+                        <span>
+                            Ich akzeptiere die <a routerLink="/agb" target="_blank">AGB</a> und habe die
+                            <a routerLink="/datenschutz" target="_blank">Datenschutzerklärung</a> gelesen.
+                            @if (customerForm.controls.termsAccepted.touched && customerForm.controls.termsAccepted.invalid) {
+                                <span class="field-error">Bitte akzeptiere die AGB, um zu bestellen.</span>
+                            }
+                        </span>
+                    </label>
+                    <p class="note wide">
+                        Dein Teil wird individuell nach deinem Modell gefertigt. Eine Rückgabe ist deshalb
+                        ausgeschlossen; bis zum Produktionsstart kannst du per E-Mail stornieren.
+                    </p>
+
                     @if (priceChangedTo() !== null) {
                         <div class="price-changed" role="alert">
                             <p>
