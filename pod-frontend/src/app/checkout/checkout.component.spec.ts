@@ -11,7 +11,7 @@ import { CheckoutComponent, FALLBACK_ORDER_SETTINGS } from './checkout.component
 const quote: QuoteResponse = {
     fileName: 'benchy.stl',
     filament: 'PLA',
-    color: { code: 'red', label: 'Red', hex: '#d62828' },
+    color: { code: 'red', label: 'Red', hex: '#d62828', pricePerKgChf: 45 },
     quality: 'medium',
     quantity: 2,
     machineProfile: 'Bambu Lab A1 0.4 nozzle',
