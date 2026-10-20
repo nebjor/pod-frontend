@@ -1,10 +1,13 @@
 import { Routes } from '@angular/router';
 
+const admin = () => import('./admin/admin.component').then((m) => m.AdminComponent);
+
 /**
  * Every page is lazy loaded so the 3D viewer (three.js) only ships with the pages that
- * render it and stays out of the initial bundle.
+ * render it and stays out of the initial bundle. Which table applies is decided by the host
+ * (see host-routes.ts): the shop's pages on the shop host, the admin panel on the admin host.
  */
-export const routes: Routes = [
+export const shopRoutes: Routes = [
     {
         path: '',
         loadComponent: () => import('./landing/landing.component').then((m) => m.LandingComponent)
@@ -26,8 +29,10 @@ export const routes: Routes = [
         loadComponent: () => import('./payment/mock-payment.component').then((m) => m.MockPaymentComponent)
     },
     {
+        // Kept in the shop table so the page is prerendered; on the shop host Caddy redirects
+        // it to the admin host, where it is served as the root (see server.ts).
         path: 'admin',
-        loadComponent: () => import('./admin/admin.component').then((m) => m.AdminComponent)
+        loadComponent: admin
     },
     {
         path: 'impressum',
@@ -43,3 +48,17 @@ export const routes: Routes = [
     },
     { path: '**', redirectTo: '' }
 ];
+
+/**
+ * On admin.3dburg.ch the panel is the root. The 'admin' path stays as well because the
+ * prerendered page the server hands out for the root of that host is the one built for
+ * /admin (see server.ts); both paths render the same component, so hydration matches.
+ */
+export const adminRoutes: Routes = [
+    { path: '', loadComponent: admin },
+    { path: 'admin', loadComponent: admin },
+    { path: '**', redirectTo: '' }
+];
+
+/** Default table, used by tooling that needs one without a host. */
+export const routes = shopRoutes;

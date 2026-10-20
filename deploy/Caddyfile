@@ -29,7 +29,7 @@ www.{$SITE_ADDRESS} {
 	}
 
 	# The admin panel lives on its own host so its browser session is separate from the shop's.
-	redir /admin* https://admin.{$SITE_ADDRESS}{uri} permanent
+	redir /admin* https://admin.{$SITE_ADDRESS}/ permanent
 
 	# API and its contract go to Spring; everything else is rendered by the Angular server.
 	@backend path /api/* /v3/api-docs /v3/api-docs/* /api-docs /api-docs/* /swagger-ui/*
@@ -47,7 +47,8 @@ admin.{$SITE_ADDRESS} {
 	encode zstd gzip
 	import security_headers
 
-	redir / /admin
+	# The panel is the root here; the old path still works for bookmarks.
+	redir /admin* / permanent
 
 	handle /api/* {
 		reverse_proxy backend:8080
