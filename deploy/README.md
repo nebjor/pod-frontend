@@ -43,6 +43,27 @@ internet ──443──> caddy ──> frontend:4000 (Angular SSR)
 With the mock provider the payment page is a stand-in: orders become `PAID` without money.
 Do not ship anything ordered through it.
 
+## Switch payments to Stripe
+
+Until this is done the mock provider is active and orders become `PAID` without money. Do it
+first with the **test** keys and a test card, then once more with the live keys.
+
+1. In the Stripe dashboard open **Entwickler → API-Schlüssel** and copy the secret key
+   (`sk_test_...`, later `sk_live_...`).
+2. Under **Entwickler → Webhooks** add an endpoint for
+   `https://3dburg.ch/api/payments/stripe/webhook` with the events
+   `checkout.session.completed` and `checkout.session.async_payment_succeeded`, then copy its
+   signing secret (`whsec_...`). Test and live mode each have their own endpoint and secret.
+3. On the server set `PAYMENT_PROVIDER=stripe`, `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`
+   in `.env`, then `docker compose -f docker-compose.prod.yml up -d backend`. The backend
+   refuses to start if either key is missing; `logs backend` says which.
+4. Place an order with Stripe's test card `4242 4242 4242 4242`, any future date, any CVC.
+   The success page must switch to "bezahlt", the order must be `PAID` in `/admin`, and the
+   webhook's delivery must show `200` in the Stripe dashboard. A `400` there means the secret
+   in `.env` belongs to another endpoint.
+5. Repeat steps 1 to 4 with the live keys and the live webhook endpoint. From then on the
+   `/pay/mock` page and the mock confirmation endpoint no longer exist.
+
 ## Update
 
 ```bash
@@ -88,7 +109,7 @@ deletion requests made since.
 - **Database password**: `docker compose ... exec postgres psql -U sliceruser -d slicercore -c "ALTER USER sliceruser PASSWORD '<new>'"`,
   then update `.env` and `up -d backend postgres`.
 - **Mail password**: change it in the Infomaniak manager, update `.env`, `up -d backend`.
-- **Stripe keys** (once live): rotate in the Stripe dashboard, update `.env`, `up -d backend`.
+- **Stripe keys**: roll the secret key or the webhook secret in the Stripe dashboard, update `.env`, `up -d backend`.
 
 ## Reset a rate limit
 
