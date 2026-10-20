@@ -17,6 +17,7 @@ export type QuoteResponse = Schemas['QuoteResponse'];
 export type FilamentOption = Schemas['FilamentOption'];
 export type QualityOption = Schemas['QualityOption'];
 export type QuoteOptions = Schemas['QuoteOptions'];
+export type UploadedModel = Schemas['UploadedModel'];
 
 export interface QuoteRequestParams {
     /** Filament code from `QuoteOptions.filaments`. */

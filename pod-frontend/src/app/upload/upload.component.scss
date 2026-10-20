@@ -370,8 +370,9 @@
     }
 }
 
-.estimate.inactive {
-    opacity: 0.55;
+.estimate .quote-body.stale {
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
 }
 
 .estimate-total {

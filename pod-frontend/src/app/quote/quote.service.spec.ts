@@ -1,8 +1,8 @@
-import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import { HttpErrorResponse, HttpEventType, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { QuoteResponse } from './quote.models';
-import { QUOTE_API_URL, QuoteService, describeQuoteError } from './quote.service';
+import { MODEL_API_URL, QUOTE_API_URL, QuoteService, UploadEvent, describeQuoteError, isModelExpired } from './quote.service';
 
 const sampleQuote: QuoteResponse = {
     fileName: 'cube.stl',
@@ -43,26 +43,53 @@ describe('QuoteService', () => {
 
     afterEach(() => http.verify());
 
-    it('posts the model and parameters as multipart form data', () => {
+    it('uploads the model once and reports progress, then the id the backend keeps it under', () => {
         const file = new File(['solid cube'], 'cube.stl', { type: 'model/stl' });
+        const events: UploadEvent[] = [];
+
+        service.uploadModel(file).subscribe((event) => events.push(event));
+
+        const request = http.expectOne(MODEL_API_URL);
+        expect(request.request.method).toBe('POST');
+        expect(request.request.reportProgress).toBe(true);
+        expect(((request.request.body as FormData).get('file') as File).name).toBe('cube.stl');
+
+        request.event({ type: HttpEventType.UploadProgress, loaded: 5, total: 10 });
+        request.flush({ modelId: 'a'.repeat(64), fileName: 'cube.stl', sizeBytes: 10 });
+
+        expect(events).toEqual([
+            { kind: 'progress', percent: 50 },
+            { kind: 'done', model: { modelId: 'a'.repeat(64), fileName: 'cube.stl', sizeBytes: 10 } }
+        ]);
+    });
+
+    it('posts the model id and parameters as multipart form data', () => {
         let received: QuoteResponse | undefined;
 
         service
-            .requestQuote(file, { filament: 'PETG', color: 'white', quality: 'high', quantity: 3 })
+            .requestQuote('a'.repeat(64), { filament: 'PETG', color: 'white', quality: 'high', quantity: 3 })
             .subscribe((quote) => (received = quote));
 
         const request = http.expectOne(QUOTE_API_URL);
         expect(request.request.method).toBe('POST');
 
         const body = request.request.body as FormData;
+        expect(body.get('modelId')).toBe('a'.repeat(64));
         expect(body.get('filament')).toBe('PETG');
         expect(body.get('color')).toBe('white');
         expect(body.get('quality')).toBe('high');
         expect(body.get('quantity')).toBe('3');
-        expect((body.get('file') as File).name).toBe('cube.stl');
+        expect(body.has('file')).toBe(false);
 
         request.flush(sampleQuote);
         expect(received?.totalPriceChf).toBe(19.1);
+    });
+
+    it('recognises the backend telling us to upload the model again', () => {
+        expect(isModelExpired(new HttpErrorResponse({ status: 404, error: { code: 'model-expired' } }))).toBe(true);
+        expect(isModelExpired(new HttpErrorResponse({ status: 404, error: { detail: 'Sample file not found.' } }))).toBe(false);
+        expect(isModelExpired(new HttpErrorResponse({ status: 500 }))).toBe(false);
+        expect(isModelExpired(new Error('boom'))).toBe(false);
     });
 
     it('loads the available options', () => {

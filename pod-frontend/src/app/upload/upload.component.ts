@@ -12,31 +12,40 @@ import {
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { EMPTY, Subject, catchError, concatMap, debounceTime, from, map, of, switchMap, tap, timer } from 'rxjs';
+import { EMPTY, Subject, catchError, concatMap, debounce, from, map, of, switchMap, tap, timer } from 'rxjs';
 import { CartService } from '../cart/cart.service';
 import { ModelViewerComponent } from '../model-viewer/model-viewer.component';
 import { ColorOption, FilamentOption, QualityOption, QuoteOptions, QuoteResponse } from '../quote/quote.models';
-import { QuoteService, describeQuoteError } from '../quote/quote.service';
+import { QuoteService, UploadEvent, describeQuoteError, isModelExpired } from '../quote/quote.service';
 
 type UploadFormat = 'stl' | '3mf';
 type QuoteState = 'idle' | 'loading' | 'ready' | 'error';
+type UploadState = 'idle' | 'uploading' | 'done' | 'error';
 type CatalogState = 'loading' | 'ready' | 'error';
 type ModelLoadState = 'idle' | 'loading' | 'loaded' | 'error';
 
 interface QuoteJob {
     key: string;
-    file: File;
+    modelId: string;
     filament: string;
     color: string;
     quality: string;
     quantity: number;
+    /** Skip the debounce: the job follows an upload or a retry, not a form change. */
+    immediate: boolean;
+    /** Slice even if the cache holds this combination; the retry button needs that. */
+    force: boolean;
 }
 
 interface QuoteOutcome {
     job: QuoteJob;
     quote: QuoteResponse | null;
     error: string;
+    /** The backend no longer keeps the model; it has to be uploaded again first. */
+    modelExpired: boolean;
 }
+
+type UploadOutcome = { file: File; event: UploadEvent } | { file: File; event: { kind: 'error'; message: string } };
 
 /**
  * Every slicer run costs seconds of CPU and counts against the client's rate limit, so the
@@ -45,15 +54,15 @@ interface QuoteOutcome {
 export const QUOTE_DEBOUNCE_MS = 800;
 
 /**
- * Once a quote is on screen the other filaments are fetched in the background, so switching
- * between them is instant. The pause keeps a user who is still changing quality or quantity
- * from triggering slices that are thrown away.
+ * Once a quote is on screen, the other filaments at this quality and the other qualities with
+ * this filament are fetched in the background, so switching between them is instant. The
+ * pause keeps a user who is still changing values from triggering slices that are thrown away.
  */
 export const PREFETCH_DELAY_MS = 1000;
 
 /** Identifies a slice; colour is excluded because it never changes the result. */
-function quoteKey(file: File, filament: string, quality: string, quantity: number): string {
-    return `${file.name}|${file.size}|${file.lastModified}|${filament}|${quality}|${quantity}`;
+function quoteKey(modelId: string, filament: string, quality: string, quantity: number): string {
+    return `${modelId}|${filament}|${quality}|${quantity}`;
 }
 
 /** Chosen when the catalogue arrives, if the backend offers it; otherwise the first tier. */
@@ -88,8 +97,11 @@ export class UploadComponent {
     private readonly quoteService = inject(QuoteService);
     private readonly cart = inject(CartService);
     private readonly destroyRef = inject(DestroyRef);
+    private readonly uploads = new Subject<File | null>();
     private readonly quoteJobs = new Subject<QuoteJob | null>();
     private readonly prefetchRuns = new Subject<QuoteJob | null>();
+    /** One re-upload per file when the backend has dropped it; a second expiry is an error. */
+    private reuploaded = false;
 
     /** Key of the last job sent or served from the cache. */
     private lastRequestedKey = '';
@@ -107,6 +119,10 @@ export class UploadComponent {
     readonly errorMessage = signal('');
     readonly cartNotice = signal('');
     readonly selectedFile = signal<File | null>(null);
+    /** Id the backend keeps the uploaded model under; quotes reference it instead of the file. */
+    readonly modelId = signal<string | null>(null);
+    readonly uploadState = signal<UploadState>('idle');
+    readonly uploadProgress = signal(0);
     readonly modelUrl = signal<string | undefined>(undefined);
     readonly modelFormat = signal<UploadFormat | undefined>(undefined);
 
@@ -158,24 +174,52 @@ export class UploadComponent {
     );
 
     constructor() {
+        // A new file cancels the upload of the previous one.
+        this.uploads
+            .pipe(
+                switchMap((file) =>
+                    file === null
+                        ? EMPTY
+                        : this.quoteService.uploadModel(file).pipe(
+                              map((event): UploadOutcome => ({ file, event })),
+                              catchError((error: unknown) =>
+                                  of<UploadOutcome>({ file, event: { kind: 'error', message: describeQuoteError(error) } })
+                              )
+                          )
+                ),
+                takeUntilDestroyed()
+            )
+            .subscribe((outcome) => this.applyUploadOutcome(outcome));
+
         this.quoteJobs
             .pipe(
-                debounceTime(QUOTE_DEBOUNCE_MS),
-                switchMap((job) =>
-                    job === null
-                        ? EMPTY
-                        : this.quoteService.requestQuote(job.file, {
+                debounce((job) => timer(job?.immediate ? 0 : QUOTE_DEBOUNCE_MS)),
+                switchMap((job) => {
+                    if (job === null) {
+                        return EMPTY;
+                    }
+                    // A prefetch may have filled this combination while the job was debounced.
+                    const cached = job.force ? undefined : this.quoteCache.get(job.key);
+                    if (cached) {
+                        return of<QuoteOutcome>({ job, quote: cached, error: '', modelExpired: false });
+                    }
+                    return this.quoteService.requestQuote(job.modelId, {
                               filament: job.filament,
                               color: job.color,
                               quality: job.quality,
                               quantity: job.quantity
                           }).pipe(
-                              map((quote): QuoteOutcome => ({ job, quote, error: '' })),
+                              map((quote): QuoteOutcome => ({ job, quote, error: '', modelExpired: false })),
                               catchError((error: unknown) =>
-                                  of<QuoteOutcome>({ job, quote: null, error: describeQuoteError(error) })
+                                  of<QuoteOutcome>({
+                                      job,
+                                      quote: null,
+                                      error: describeQuoteError(error),
+                                      modelExpired: isModelExpired(error)
+                                  })
                               )
-                          )
-                ),
+                          );
+                }),
                 takeUntilDestroyed()
             )
             .subscribe((outcome) => this.applyQuoteOutcome(outcome));
@@ -183,7 +227,7 @@ export class UploadComponent {
         this.prefetchRuns
             .pipe(
                 switchMap((job) =>
-                    job === null ? EMPTY : timer(PREFETCH_DELAY_MS).pipe(switchMap(() => this.prefetchOtherFilaments(job)))
+                    job === null ? EMPTY : timer(PREFETCH_DELAY_MS).pipe(switchMap(() => this.prefetchNeighbours(job)))
                 ),
                 takeUntilDestroyed()
             )
@@ -266,18 +310,19 @@ export class UploadComponent {
     }
 
     /**
-     * Sends the current file and configuration to the backend slicer. Jobs whose slice-relevant
-     * values are unchanged are dropped unless {@code force} is set, which the retry button uses.
-     * Without a catalogue there is nothing valid to send; the job runs once it has arrived.
+     * Asks the backend to slice and price the uploaded model with the current configuration.
+     * Jobs whose slice-relevant values are unchanged are dropped unless {@code force} is set,
+     * which the retry button uses; forced jobs also skip the debounce. Without a catalogue or
+     * before the upload has finished there is nothing to send; the job runs once both are there.
      */
     requestQuote(force = false) {
-        const file = this.selectedFile();
-        if (!file || this.catalogState() !== 'ready' || this.orderForm.invalid) {
+        const modelId = this.modelId();
+        if (!modelId || this.catalogState() !== 'ready' || this.orderForm.invalid) {
             return;
         }
 
         const { filament, quality, quantity } = this.orderForm.getRawValue();
-        const key = quoteKey(file, filament, quality, Number(quantity));
+        const key = quoteKey(modelId, filament, quality, Number(quantity));
         if (!force && key === this.lastRequestedKey) {
             return;
         }
@@ -285,14 +330,14 @@ export class UploadComponent {
         // Right after a filament switch the form may still hold a colour the new filament does
         // not come in; selectedColor() already falls back to a stocked one.
         const color = this.selectedColor()?.code ?? this.orderForm.controls.color.value;
-        const job: QuoteJob = { key, file, filament, color, quality, quantity: Number(quantity) };
+        const job: QuoteJob = { key, modelId, filament, color, quality, quantity: Number(quantity), immediate: force, force };
 
         this.lastRequestedKey = key;
         const cached = force ? undefined : this.quoteCache.get(key);
         if (cached) {
             // Served from the cache, and a slice still pending for an earlier choice is dropped.
             this.quoteJobs.next(null);
-            this.applyQuoteOutcome({ job, quote: cached, error: '' });
+            this.applyQuoteOutcome({ job, quote: cached, error: '', modelExpired: false });
             return;
         }
 
@@ -302,31 +347,68 @@ export class UploadComponent {
     }
 
     /**
-     * Fetches the quote of every other filament for the same quality and quantity, one after
-     * the other so the slicer is not flooded. Best effort: a failure only means that filament
-     * is sliced on demand when chosen. Cache hits on the backend do not count against the
-     * rate limit, so repeating a prefetch after a quality change is cheap for the user.
+     * Fetches the quotes next to the one on screen: the other filaments at this quality, then
+     * the other qualities with this filament, one after the other so the slicer is not
+     * flooded. Best effort: a failure only means that combination is sliced on demand when
+     * chosen. Cache hits on the backend do not count against the rate limit, so repeating a
+     * prefetch after a change is cheap for the user.
      */
-    private prefetchOtherFilaments(job: QuoteJob) {
-        const others = this.filamentOptions().filter((option) => option.code !== job.filament);
-        return from(others).pipe(
-            concatMap((option) => {
-                const key = quoteKey(job.file, option.code, job.quality, job.quantity);
+    private prefetchNeighbours(job: QuoteJob) {
+        const colorFor = (filament: string) =>
+            this.filamentOptions().find((option) => option.code === filament)?.colors[0]?.code ?? '';
+        const neighbours = [
+            ...this.filamentOptions()
+                .filter((option) => option.code !== job.filament)
+                .map((option) => ({ filament: option.code, quality: job.quality })),
+            ...this.qualityOptions()
+                .filter((option) => option.code !== job.quality)
+                .map((option) => ({ filament: job.filament, quality: option.code }))
+        ];
+        return from(neighbours).pipe(
+            concatMap(({ filament, quality }) => {
+                const key = quoteKey(job.modelId, filament, quality, job.quantity);
                 if (this.quoteCache.has(key)) {
                     return EMPTY;
                 }
-                const params = {
-                    filament: option.code,
-                    color: option.colors[0]?.code ?? '',
-                    quality: job.quality,
-                    quantity: job.quantity
-                };
-                return this.quoteService.requestQuote(job.file, params).pipe(
+                const params = { filament, color: colorFor(filament), quality, quantity: job.quantity };
+                return this.quoteService.requestQuote(job.modelId, params).pipe(
                     tap((quote) => this.quoteCache.set(key, quote)),
                     catchError(() => EMPTY)
                 );
             })
         );
+    }
+
+    private applyUploadOutcome({ file, event }: UploadOutcome) {
+        if (file !== this.selectedFile()) {
+            return;
+        }
+        switch (event.kind) {
+            case 'progress':
+                this.uploadProgress.set(event.percent);
+                break;
+            case 'done':
+                this.uploadProgress.set(100);
+                this.uploadState.set('done');
+                this.modelId.set(event.model.modelId);
+                this.requestQuote(true);
+                break;
+            case 'error':
+                this.uploadState.set('error');
+                this.quote.set(null);
+                this.quoteError.set(event.message);
+                this.quoteState.set('error');
+                break;
+        }
+    }
+
+    private startUpload(file: File) {
+        this.modelId.set(null);
+        this.uploadState.set('uploading');
+        this.uploadProgress.set(0);
+        this.quoteState.set('loading');
+        this.quoteError.set('');
+        this.uploads.next(file);
     }
 
     onAddToCartAndUploadAnother() {
@@ -411,7 +493,7 @@ export class UploadComponent {
         this.isModelLoading.set(true);
         this.modelUrl.set(URL.createObjectURL(file));
 
-        this.requestQuote();
+        this.startUpload(file);
     }
 
     private applyQuoteOutcome(outcome: QuoteOutcome) {
@@ -421,6 +503,17 @@ export class UploadComponent {
             this.quoteError.set('');
             this.quoteState.set('ready');
             this.prefetchRuns.next(outcome.job);
+            return;
+        }
+
+        const file = this.selectedFile();
+        if (outcome.modelExpired && file && !this.reuploaded) {
+            // The backend dropped the model (restart or expiry): upload it once more, then the
+            // same quote is requested again when the upload completes.
+            this.reuploaded = true;
+            this.quoteCache.clear();
+            this.lastRequestedKey = '';
+            this.startUpload(file);
             return;
         }
 
@@ -441,6 +534,12 @@ export class UploadComponent {
         this.lastRequestedKey = '';
         this.quoteCache.clear();
         this.prefetchRuns.next(null);
+        this.quoteJobs.next(null);
+        this.uploads.next(null);
+        this.modelId.set(null);
+        this.uploadState.set('idle');
+        this.uploadProgress.set(0);
+        this.reuploaded = false;
     }
 
     private releaseModelUrl() {
