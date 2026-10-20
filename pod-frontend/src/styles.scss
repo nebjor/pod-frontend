@@ -50,3 +50,9 @@ body {
 }
 
 /* You can add global styles to this file, and also import other style files */
+
+/* Links default to the accent instead of the browser's blue and purple. */
+a {
+    color: var(--accent-300);
+    text-underline-offset: 0.15em;
+}
