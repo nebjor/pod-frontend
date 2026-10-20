@@ -5,18 +5,7 @@
 	email {$ACME_EMAIL}
 }
 
-www.{$SITE_ADDRESS} {
-	redir https://{$SITE_ADDRESS}{uri} permanent
-}
-
-{$SITE_ADDRESS} {
-	encode zstd gzip
-
-	# Model uploads are capped at 50 MB by the backend; leave room for the multipart overhead.
-	request_body {
-		max_size 60MB
-	}
-
+(security_headers) {
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options nosniff
@@ -24,10 +13,43 @@ www.{$SITE_ADDRESS} {
 		Referrer-Policy strict-origin-when-cross-origin
 		-Server
 	}
+}
+
+www.{$SITE_ADDRESS} {
+	redir https://{$SITE_ADDRESS}{uri} permanent
+}
+
+{$SITE_ADDRESS} {
+	encode zstd gzip
+	import security_headers
+
+	# Model uploads are capped at 50 MB by the backend; leave room for the multipart overhead.
+	request_body {
+		max_size 60MB
+	}
+
+	# The admin panel lives on its own host so its browser session is separate from the shop's.
+	redir /admin* https://admin.{$SITE_ADDRESS}{uri} permanent
 
 	# API and its contract go to Spring; everything else is rendered by the Angular server.
 	@backend path /api/* /v3/api-docs /v3/api-docs/* /api-docs /api-docs/* /swagger-ui/*
 	handle @backend {
+		reverse_proxy backend:8080
+	}
+
+	handle {
+		reverse_proxy frontend:4000
+	}
+}
+
+# Same containers, separate origin: the owner's login and session never mix with a shop visit.
+admin.{$SITE_ADDRESS} {
+	encode zstd gzip
+	import security_headers
+
+	redir / /admin
+
+	handle /api/* {
 		reverse_proxy backend:8080
 	}
 
