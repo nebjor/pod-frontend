@@ -40,6 +40,18 @@ Available sample files:
 
 Note: the current backend slicing service is wired for STL and 3MF input paths. GLB is mounted for inspection, but not part of the current Java slicing path.
 
+## API contract and generated models
+
+The backend publishes its OpenAPI document at `/v3/api-docs` (browsable at `/api-docs`).
+The frontend's response models are aliases of `src/app/api/openapi.d.ts`, which is generated
+and committed. After a backend DTO change, regenerate it against a running backend and review
+the diff; a changed shape then fails the Angular build where it matters:
+
+```powershell
+npm run api:types                                   # backend on http://localhost:8080
+$env:BACKEND_URL = "http://backend:8080"; npm run api:types   # inside the frontend container
+```
+
 ## Quote API
 The upload page sends the selected model to the backend, which slices it with the bundled
 Bambu Lab A1 profiles and returns a priced quote. The Angular dev server proxies `/api` to the

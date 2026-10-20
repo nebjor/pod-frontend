@@ -14,6 +14,7 @@ const paidOrder: AdminOrder = {
     paidAt: '2026-10-19T09:05:00Z',
     shippedAt: null,
     deleteAfter: null,
+    erasedAt: null,
     customerName: 'Anna Muster',
     customerEmail: 'anna@example.com',
     street: 'Bahnhofstrasse 1',
