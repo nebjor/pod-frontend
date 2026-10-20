@@ -4,7 +4,7 @@ import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { QuoteOptions, QuoteResponse } from '../quote/quote.models';
 import { QuoteService } from '../quote/quote.service';
-import { FALLBACK_FILAMENTS, QUOTE_DEBOUNCE_MS, UploadComponent, formatPrintDuration } from './upload.component';
+import { QUOTE_DEBOUNCE_MS, UploadComponent, formatPrintDuration } from './upload.component';
 
 const sampleQuote: QuoteResponse = {
     fileName: 'benchy.stl',
@@ -31,9 +31,33 @@ const sampleQuote: QuoteResponse = {
     leadTimeDays: 3
 };
 
+/** What the backend publishes; the component holds no catalogue of its own. */
 const backendOptions: QuoteOptions = {
-    filaments: [...FALLBACK_FILAMENTS],
-    qualities: [],
+    filaments: [
+        {
+            code: 'PLA',
+            label: 'PLA',
+            profileName: 'Bambu PLA Basic @BBL A1',
+            colors: [
+                { code: 'black', label: 'Charcoal Black (matt)', hex: '#2b2b2b' },
+                { code: 'red', label: 'Red', hex: '#d62828' }
+            ]
+        },
+        {
+            code: 'PETG',
+            label: 'PETG',
+            profileName: 'PolyLite PETG @BBL A1',
+            colors: [
+                { code: 'black', label: 'Black', hex: '#1f1f1f' },
+                { code: 'white', label: 'White', hex: '#f2f2f2' }
+            ]
+        }
+    ],
+    qualities: [
+        { code: 'coarse', label: 'Grob', profileName: '0.24mm Draft @BBL A1', layerHeightMm: 0.24, baseLeadTimeDays: 2 },
+        { code: 'medium', label: 'Standard', profileName: '0.20mm Standard @BBL A1', layerHeightMm: 0.2, baseLeadTimeDays: 3 },
+        { code: 'high', label: 'Fein', profileName: '0.12mm Fine @BBL A1', layerHeightMm: 0.12, baseLeadTimeDays: 4 }
+    ],
     maxQuantity: 20
 };
 
@@ -54,6 +78,7 @@ describe('UploadComponent', () => {
     let fixture: ComponentFixture<UploadComponent>;
     let component: UploadComponent;
     let requestQuote: ReturnType<typeof vi.fn>;
+    let loadOptions: ReturnType<typeof vi.fn>;
     const benchy = new File(['solid benchy endsolid benchy'], 'benchy.stl');
 
     beforeEach(async () => {
@@ -64,13 +89,11 @@ describe('UploadComponent', () => {
         URL.revokeObjectURL = vi.fn();
 
         requestQuote = vi.fn(() => of(sampleQuote));
+        loadOptions = vi.fn(() => of(backendOptions));
 
         await TestBed.configureTestingModule({
             imports: [UploadComponent],
-            providers: [
-                provideRouter([]),
-                { provide: QuoteService, useValue: { requestQuote, loadOptions: () => of(backendOptions) } }
-            ]
+            providers: [provideRouter([]), { provide: QuoteService, useValue: { requestQuote, loadOptions } }]
         }).compileComponents();
 
         fixture = TestBed.createComponent(UploadComponent);
@@ -80,6 +103,44 @@ describe('UploadComponent', () => {
 
     afterEach(() => {
         vi.useRealTimers();
+    });
+
+    it('takes filaments, qualities and the quantity limit from the backend', () => {
+        expect(component.catalogState()).toBe('ready');
+        expect(component.filamentOptions().map((option) => option.code)).toEqual(['PLA', 'PETG']);
+        expect(component.qualityOptions().map((option) => option.code)).toEqual(['coarse', 'medium', 'high']);
+        expect(component.orderForm.getRawValue()).toMatchObject({ filament: 'PLA', color: 'black', quality: 'medium' });
+
+        component.orderForm.controls.quantity.setValue(21);
+        expect(component.orderForm.controls.quantity.invalid).toBe(true);
+    });
+
+    it('waits for the catalogue before quoting a file dropped early', async () => {
+        const { Subject } = await import('rxjs');
+        const options = new Subject<QuoteOptions>();
+        loadOptions.mockReturnValue(options);
+        const early = TestBed.createComponent(UploadComponent);
+        early.detectChanges();
+
+        early.componentInstance.onDrop(dropEvent(benchy));
+        settle();
+        expect(early.componentInstance.catalogState()).toBe('loading');
+        expect(requestQuote).not.toHaveBeenCalled();
+
+        options.next(backendOptions);
+        settle();
+        expect(requestQuote).toHaveBeenCalledTimes(1);
+        expect(requestQuote.mock.calls[0][1]).toMatchObject({ filament: 'PLA', color: 'black', quality: 'medium' });
+    });
+
+    it('offers a retry when the catalogue cannot be loaded', () => {
+        loadOptions.mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 0 })));
+        const failing = TestBed.createComponent(UploadComponent);
+        failing.detectChanges();
+        expect(failing.componentInstance.catalogState()).toBe('error');
+
+        failing.componentInstance.loadCatalog();
+        expect(failing.componentInstance.catalogState()).toBe('ready');
     });
 
     it('requests one quote with the current configuration once a file is dropped', () => {

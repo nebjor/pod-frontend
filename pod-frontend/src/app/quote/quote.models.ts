@@ -1,13 +1,18 @@
-/** Mirrors the JSON contract of the cad-slicer-engine quote API (`/api/quotes`). */
-
-export type FilamentCode = 'PLA' | 'PETG' | 'PCTG';
-export type QualityCode = 'coarse' | 'medium' | 'high';
+/**
+ * Mirrors the JSON contract of the cad-slicer-engine quote API (`/api/quotes`).
+ *
+ * Filament and quality codes are plain strings on purpose: the backend owns the catalogue
+ * and publishes it through `/api/quotes/options`, so adding a material there must never
+ * require a frontend change.
+ */
 
 export interface QuoteRequestParams {
-    filament: FilamentCode;
+    /** Filament code from `QuoteOptions.filaments`. */
+    filament: string;
     /** Colour code from the filament's `colors` list; it does not affect time or price. */
     color: string;
-    quality: QualityCode;
+    /** Quality code from `QuoteOptions.qualities`. */
+    quality: string;
     quantity: number;
 }
 
@@ -63,7 +68,9 @@ export interface FilamentOption {
 
 export interface QualityOption {
     code: string;
+    /** Customer-facing name, e.g. "Fein". */
     label: string;
+    profileName: string;
     layerHeightMm: number;
     baseLeadTimeDays: number;
 }

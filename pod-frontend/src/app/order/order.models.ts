@@ -1,6 +1,6 @@
 /** Mirrors the JSON contract of the cad-slicer-engine orders API (`/api/orders`). */
 
-import { FilamentCode, QualityCode, QuoteResponse } from '../quote/quote.models';
+import { QuoteResponse } from '../quote/quote.models';
 
 export type OrderStatus = 'NEW' | 'PAID' | 'IN_REVIEW' | 'APPROVED' | 'PRINTING' | 'SHIPPED' | 'CANCELLED';
 
@@ -15,9 +15,9 @@ export interface CustomerDetails {
 }
 
 export interface OrderRequestParams extends CustomerDetails {
-    filament: FilamentCode;
+    filament: string;
     color: string;
-    quality: QualityCode;
+    quality: string;
     quantity: number;
     /** The total the customer saw; the backend answers 409 if it no longer holds. */
     expectedTotalChf: number;
