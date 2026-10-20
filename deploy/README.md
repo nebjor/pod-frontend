@@ -17,8 +17,10 @@ internet ──443──> caddy ──> frontend:4000 (Angular SSR)
    Install Docker from the official repository and add the user to the `docker` group:
    https://docs.docker.com/engine/install/ubuntu/
 2. **Firewall**: `ufw allow OpenSSH && ufw allow 80 && ufw allow 443 && ufw enable`.
-3. **DNS** at Infomaniak: `A` record for `3dburg.ch` and `www` to the server's IPv4 (and `AAAA`
-   for IPv6 if the server has one). Caddy cannot get a certificate before this resolves.
+3. **DNS** at Infomaniak: `A` records for `3dburg.ch`, `www` and `admin` to the server's IPv4
+   (and `AAAA` for IPv6 if the server has one). Caddy cannot get a certificate before this
+   resolves. The admin panel is served on `admin.3dburg.ch` only; `/admin` on the shop host
+   redirects there, so the owner's login never shares a browser session with a shop visit.
 4. **Code**:
    ```bash
    sudo mkdir -p /opt/3dburg && sudo chown "$USER" /opt/3dburg && cd /opt/3dburg
@@ -126,7 +128,7 @@ deletion requests made since.
 
 ## Reset a rate limit
 
-Log in at `https://3dburg.ch/admin` and use the reset button, or
+Log in at `https://admin.3dburg.ch` and use the reset button, or
 `curl -u admin -X POST https://3dburg.ch/api/admin/rate-limits/reset`.
 
 ## Logs and disk
