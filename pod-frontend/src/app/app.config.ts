@@ -3,13 +3,15 @@ import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/
 import { provideRouter } from '@angular/router';
 
 import { adminAuthInterceptor } from './admin/admin-auth.interceptor';
-import { routes } from './app.routes';
+import { provideHostRoutes } from './host-routes';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes),
+    // The route table depends on the host the app is served on.
+    provideRouter([]),
+    provideHostRoutes(),
     provideClientHydration(withEventReplay()),
     provideHttpClient(withFetch(), withInterceptors([adminAuthInterceptor]))
   ]

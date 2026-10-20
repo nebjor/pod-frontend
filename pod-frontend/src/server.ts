@@ -25,6 +25,20 @@ const angularApp = new AngularNodeAppEngine();
  */
 
 /**
+ * On the admin host the panel is the root. Every page is prerendered, and the one for the
+ * root of that host is the page built for /admin, so the request is mapped before Angular
+ * looks it up. The browser then boots with the admin route table (see app/host-routes.ts).
+ */
+app.use((req, _res, next) => {
+  if (/^admin\./i.test(req.hostname) && (req.url === '/' || req.url.startsWith('/?'))) {
+    // Angular reads originalUrl, Express's static handler reads url: map both.
+    req.url = '/admin' + req.url.slice(1);
+    req.originalUrl = req.url;
+  }
+  next();
+});
+
+/**
  * Serve static files from /browser
  */
 app.use(
