@@ -12,7 +12,7 @@ import {
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subject, catchError, debounceTime, map, of, switchMap } from 'rxjs';
+import { EMPTY, Subject, catchError, concatMap, debounceTime, from, map, of, switchMap, tap, timer } from 'rxjs';
 import { CartService } from '../cart/cart.service';
 import { ModelViewerComponent } from '../model-viewer/model-viewer.component';
 import { ColorOption, FilamentOption, QualityOption, QuoteOptions, QuoteResponse } from '../quote/quote.models';
@@ -24,6 +24,7 @@ type CatalogState = 'loading' | 'ready' | 'error';
 type ModelLoadState = 'idle' | 'loading' | 'loaded' | 'error';
 
 interface QuoteJob {
+    key: string;
     file: File;
     filament: string;
     color: string;
@@ -32,6 +33,7 @@ interface QuoteJob {
 }
 
 interface QuoteOutcome {
+    job: QuoteJob;
     quote: QuoteResponse | null;
     error: string;
 }
@@ -41,6 +43,18 @@ interface QuoteOutcome {
  * form waits until the user stops changing values before it asks the backend.
  */
 export const QUOTE_DEBOUNCE_MS = 800;
+
+/**
+ * Once a quote is on screen the other filaments are fetched in the background, so switching
+ * between them is instant. The pause keeps a user who is still changing quality or quantity
+ * from triggering slices that are thrown away.
+ */
+export const PREFETCH_DELAY_MS = 1000;
+
+/** Identifies a slice; colour is excluded because it never changes the result. */
+function quoteKey(file: File, filament: string, quality: string, quantity: number): string {
+    return `${file.name}|${file.size}|${file.lastModified}|${filament}|${quality}|${quantity}`;
+}
 
 /** Chosen when the catalogue arrives, if the backend offers it; otherwise the first tier. */
 const PREFERRED_QUALITY = 'medium';
@@ -74,10 +88,13 @@ export class UploadComponent {
     private readonly quoteService = inject(QuoteService);
     private readonly cart = inject(CartService);
     private readonly destroyRef = inject(DestroyRef);
-    private readonly quoteJobs = new Subject<QuoteJob>();
+    private readonly quoteJobs = new Subject<QuoteJob | null>();
+    private readonly prefetchRuns = new Subject<QuoteJob | null>();
 
-    /** Key of the last job sent; colour is excluded because it never changes the slice. */
+    /** Key of the last job sent or served from the cache. */
     private lastRequestedKey = '';
+    /** Quotes already fetched for the selected file, by {@link quoteKey}; cleared with the file. */
+    private readonly quoteCache = new Map<string, QuoteResponse>();
 
     readonly catalogState = signal<CatalogState>('loading');
     readonly filamentOptions = signal<ReadonlyArray<FilamentOption>>([]);
@@ -145,14 +162,32 @@ export class UploadComponent {
             .pipe(
                 debounceTime(QUOTE_DEBOUNCE_MS),
                 switchMap((job) =>
-                    this.quoteService.requestQuote(job.file, job).pipe(
-                        map((quote): QuoteOutcome => ({ quote, error: '' })),
-                        catchError((error: unknown) => of<QuoteOutcome>({ quote: null, error: describeQuoteError(error) }))
-                    )
+                    job === null
+                        ? EMPTY
+                        : this.quoteService.requestQuote(job.file, {
+                              filament: job.filament,
+                              color: job.color,
+                              quality: job.quality,
+                              quantity: job.quantity
+                          }).pipe(
+                              map((quote): QuoteOutcome => ({ job, quote, error: '' })),
+                              catchError((error: unknown) =>
+                                  of<QuoteOutcome>({ job, quote: null, error: describeQuoteError(error) })
+                              )
+                          )
                 ),
                 takeUntilDestroyed()
             )
             .subscribe((outcome) => this.applyQuoteOutcome(outcome));
+
+        this.prefetchRuns
+            .pipe(
+                switchMap((job) =>
+                    job === null ? EMPTY : timer(PREFETCH_DELAY_MS).pipe(switchMap(() => this.prefetchOtherFilaments(job)))
+                ),
+                takeUntilDestroyed()
+            )
+            .subscribe();
 
         this.orderForm.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.requestQuote());
         this.destroyRef.onDestroy(() => this.releaseModelUrl());
@@ -242,7 +277,7 @@ export class UploadComponent {
         }
 
         const { filament, quality, quantity } = this.orderForm.getRawValue();
-        const key = `${file.name}|${file.size}|${file.lastModified}|${filament}|${quality}|${quantity}`;
+        const key = quoteKey(file, filament, quality, Number(quantity));
         if (!force && key === this.lastRequestedKey) {
             return;
         }
@@ -250,11 +285,48 @@ export class UploadComponent {
         // Right after a filament switch the form may still hold a colour the new filament does
         // not come in; selectedColor() already falls back to a stocked one.
         const color = this.selectedColor()?.code ?? this.orderForm.controls.color.value;
+        const job: QuoteJob = { key, file, filament, color, quality, quantity: Number(quantity) };
 
         this.lastRequestedKey = key;
+        const cached = force ? undefined : this.quoteCache.get(key);
+        if (cached) {
+            // Served from the cache, and a slice still pending for an earlier choice is dropped.
+            this.quoteJobs.next(null);
+            this.applyQuoteOutcome({ job, quote: cached, error: '' });
+            return;
+        }
+
         this.quoteState.set('loading');
         this.quoteError.set('');
-        this.quoteJobs.next({ file, filament, color, quality, quantity: Number(quantity) });
+        this.quoteJobs.next(job);
+    }
+
+    /**
+     * Fetches the quote of every other filament for the same quality and quantity, one after
+     * the other so the slicer is not flooded. Best effort: a failure only means that filament
+     * is sliced on demand when chosen. Cache hits on the backend do not count against the
+     * rate limit, so repeating a prefetch after a quality change is cheap for the user.
+     */
+    private prefetchOtherFilaments(job: QuoteJob) {
+        const others = this.filamentOptions().filter((option) => option.code !== job.filament);
+        return from(others).pipe(
+            concatMap((option) => {
+                const key = quoteKey(job.file, option.code, job.quality, job.quantity);
+                if (this.quoteCache.has(key)) {
+                    return EMPTY;
+                }
+                const params = {
+                    filament: option.code,
+                    color: option.colors[0]?.code ?? '',
+                    quality: job.quality,
+                    quantity: job.quantity
+                };
+                return this.quoteService.requestQuote(job.file, params).pipe(
+                    tap((quote) => this.quoteCache.set(key, quote)),
+                    catchError(() => EMPTY)
+                );
+            })
+        );
     }
 
     onAddToCartAndUploadAnother() {
@@ -344,9 +416,11 @@ export class UploadComponent {
 
     private applyQuoteOutcome(outcome: QuoteOutcome) {
         if (outcome.quote) {
+            this.quoteCache.set(outcome.job.key, outcome.quote);
             this.quote.set(outcome.quote);
             this.quoteError.set('');
             this.quoteState.set('ready');
+            this.prefetchRuns.next(outcome.job);
             return;
         }
 
@@ -365,6 +439,8 @@ export class UploadComponent {
         this.isModelLoading.set(false);
         this.modelLoadProgress.set(0);
         this.lastRequestedKey = '';
+        this.quoteCache.clear();
+        this.prefetchRuns.next(null);
     }
 
     private releaseModelUrl() {
