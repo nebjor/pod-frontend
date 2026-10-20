@@ -4,7 +4,7 @@ import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { QuoteOptions, QuoteResponse } from '../quote/quote.models';
 import { QuoteService } from '../quote/quote.service';
-import { QUOTE_DEBOUNCE_MS, UploadComponent, formatPrintDuration } from './upload.component';
+import { PREFETCH_DELAY_MS, QUOTE_DEBOUNCE_MS, UploadComponent, formatPrintDuration } from './upload.component';
 
 const sampleQuote: QuoteResponse = {
     fileName: 'benchy.stl',
@@ -148,8 +148,8 @@ describe('UploadComponent', () => {
         settle();
 
         expect(requestQuote).toHaveBeenCalledTimes(1);
+        expect(requestQuote.mock.calls[0][0]).toBe(benchy);
         expect(requestQuote.mock.calls[0][1]).toEqual({
-            file: benchy,
             filament: 'PLA',
             color: 'black',
             quality: 'medium',
@@ -195,6 +195,60 @@ describe('UploadComponent', () => {
         expect(component.orderForm.controls.color.value).toBe('black');
         expect(requestQuote).toHaveBeenCalledTimes(2);
         expect(requestQuote.mock.calls[1][1]).toMatchObject({ filament: 'PETG', color: 'black' });
+    });
+
+    it('prefetches the other filaments after a quote so that switching is instant', () => {
+        requestQuote.mockImplementation((_file: File, params: { filament: string }) =>
+            of({ ...sampleQuote, filament: params.filament, totalPriceChf: params.filament === 'PETG' ? 9 : 8 })
+        );
+
+        component.onDrop(dropEvent(benchy));
+        settle();
+        expect(requestQuote).toHaveBeenCalledTimes(1);
+
+        vi.advanceTimersByTime(PREFETCH_DELAY_MS);
+        expect(requestQuote).toHaveBeenCalledTimes(2);
+        expect(requestQuote.mock.calls[1][1]).toEqual({ filament: 'PETG', color: 'black', quality: 'medium', quantity: 1 });
+        expect(component.quote()?.filament).toBe('PLA');
+
+        component.orderForm.controls.filament.setValue('PETG');
+        fixture.detectChanges();
+        settle();
+
+        expect(requestQuote).toHaveBeenCalledTimes(2);
+        expect(component.quoteState()).toBe('ready');
+        expect(component.quote()?.totalPriceChf).toBe(9);
+
+        component.orderForm.controls.filament.setValue('PLA');
+        fixture.detectChanges();
+        settle();
+        expect(requestQuote).toHaveBeenCalledTimes(2);
+        expect(component.quote()?.totalPriceChf).toBe(8);
+    });
+
+    it('slices on demand when a prefetch failed, and forgets the cache with the file', () => {
+        requestQuote.mockImplementation((_file: File, params: { filament: string }) =>
+            params.filament === 'PETG' && requestQuote.mock.calls.length === 2
+                ? throwError(() => new HttpErrorResponse({ status: 503 }))
+                : of({ ...sampleQuote, filament: params.filament })
+        );
+
+        component.onDrop(dropEvent(benchy));
+        settle();
+        vi.advanceTimersByTime(PREFETCH_DELAY_MS);
+        expect(requestQuote).toHaveBeenCalledTimes(2);
+        expect(component.quoteState()).toBe('ready');
+
+        component.orderForm.controls.filament.setValue('PETG');
+        fixture.detectChanges();
+        settle();
+        expect(requestQuote).toHaveBeenCalledTimes(3);
+        expect(component.quote()?.filament).toBe('PETG');
+
+        component.onDrop(dropEvent(new File(['solid other endsolid other'], 'other.stl')));
+        settle();
+        expect(requestQuote).toHaveBeenCalledTimes(4);
+        expect(requestQuote.mock.calls[3][1].filament).toBe('PETG');
     });
 
     it('does not request while the quantity is invalid', () => {
