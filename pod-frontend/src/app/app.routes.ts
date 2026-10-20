@@ -29,5 +29,17 @@ export const routes: Routes = [
         path: 'admin',
         loadComponent: () => import('./admin/admin.component').then((m) => m.AdminComponent)
     },
+    {
+        path: 'impressum',
+        loadComponent: () => import('./legal/imprint.component').then((m) => m.ImprintComponent)
+    },
+    {
+        path: 'agb',
+        loadComponent: () => import('./legal/terms.component').then((m) => m.TermsComponent)
+    },
+    {
+        path: 'datenschutz',
+        loadComponent: () => import('./legal/privacy.component').then((m) => m.PrivacyComponent)
+    },
     { path: '**', redirectTo: '' }
 ];

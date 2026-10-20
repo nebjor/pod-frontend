@@ -1,0 +1,35 @@
+<article class="legal-page">
+    <p class="kicker">Rechtliches</p>
+    <h1>Impressum</h1>
+
+    <h2>Betreiber</h2>
+    <address>
+        {{ business.shopName }}, {{ business.legalForm }}<br />
+        {{ business.owner }}<br />
+        {{ business.street }}<br />
+        {{ business.postalCode }} {{ business.city }}, {{ business.country }}<br />
+        E-Mail: <a [href]="'mailto:' + business.email">{{ business.email }}</a>
+    </address>
+    <p>Verantwortlich für den Inhalt dieser Website: {{ business.owner }}.</p>
+    <p>Nicht mehrwertsteuerpflichtig. Alle Preise verstehen sich ohne MWST.</p>
+
+    <h2>Haftung für Inhalte</h2>
+    <p>
+        Die Inhalte dieser Website wurden mit Sorgfalt erstellt. Für Richtigkeit, Vollständigkeit und
+        Aktualität wird keine Gewähr übernommen. Preise werden automatisch aus dem hochgeladenen Modell
+        berechnet; massgebend ist der in der Bestellung bestätigte Betrag.
+    </p>
+
+    <h2>Haftung für Links</h2>
+    <p>
+        Verweise auf Websites Dritter liegen ausserhalb unseres Verantwortungsbereichs. Für deren Inhalte
+        wird jede Haftung abgelehnt.
+    </p>
+
+    <h2>Urheberrechte</h2>
+    <p>
+        Texte, Gestaltung und Code dieser Website gehören {{ business.owner }}. Hochgeladene Modelle
+        bleiben Eigentum der jeweiligen Kundinnen und Kunden und werden ausschliesslich für die
+        Produktion verwendet.
+    </p>
+</article>

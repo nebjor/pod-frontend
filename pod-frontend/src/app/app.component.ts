@@ -10,5 +10,5 @@ import { FooterComponent } from './footer/footer.component';
   styleUrl: './app.scss'
 })
 export class App {
-  protected readonly title = signal('pod-frontend');
+  protected readonly title = signal('3DBurg');
 }

@@ -2,49 +2,42 @@
     <div class="footer-inner">
         <div class="footer-top">
             <section class="brand-column">
-                <h2 class="brand">JN</h2>
+                <h2 class="brand">{{ business.shopName }}</h2>
                 <p class="brand-copy">
-                    Placeholder headline line one.<br>
-                    Placeholder headline line two.<br>
-                    Placeholder headline line three.
+                    3D-Druck auf Bestellung aus {{ business.city }}.<br />
+                    Modell hochladen, Preis sehen, bestellen.
                 </p>
             </section>
 
             <section class="link-column">
-                <h3>Section One</h3>
+                <h3>Shop</h3>
                 <ul>
-                    <li>Item 01</li>
-                    <li>Item 02</li>
-                    <li>Item 03</li>
-                    <li>Item 04</li>
+                    <li><a routerLink="/upload">Modell hochladen</a></li>
+                    <li><a routerLink="/" fragment="how-it-works">So funktioniert es</a></li>
                 </ul>
             </section>
 
             <section class="link-column">
-                <h3>Section Two</h3>
+                <h3>Rechtliches</h3>
                 <ul>
-                    <li>Item 05</li>
-                    <li>Item 06</li>
-                    <li>Item 07</li>
-                    <li>Item 08</li>
-                    <li>Item 09</li>
+                    <li><a routerLink="/impressum">Impressum</a></li>
+                    <li><a routerLink="/agb">AGB</a></li>
+                    <li><a routerLink="/datenschutz">Datenschutz</a></li>
                 </ul>
             </section>
 
             <section class="link-column">
-                <h3>Section Three</h3>
+                <h3>Kontakt</h3>
                 <ul>
-                    <li>Item 10</li>
-                    <li>Item 11</li>
-                    <li>Item 12</li>
-                    <li>Item 13</li>
+                    <li><a [href]="'mailto:' + business.email">{{ business.email }}</a></li>
+                    <li>{{ business.street }}, {{ business.postalCode }} {{ business.city }}</li>
                 </ul>
             </section>
         </div>
 
         <div class="footer-bottom">
-            <p>© 2026 Placeholder Company · All rights reserved</p>
-            <p>Made in Placeholder Region</p>
+            <p>© {{ year }} {{ business.shopName }} · {{ business.owner }}, {{ business.city }}</p>
+            <p>Gedruckt und versendet in der Schweiz</p>
         </div>
     </div>
 </footer>

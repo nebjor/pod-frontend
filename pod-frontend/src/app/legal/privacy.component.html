@@ -1,0 +1,66 @@
+<article class="legal-page">
+    <p class="kicker">Rechtliches</p>
+    <h1>Datenschutzerklärung</h1>
+
+    <h2>Verantwortlicher</h2>
+    <address>
+        {{ business.owner }}, {{ business.shopName }}<br />
+        {{ business.street }}, {{ business.postalCode }} {{ business.city }}<br />
+        E-Mail: <a [href]="'mailto:' + business.email">{{ business.email }}</a>
+    </address>
+    <p>Diese Erklärung richtet sich nach dem Schweizer Datenschutzgesetz (DSG).</p>
+
+    <h2>Welche Daten wir bearbeiten</h2>
+    <ul>
+        <li><strong>Bestelldaten:</strong> Name, E-Mail-Adresse und Lieferadresse, damit wir die Bestellung bestätigen, produzieren und versenden können.</li>
+        <li><strong>Modelldatei:</strong> das hochgeladene STL- oder 3MF-Modell, um den Preis zu berechnen und das Teil zu drucken.</li>
+        <li><strong>Technische Daten:</strong> die IP-Adresse beim Berechnen eines Preises, um Missbrauch des Rechendienstes zu begrenzen. Sie wird nur im Arbeitsspeicher und höchstens eine Stunde gehalten.</li>
+        <li><strong>Zahlungsdaten:</strong> werden ausschliesslich vom Zahlungsdienstleister bearbeitet. Wir erhalten nur die Bestätigung und eine Referenz, nie Kartendaten.</li>
+    </ul>
+    <p>Wir führen keine Kundenkonten, setzen keine Tracking-Dienste ein und versenden keine Werbung.</p>
+
+    <h2>Zweck und Rechtsgrundlage</h2>
+    <p>
+        Wir bearbeiten die Daten, um den Vertrag mit dir zu erfüllen: Preis berechnen, Bestellung bestätigen,
+        Teil produzieren, versenden und bei Fragen antworten. Die Aufbewahrung der Rechnungsdaten erfolgt
+        aufgrund gesetzlicher Pflichten (Buchführung, Art. 958f OR).
+    </p>
+
+    <h2>Weitergabe an Dritte</h2>
+    <ul>
+        <li><strong>Hosting:</strong> Der Shop und die Datenbank laufen auf Servern von Hetzner (Deutschland/Finnland).</li>
+        <li><strong>E-Mail:</strong> Bestellbestätigungen werden über Infomaniak (Schweiz) versendet.</li>
+        <li><strong>Zahlung:</strong> Der Zahlungsdienstleister erhält Betrag und Bestellnummer sowie die Daten, die du auf seiner Zahlungsseite eingibst.</li>
+        <li><strong>Versand:</strong> Die Schweizerische Post erhält Name und Lieferadresse.</li>
+    </ul>
+    <p>Eine darüber hinausgehende Weitergabe findet nicht statt.</p>
+
+    <h2>Aufbewahrung und Löschung</h2>
+    <p>
+        Die Modelldatei sowie Name, E-Mail-Adresse und Lieferadresse werden 90 Tage nach dem Versand
+        automatisch gelöscht. Bestellnummer, Konfiguration und Beträge bleiben als Buchhaltungsbeleg
+        10 Jahre gespeichert, ohne Personenbezug. Auf Wunsch löschen wir deine Daten früher, sobald die
+        Bestellung abgeschlossen ist.
+    </p>
+
+    <h2>Cookies und lokale Speicherung</h2>
+    <p>
+        Wir setzen keine Cookies zu Werbe- oder Analysezwecken. Der Browser merkt sich lokal die letzte
+        Bestellnummer und E-Mail-Adresse, damit die Bestellseite nach der Zahlung angezeigt werden kann.
+        Diese Angabe bleibt auf deinem Gerät.
+    </p>
+
+    <h2>Sicherheit</h2>
+    <p>
+        Die Verbindung zum Shop ist verschlüsselt (TLS). Modelle werden unter einer zufälligen Kennung
+        gespeichert und sind nur mit dem Betreiberzugang abrufbar.
+    </p>
+
+    <h2>Deine Rechte</h2>
+    <p>
+        Du kannst Auskunft über deine Daten verlangen, sie berichtigen oder löschen lassen. Schreib dazu an
+        <a [href]="'mailto:' + business.email">{{ business.email }}</a>. Wir antworten innert 30 Tagen.
+    </p>
+
+    <p class="updated">Stand: {{ business.legalTextsDate }}</p>
+</article>
