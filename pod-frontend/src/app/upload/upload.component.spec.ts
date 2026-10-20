@@ -9,7 +9,7 @@ import { PREFETCH_DELAY_MS, QUOTE_DEBOUNCE_MS, UploadComponent, formatPrintDurat
 const sampleQuote: QuoteResponse = {
     fileName: 'benchy.stl',
     filament: 'PLA',
-    color: { code: 'black', label: 'Black', hex: '#1f1f1f' },
+    color: { code: 'black', label: 'Black', hex: '#1f1f1f', pricePerKgChf: 36 },
     quality: 'medium',
     quantity: 1,
     machineProfile: 'Bambu Lab A1 0.4 nozzle',
@@ -39,8 +39,9 @@ const backendOptions: QuoteOptions = {
             label: 'PLA',
             profileName: 'Bambu PLA Basic @BBL A1',
             colors: [
-                { code: 'black', label: 'Charcoal Black (matt)', hex: '#2b2b2b' },
-                { code: 'red', label: 'Red', hex: '#d62828' }
+                { code: 'black', label: 'Charcoal Black (matt)', hex: '#2b2b2b', pricePerKgChf: 36 },
+                { code: 'white', label: 'Cotton White (matt)', hex: '#f1ede3', pricePerKgChf: 36 },
+                { code: 'red', label: 'Red', hex: '#d62828', pricePerKgChf: 45 }
             ]
         },
         {
@@ -48,8 +49,8 @@ const backendOptions: QuoteOptions = {
             label: 'PETG',
             profileName: 'PolyLite PETG @BBL A1',
             colors: [
-                { code: 'black', label: 'Black', hex: '#1f1f1f' },
-                { code: 'white', label: 'White', hex: '#f2f2f2' }
+                { code: 'black', label: 'Black', hex: '#1f1f1f', pricePerKgChf: 45 },
+                { code: 'white', label: 'White', hex: '#f2f2f2', pricePerKgChf: 45 }
             ]
         }
     ],
@@ -113,7 +114,7 @@ describe('UploadComponent', () => {
     /** Parameters of every quote request for one filament and quality, prefetches included. */
     function requestsFor(filament: string, quality: string) {
         return requestQuote.mock.calls
-            .map((call) => call[1] as { filament: string; quality: string })
+            .map((call) => call[1] as { filament: string; color: string; quality: string })
             .filter((params) => params.filament === filament && params.quality === quality);
     }
 
@@ -185,16 +186,31 @@ describe('UploadComponent', () => {
         expect(requestQuote.mock.calls[0][1].quantity).toBe(3);
     });
 
-    it('does not slice again when only the colour changes', () => {
+    it('does not request again when the new colour costs the same', () => {
+        component.onDrop(dropEvent(benchy));
+        settle();
+
+        component.orderForm.controls.color.setValue('white');
+        settle();
+
+        // Prefetches of other price tiers aside, the 36 CHF/kg quote was requested exactly once.
+        expect(requestsFor('PLA', 'medium').filter((params) => params.color !== 'red')).toHaveLength(1);
+        expect(component.selectedColor()?.code).toBe('white');
+        expect(component.quoteState()).toBe('ready');
+    });
+
+    it('re-prices when the new colour has another material price, without a second slice of the same tier', () => {
+        requestQuote.mockImplementation((_id: string, params: { color: string }) =>
+            of({ ...sampleQuote, materialCostChf: params.color === 'red' ? 0.5 : 0.4 })
+        );
         component.onDrop(dropEvent(benchy));
         settle();
 
         component.orderForm.controls.color.setValue('red');
         settle();
 
-        // Background prefetches aside, the PLA/medium slice was requested exactly once.
-        expect(requestsFor('PLA', 'medium')).toHaveLength(1);
-        expect(component.selectedColor()?.code).toBe('red');
+        expect(requestsFor('PLA', 'medium').filter((params) => params.color === 'red')).toHaveLength(1);
+        expect(component.quote()?.materialCostChf).toBe(0.5);
         expect(component.quoteState()).toBe('ready');
     });
 
@@ -260,11 +276,12 @@ describe('UploadComponent', () => {
         expect(requestQuote).toHaveBeenCalledTimes(1);
 
         vi.advanceTimersByTime(PREFETCH_DELAY_MS);
-        expect(requestQuote).toHaveBeenCalledTimes(4);
+        expect(requestQuote).toHaveBeenCalledTimes(5);
         expect(requestQuote.mock.calls.slice(1).map((call) => call[1])).toEqual([
             { filament: 'PETG', color: 'black', quality: 'medium', quantity: 1 },
             { filament: 'PLA', color: 'black', quality: 'coarse', quantity: 1 },
-            { filament: 'PLA', color: 'black', quality: 'high', quantity: 1 }
+            { filament: 'PLA', color: 'black', quality: 'high', quantity: 1 },
+            { filament: 'PLA', color: 'red', quality: 'medium', quantity: 1 }
         ]);
         expect(component.quote()?.filament).toBe('PLA');
 
@@ -272,7 +289,7 @@ describe('UploadComponent', () => {
         fixture.detectChanges();
         settle();
 
-        expect(requestQuote).toHaveBeenCalledTimes(4);
+        expect(requestQuote).toHaveBeenCalledTimes(5);
         expect(component.quoteState()).toBe('ready');
         expect(component.quote()?.totalPriceChf).toBe(9);
 
@@ -280,7 +297,7 @@ describe('UploadComponent', () => {
         component.orderForm.controls.quality.setValue('high');
         fixture.detectChanges();
         settle();
-        expect(requestQuote).toHaveBeenCalledTimes(4);
+        expect(requestQuote).toHaveBeenCalledTimes(5);
         expect(component.quote()?.totalPriceChf).toBe(8);
     });
 
@@ -294,20 +311,20 @@ describe('UploadComponent', () => {
         component.onDrop(dropEvent(benchy));
         settle();
         vi.advanceTimersByTime(PREFETCH_DELAY_MS);
-        expect(requestQuote).toHaveBeenCalledTimes(4);
+        expect(requestQuote).toHaveBeenCalledTimes(5);
         expect(component.quoteState()).toBe('ready');
 
         component.orderForm.controls.filament.setValue('PETG');
         fixture.detectChanges();
         settle();
-        expect(requestQuote).toHaveBeenCalledTimes(5);
+        expect(requestQuote).toHaveBeenCalledTimes(6);
         expect(component.quote()?.filament).toBe('PETG');
 
         component.onDrop(dropEvent(new File(['solid other endsolid other'], 'other.stl')));
         settle();
         expect(uploadModel).toHaveBeenCalledTimes(2);
-        expect(requestQuote).toHaveBeenCalledTimes(6);
-        expect(requestQuote.mock.calls[5][1].filament).toBe('PETG');
+        expect(requestQuote).toHaveBeenCalledTimes(7);
+        expect(requestQuote.mock.calls[6][1].filament).toBe('PETG');
     });
 
     it('does not request while the quantity is invalid', () => {

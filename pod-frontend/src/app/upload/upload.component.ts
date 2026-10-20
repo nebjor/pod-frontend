@@ -29,6 +29,7 @@ interface QuoteJob {
     modelId: string;
     filament: string;
     color: string;
+    pricePerKgChf: number;
     quality: string;
     quantity: number;
     /** Skip the debounce: the job follows an upload or a retry, not a form change. */
@@ -60,9 +61,13 @@ export const QUOTE_DEBOUNCE_MS = 800;
  */
 export const PREFETCH_DELAY_MS = 1000;
 
-/** Identifies a slice; colour is excluded because it never changes the result. */
-function quoteKey(modelId: string, filament: string, quality: string, quantity: number): string {
-    return `${modelId}|${filament}|${quality}|${quantity}`;
+/**
+ * Identifies a quote. The colour itself is excluded because it never changes the slice; its
+ * material price is included, so colours that cost the same share a quote and a dearer one
+ * gets its own.
+ */
+function quoteKey(modelId: string, filament: string, quality: string, quantity: number, pricePerKgChf: number): string {
+    return `${modelId}|${filament}|${quality}|${quantity}|${pricePerKgChf}`;
 }
 
 /** Chosen when the catalogue arrives, if the backend offers it; otherwise the first tier. */
@@ -322,15 +327,27 @@ export class UploadComponent {
         }
 
         const { filament, quality, quantity } = this.orderForm.getRawValue();
-        const key = quoteKey(modelId, filament, quality, Number(quantity));
+        // Right after a filament switch the form may still hold a colour the new filament does
+        // not come in; selectedColor() already falls back to a stocked one.
+        const selected = this.selectedColor();
+        const color = selected?.code ?? this.orderForm.controls.color.value;
+        const pricePerKgChf = selected?.pricePerKgChf ?? 0;
+        const key = quoteKey(modelId, filament, quality, Number(quantity), pricePerKgChf);
         if (!force && key === this.lastRequestedKey) {
             return;
         }
 
-        // Right after a filament switch the form may still hold a colour the new filament does
-        // not come in; selectedColor() already falls back to a stocked one.
-        const color = this.selectedColor()?.code ?? this.orderForm.controls.color.value;
-        const job: QuoteJob = { key, modelId, filament, color, quality, quantity: Number(quantity), immediate: force, force };
+        const job: QuoteJob = {
+            key,
+            modelId,
+            filament,
+            color,
+            pricePerKgChf,
+            quality,
+            quantity: Number(quantity),
+            immediate: force,
+            force
+        };
 
         this.lastRequestedKey = key;
         const cached = force ? undefined : this.quoteCache.get(key);
@@ -347,30 +364,38 @@ export class UploadComponent {
     }
 
     /**
-     * Fetches the quotes next to the one on screen: the other filaments at this quality, then
-     * the other qualities with this filament, one after the other so the slicer is not
-     * flooded. Best effort: a failure only means that combination is sliced on demand when
-     * chosen. Cache hits on the backend do not count against the rate limit, so repeating a
-     * prefetch after a change is cheap for the user.
+     * Fetches the quotes next to the one on screen: the other filaments at this quality, the
+     * other qualities with this filament, and this filament's other material prices (one
+     * colour per price), one after the other so the slicer is not flooded. Best effort: a
+     * failure only means that combination is sliced on demand when chosen. Cache hits on the
+     * backend do not count against the rate limit, so repeating a prefetch after a change is
+     * cheap for the user.
      */
     private prefetchNeighbours(job: QuoteJob) {
-        const colorFor = (filament: string) =>
-            this.filamentOptions().find((option) => option.code === filament)?.colors[0]?.code ?? '';
-        const neighbours = [
-            ...this.filamentOptions()
+        const filaments = this.filamentOptions();
+        const current = filaments.find((option) => option.code === job.filament);
+        const currentColor = current?.colors.find((color) => color.code === job.color) ?? current?.colors[0];
+        const otherTiers = (current?.colors ?? []).filter(
+            (color, index, colors) =>
+                color.pricePerKgChf !== job.pricePerKgChf &&
+                colors.findIndex((other) => other.pricePerKgChf === color.pricePerKgChf) === index
+        );
+        const neighbours: { filament: string; quality: string; color: ColorOption | undefined }[] = [
+            ...filaments
                 .filter((option) => option.code !== job.filament)
-                .map((option) => ({ filament: option.code, quality: job.quality })),
+                .map((option) => ({ filament: option.code, quality: job.quality, color: option.colors[0] })),
             ...this.qualityOptions()
                 .filter((option) => option.code !== job.quality)
-                .map((option) => ({ filament: job.filament, quality: option.code }))
+                .map((option) => ({ filament: job.filament, quality: option.code, color: currentColor })),
+            ...otherTiers.map((color) => ({ filament: job.filament, quality: job.quality, color }))
         ];
         return from(neighbours).pipe(
-            concatMap(({ filament, quality }) => {
-                const key = quoteKey(job.modelId, filament, quality, job.quantity);
+            concatMap(({ filament, quality, color }) => {
+                const key = quoteKey(job.modelId, filament, quality, job.quantity, color?.pricePerKgChf ?? 0);
                 if (this.quoteCache.has(key)) {
                     return EMPTY;
                 }
-                const params = { filament, color: colorFor(filament), quality, quantity: job.quantity };
+                const params = { filament, color: color?.code ?? '', quality, quantity: job.quantity };
                 return this.quoteService.requestQuote(job.modelId, params).pipe(
                     tap((quote) => this.quoteCache.set(key, quote)),
                     catchError(() => EMPTY)

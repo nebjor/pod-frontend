@@ -96,6 +96,7 @@
                                     <input type="radio" formControlName="color" [value]="color.code" />
                                     <span class="swatch-dot" [style.background]="color.hex" aria-hidden="true"></span>
                                     <span class="swatch-label">{{ color.label }}</span>
+                                    <span class="swatch-price">CHF {{ color.pricePerKgChf | number:'1.0-0' }}/kg</span>
                                 </label>
                             }
                         </div>

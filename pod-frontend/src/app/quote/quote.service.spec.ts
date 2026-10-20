@@ -7,7 +7,7 @@ import { MODEL_API_URL, QUOTE_API_URL, QuoteService, UploadEvent, describeQuoteE
 const sampleQuote: QuoteResponse = {
     fileName: 'cube.stl',
     filament: 'PETG',
-    color: { code: 'white', label: 'White', hex: '#f2f2f2' },
+    color: { code: 'white', label: 'White', hex: '#f2f2f2', pricePerKgChf: 45 },
     quality: 'high',
     quantity: 3,
     machineProfile: 'Bambu Lab A1 0.4 nozzle',
