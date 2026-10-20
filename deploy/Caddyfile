@@ -1,0 +1,37 @@
+# Reverse proxy and TLS for the shop. Certificates come from Let's Encrypt automatically;
+# SITE_ADDRESS and ACME_EMAIL are set by docker-compose.prod.yml.
+
+{
+	email {$ACME_EMAIL}
+}
+
+www.{$SITE_ADDRESS} {
+	redir https://{$SITE_ADDRESS}{uri} permanent
+}
+
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	# Model uploads are capped at 50 MB by the backend; leave room for the multipart overhead.
+	request_body {
+		max_size 60MB
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	# API and its contract go to Spring; everything else is rendered by the Angular server.
+	@backend path /api/* /v3/api-docs /v3/api-docs/* /api-docs /api-docs/* /swagger-ui/*
+	handle @backend {
+		reverse_proxy backend:8080
+	}
+
+	handle {
+		reverse_proxy frontend:4000
+	}
+}

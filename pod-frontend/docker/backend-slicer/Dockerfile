@@ -3,6 +3,8 @@ FROM maven:3.9.9-eclipse-temurin-21
 ARG DEBIAN_FRONTEND=noninteractive
 ARG BAMBU_TAG=v02.08.02.61
 ARG BAMBU_APPIMAGE=BambuStudio_ubuntu24.04-v02.08.02.61-20260820225108.AppImage
+# Pinned from the release downloaded on 2026-10-18; a changed file fails the build.
+ARG BAMBU_SHA256=d501b103fac5424513ec0e8d6bc145fb30719de2c7d94d7320d723740c81a7fd
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
@@ -49,14 +51,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxtst6 \
     locales \
     mesa-utils \
- && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/bambu
 
 RUN curl -fsSL -o BambuStudio.AppImage \
     "https://github.com/bambulab/BambuStudio/releases/download/${BAMBU_TAG}/${BAMBU_APPIMAGE}" \
- && chmod +x BambuStudio.AppImage \
- && ./BambuStudio.AppImage --appimage-extract >/dev/null \
- && ln -sf /opt/bambu/squashfs-root/AppRun /usr/local/bin/bambu-studio-cli
+    && echo "${BAMBU_SHA256}  BambuStudio.AppImage" | sha256sum -c - \
+    && chmod +x BambuStudio.AppImage \
+    && ./BambuStudio.AppImage --appimage-extract >/dev/null \
+    && ln -sf /opt/bambu/squashfs-root/AppRun /usr/local/bin/bambu-studio-cli
 
 WORKDIR /app
