@@ -146,6 +146,14 @@
                                         <dd>{{ q.totalFilamentGrams | number:'1.0-1' }} g {{ q.filament }}</dd>
                                     </div>
                                     <div>
+                                        <dt>Materialkosten</dt>
+                                        <dd>{{ q.currency }} {{ q.materialCostChf | number:'1.2-2' }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Maschinenzeit</dt>
+                                        <dd>{{ q.currency }} {{ q.machineCostChf | number:'1.2-2' }}</dd>
+                                    </div>
+                                    <div>
                                         <dt>Farbe</dt>
                                         <dd class="color-value">
                                             <span class="swatch-dot small" [style.background]="selectedColor()?.hex" aria-hidden="true"></span>
