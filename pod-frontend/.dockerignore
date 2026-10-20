@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.angular/
+docker/
+docker-compose.local.yml
+.git/
+*.md
