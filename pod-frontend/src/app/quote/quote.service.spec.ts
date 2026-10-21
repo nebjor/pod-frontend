@@ -120,7 +120,11 @@ describe('QuoteService', () => {
 
         expect(describeQuoteError(new HttpErrorResponse({ status: 0 }))).toContain('nicht erreichbar');
         expect(describeQuoteError(new HttpErrorResponse({ status: 413 }))).toContain('zu gross');
-        expect(describeQuoteError(new HttpErrorResponse({ status: 500 }))).toContain('HTTP 500');
-        expect(describeQuoteError(new Error('boom'))).toBe('Angebot konnte nicht berechnet werden.');
+        // Status codes never reach the customer; a bare failure gets a short line to act on.
+        const serverError = describeQuoteError(new HttpErrorResponse({ status: 500 }));
+        expect(serverError).toContain('nicht berechnet werden');
+        expect(serverError).not.toContain('HTTP');
+        expect(serverError).not.toContain('500');
+        expect(describeQuoteError(new Error('boom'))).toBe(serverError);
     });
 });

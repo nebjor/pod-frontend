@@ -142,6 +142,15 @@
     color: var(--text-300);
     font-size: 0.82rem;
     line-height: 1.5;
+
+    a {
+        color: var(--accent-300);
+    }
+}
+
+.payment-hint {
+    margin-top: 0.4rem;
+    text-align: center;
 }
 
 .account-hint {

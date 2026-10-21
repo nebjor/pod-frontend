@@ -3,12 +3,12 @@
         <p class="subtitle">3D-Druck auf Bestellung aus Winterthur</p>
         <h1>Dein Modell. <span class="highlight">Gedruckt.</span> Geliefert.</h1>
         <p class="description">
-            Lade dein STL oder 3MF hoch, wähle Material, Farbe und Qualität und sieh den Preis sofort.
+            Lade dein STL oder 3MF hoch, waehle Material, Farbe und Qualitaet und sieh den Preis sofort.
             Gedruckt auf Bambu Lab A1, versendet in der ganzen Schweiz.
         </p>
         <div class="button-group">
-            <button mat-raised-button class="primary-btn" (click)="goToUpload()">
-                Modell hochladen & Preis erhalten
+            <button mat-raised-button class="primary-btn" type="button" (click)="goToUpload()">
+                Modell hochladen und Preis erhalten
             </button>
         </div>
     </div>
@@ -22,34 +22,36 @@
 </section>
 
 <section class="how-it-works" id="how-it-works">
-    <p class="kicker">Schnell und planbar</p>
-    <h2>Von Datei zu Bauteil in deinem Tempo</h2>
+    <p class="kicker">In drei Schritten</p>
+    <h2>So funktioniert es</h2>
     <p class="intro">
-        Du konfigurierst nur das Wesentliche. Wir halten den Prozess schlank, transparent und production-ready.
+        Du entscheidest nur das Wesentliche: Material, Farbe, Qualitaet, Menge. Den Rest uebernehmen wir.
     </p>
 
     <div class="steps-grid">
         <article class="step-card">
             <span class="step-number">1</span>
-            <h3>Datei bereitstellen</h3>
+            <h3>Modell hochladen</h3>
             <p>Zieh dein STL- oder 3MF-Modell in den Upload und kontrolliere es direkt in der 3D-Vorschau.</p>
         </article>
 
         <article class="step-card">
             <span class="step-number">2</span>
-            <h3>Spezifikation festlegen</h3>
-            <p>Waehle Material, Farbe und Qualitaetsstufe passend zu Funktion, Optik und Budget.</p>
+            <h3>Material und Qualitaet waehlen</h3>
+            <p>Waehle Material, Farbe und Qualitaetsstufe passend zu Funktion, Optik und Budget. Der Preis folgt sofort.</p>
         </article>
 
         <article class="step-card">
             <span class="step-number">3</span>
-            <h3>Freigeben und starten</h3>
-            <p>Nach deiner Freigabe startet die Produktion innerhalb von 24h und dein Teil geht danach in den Versand.
+            <h3>Bestellen und abwarten</h3>
+            <p>
+                Nach deiner Zahlung pruefen wir das Modell, drucken es und schicken es dir mit der Post. Die Lieferzeit
+                siehst du schon beim Preis.
             </p>
         </article>
     </div>
 
     <div class="steps-cta">
-        <button mat-raised-button class="primary-btn" (click)="goToUpload()">Modell hochladen & Preis erhalten</button>
+        <button mat-raised-button class="primary-btn" type="button" (click)="goToUpload()">Modell hochladen und Preis erhalten</button>
     </div>
 </section>

@@ -14,6 +14,12 @@ import {
 type LoginState = 'form' | 'sending' | 'sent' | 'redeeming' | 'invalid';
 
 /**
+ * How long a login link stays valid, as the page tells the customer. Mirrors the backend's
+ * `account.login-link-minutes`; the API does not publish it.
+ */
+export const LOGIN_LINK_MINUTES = 15;
+
+/**
  * Passwordless login. The page asks for the e-mail and the backend mails a link back here
  * with `?token=`; opening that link signs the customer in. `?returnTo=` (a path of this app)
  * says where to go afterwards, the account page otherwise.
@@ -44,6 +50,7 @@ export class LoginComponent {
     readonly state = signal<LoginState>('form');
     readonly errorMessage = signal('');
     readonly sentTo = signal('');
+    readonly linkMinutes = LOGIN_LINK_MINUTES;
     readonly returnTo = computed(() => this.query().returnTo);
 
     constructor() {
@@ -89,7 +96,11 @@ export class LoginComponent {
                 },
                 error: (error: unknown) => {
                     const failure = describeAccountError(error);
-                    this.errorMessage.set(failure.kind === 'error' ? failure.message : 'Der Link konnte nicht verschickt werden.');
+                    this.errorMessage.set(
+                        failure.kind === 'error'
+                            ? failure.message
+                            : 'Der Link konnte nicht verschickt werden. Bitte versuche es noch einmal.'
+                    );
                     this.state.set('form');
                 }
             });
@@ -113,7 +124,7 @@ export class LoginComponent {
                     this.errorMessage.set(
                         failure.kind === 'error'
                             ? failure.message
-                            : 'Dieser Anmeldelink ist ungueltig oder abgelaufen. Fordere unten einen neuen an.'
+                            : 'Dieser Anmeldelink ist ungueltig, abgelaufen oder schon benutzt. Fordere unten einen neuen an.'
                     );
                     this.state.set('invalid');
                 }

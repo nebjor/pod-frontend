@@ -427,7 +427,7 @@ describe('UploadComponent', () => {
         expect(component.quoteIsStale()).toBe(true);
         expect(component.canSubmitOrder()).toBe(false);
         const note = host.querySelector('.quote-stale-note');
-        expect(note?.textContent).toContain('Angebot gilt fuer 1 x PLA, Standard');
+        expect(note?.textContent).toContain('Preis gilt fuer 1 x PLA, Standard 0.20 mm');
         expect(note?.textContent).toContain('Menge korrigieren');
         expect(host.querySelector('.quote-body.stale')).not.toBeNull();
 
@@ -481,7 +481,7 @@ describe('UploadComponent', () => {
         expect(component.quotePhase()).toBe('repricing');
         expect(component.quoteMatchesForm()).toBe(false);
         expect(host.querySelector('.quote-phase')?.textContent).toContain(SLICING_STEPS[2].text);
-        expect(host.querySelector('.quote-stale-note')?.textContent).toContain('Angebot gilt fuer 1 x PLA, Standard');
+        expect(host.querySelector('.quote-stale-note')?.textContent).toContain('Preis gilt fuer 1 x PLA, Standard 0.20 mm');
         expect(host.querySelector('.quote-stale-note')?.textContent).not.toContain('Menge korrigieren');
         expect(host.querySelector('.quote-body.stale')).not.toBeNull();
         expect(host.querySelector('.field-error')).toBeNull();

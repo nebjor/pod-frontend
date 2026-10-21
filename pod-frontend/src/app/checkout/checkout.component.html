@@ -17,7 +17,7 @@
                         </div>
                         <p class="item-config">
                             <span class="swatch-dot" [style.background]="line.color.hex" aria-hidden="true"></span>
-                            {{ line.filament }} {{ line.color.label }} · {{ line.quality }}
+                            {{ line.filament }} {{ line.color.label }} · {{ qualityLabel(line.quality) }}
                         </p>
                     </li>
                 }
@@ -42,7 +42,7 @@
         </section>
     } @else if (isEmpty()) {
         <section class="card empty">
-            <p>Es liegt kein Modell im Warenkorb.</p>
+            <p>Dein Warenkorb ist leer.</p>
             <a class="order-btn link-btn" routerLink="/upload">Modell hochladen und Preis erhalten</a>
         </section>
     } @else {
@@ -58,7 +58,7 @@
                             </div>
                             <p class="item-config">
                                 <span class="swatch-dot" [style.background]="item.color.hex" aria-hidden="true"></span>
-                                {{ item.filament }} {{ item.color.label }} · Qualitaet {{ item.quality }} ·
+                                {{ item.filament }} {{ item.color.label }} · Qualitaet {{ qualityLabel(item.quality) }} ·
                                 Druckzeit {{ printTimeLabel(item) }}
                             </p>
                         </li>
@@ -77,11 +77,14 @@
                 @if (!settings().vatEnabled) {
                     <p class="note">Keine MWST, da nicht MWST-pflichtig.</p>
                 }
-                <p class="note">Versand nur innerhalb der Schweiz. Der Preis bleibt {{ settings().quoteValidityDays }} Tage gueltig.</p>
+                <p class="note">
+                    Versand nur innerhalb der Schweiz. Nach der Bestellung bleibt der Preis
+                    {{ settings().quoteValidityDays }} Tage gueltig; so lange kannst du bezahlen.
+                </p>
             </section>
 
             <section class="card">
-                <h2>2. Lieferadresse</h2>
+                <h2>2. Kontakt und Lieferadresse</h2>
                 @if (accountState() === 'signedIn' && customer(); as c) {
                     <p class="account-hint signed-in">Angemeldet als <strong>{{ c.email }}</strong></p>
                 } @else if (accountState() === 'anonymous') {
@@ -130,21 +133,23 @@
                         <input formControlName="termsAccepted" type="checkbox" />
                         <span>
                             Ich akzeptiere die <a routerLink="/agb" target="_blank">AGB</a> und habe die
-                            <a routerLink="/datenschutz" target="_blank">Datenschutzerklärung</a> gelesen.
+                            <a routerLink="/datenschutz" target="_blank">Datenschutzerklaerung</a> gelesen.
                             @if (customerForm.controls.termsAccepted.touched && customerForm.controls.termsAccepted.invalid) {
                                 <span class="field-error">Bitte akzeptiere die AGB, um zu bestellen.</span>
                             }
                         </span>
                     </label>
                     <p class="note wide">
-                        Deine Teile werden individuell nach deinen Modellen gefertigt. Eine Rückgabe ist deshalb
-                        ausgeschlossen; bis zum Produktionsstart kannst du per E-Mail stornieren.
+                        Deine Teile werden einzeln nach deinen Modellen gefertigt. Eine Rueckgabe ist deshalb
+                        ausgeschlossen. Bis wir mit dem Druck beginnen, kannst du per E-Mail an
+                        <a [href]="'mailto:' + supportEmail">{{ supportEmail }}</a> stornieren.
                     </p>
 
                     @if (priceChangedTo() !== null) {
                         <div class="price-changed" role="alert">
                             <p>
-                                Der Preis wurde neu berechnet: <strong>{{ currency() }} {{ itemsTotal() | number:'1.2-2' }}</strong>
+                                Beim Pruefen deiner Bestellung hat sich der Preis geaendert:
+                                <strong>{{ currency() }} {{ itemsTotal() | number:'1.2-2' }}</strong>
                                 fuer die Positionen, gesamt {{ currency() }} {{ priceChangedTo() | number:'1.2-2' }}.
                             </p>
                             <button type="button" class="order-btn" (click)="acceptNewPrice()">Neuen Preis annehmen und bestellen</button>
@@ -153,6 +158,7 @@
                         <button type="submit" class="order-btn" [disabled]="state() === 'submitting'">
                             @if (state() === 'submitting') { Bestellung wird angelegt... } @else { Kostenpflichtig bestellen }
                         </button>
+                        <p class="note wide payment-hint">Danach geht es direkt zur Zahlung.</p>
                     }
 
                     @if (errorMessage()) {

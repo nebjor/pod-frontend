@@ -10,10 +10,14 @@
                 <p class="status"><span class="spinner" aria-hidden="true"></span> Du wirst angemeldet...</p>
             }
             @case ('sent') {
-                <h2>Wir haben dir einen Anmeldelink geschickt.</h2>
+                <h2>Dein Anmeldelink ist unterwegs.</h2>
                 <p class="note">
-                    Schau in dein Postfach fuer <strong>{{ sentTo() }}</strong> und oeffne den Link. Er ist nur kurze
-                    Zeit gueltig. Nichts erhalten? Pruefe den Spam-Ordner oder fordere einen neuen Link an.
+                    Schau in dein Postfach fuer <strong>{{ sentTo() }}</strong> und oeffne den Link. Er ist
+                    {{ linkMinutes }} Minuten gueltig und funktioniert nur einmal.
+                </p>
+                <p class="note">
+                    Nichts erhalten? Die Mail kann eine Minute brauchen. Pruefe den Spam-Ordner oder fordere einen
+                    neuen Link an.
                 </p>
                 <button type="button" class="order-btn ghost-btn" (click)="reset()">Neuen Link anfordern</button>
             }
@@ -22,7 +26,7 @@
                     <p class="error invalid-token" role="alert">{{ errorMessage() }}</p>
                 }
                 <p class="intro">
-                    Kein Passwort noetig: Wir schicken dir einen Link per E-Mail, mit dem du dich anmeldest. Danach
+                    Kein Passwort noetig: Du bekommst einen Link per E-Mail und bist mit einem Klick angemeldet. Danach
                     siehst du deine Bestellungen und deine gespeicherte Adresse.
                 </p>
                 <form [formGroup]="form" class="customer-form" (ngSubmit)="submit()" novalidate>

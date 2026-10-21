@@ -17,6 +17,7 @@ import { EMPTY, Subject, catchError, concatMap, debounce, from, map, merge, of, 
 import { CART_MAX_ITEMS, CartItem, CartService } from '../cart/cart.service';
 import { ModelViewerComponent } from '../model-viewer/model-viewer.component';
 import { formatPrintDuration } from '../quote/print-duration';
+import { formatQualityOption, qualityLabel } from '../quote/quality-labels';
 import { ColorOption, FilamentOption, QualityOption, QuoteOptions, QuoteResponse } from '../quote/quote.models';
 import { QuoteService, UploadEvent, describeQuoteError, isModelExpired } from '../quote/quote.service';
 
@@ -174,6 +175,11 @@ export class UploadComponent {
     readonly addedItem = signal<CartItem | null>(null);
     readonly cartCount = this.cart.count;
     readonly cartItemCount = computed(() => this.cart.items().length);
+    /** "1 Modell" / "3 Modelle": the number of lines in the cart, for the notes under the buttons. */
+    readonly cartModelsLabel = computed(() => {
+        const count = this.cartItemCount();
+        return `${count} ${count === 1 ? 'Modell' : 'Modelle'}`;
+    });
     readonly cartTotal = this.cart.itemsTotal;
     readonly cartCurrency = this.cart.currency;
     readonly cartIsFull = this.cart.isFull;
@@ -223,6 +229,10 @@ export class UploadComponent {
     readonly selectedQualityOption = computed<QualityOption | undefined>(() =>
         this.qualityOptions().find((option) => option.code === this.selectedQualityCode())
     );
+    readonly selectedQualityLabel = computed(() => {
+        const option = this.selectedQualityOption();
+        return option ? formatQualityOption(option) : '';
+    });
 
     /** Colours stocked for the selected filament. */
     readonly availableColors = computed<ReadonlyArray<ColorOption>>(() => this.selectedFilamentOption()?.colors ?? []);
@@ -255,10 +265,10 @@ export class UploadComponent {
             quote.color.pricePerKgChf === (this.selectedColor()?.pricePerKgChf ?? 0)
         );
     });
-    /** Quality label of the quote on screen, for the stale marker; falls back to the code. */
+    /** Quality label of the quote on screen, for the stale marker. */
     readonly quoteQualityLabel = computed(() => {
         const code = this.quote()?.quality;
-        return this.qualityOptions().find((option) => option.code === code)?.label ?? code ?? '';
+        return code ? qualityLabel(code, this.qualityOptions()) : '';
     });
     /** The quote on screen is shown dimmed: a new one is pending or the form has moved on. */
     readonly quoteIsStale = computed(
@@ -317,6 +327,11 @@ export class UploadComponent {
 
     toggleWarnings() {
         this.warningsOpen.update((open) => !open);
+    }
+
+    /** "Standard 0.20 mm", the same wording the cart and the order pages use. */
+    qualityOptionLabel(option: QualityOption): string {
+        return formatQualityOption(option);
     }
 
     /**

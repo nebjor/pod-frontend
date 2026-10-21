@@ -17,11 +17,13 @@ export const shopRoutes: Routes = [
     {
         path: 'upload',
         title: 'Modell hochladen und Sofortpreis',
-        data: { description: 'STL oder 3MF hochladen, Filament, Farbe und Qualitaet waehlen und den Preis aus einem echten Slicer-Durchlauf sofort sehen.' },
+        data: { description: 'STL oder 3MF hochladen, Material, Farbe und Qualitaet waehlen und den Preis aus einem echten Slicer-Durchlauf sofort sehen.' },
         loadComponent: () => import('./upload/upload.component').then((m) => m.UploadComponent)
     },
     {
         path: 'warenkorb',
+        title: 'Warenkorb',
+        data: { noindex: true },
         loadComponent: () => import('./cart/cart.component').then((m) => m.CartComponent)
     },
     {

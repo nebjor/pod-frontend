@@ -8,9 +8,19 @@ import { AccountService } from '../account/account.service';
 import { CartService, NewCartItem } from '../cart/cart.service';
 import { FALLBACK_ORDER_SETTINGS, LAST_ORDER_STORAGE_KEY, OrderRequest, OrderResponse } from '../order/order.models';
 import { OrderService } from '../order/order.service';
-import { QuoteResponse } from '../quote/quote.models';
+import { QuoteOptions, QuoteResponse } from '../quote/quote.models';
 import { QuoteService, UploadEvent } from '../quote/quote.service';
 import { CheckoutComponent } from './checkout.component';
+
+/** Quality tiers the page labels the cart lines with. */
+const options: QuoteOptions = {
+    filaments: [],
+    qualities: [
+        { code: 'medium', label: 'Standard', profileName: '0.20mm Standard @BBL A1', layerHeightMm: 0.2, baseLeadTimeDays: 3 },
+        { code: 'high', label: 'Fein', profileName: '0.12mm Fine @BBL A1', layerHeightMm: 0.12, baseLeadTimeDays: 4 }
+    ],
+    maxQuantity: 20
+};
 
 const quote: QuoteResponse = {
     fileName: 'benchy.stl',
@@ -158,7 +168,7 @@ describe('CheckoutComponent', () => {
             providers: [
                 provideRouter([]),
                 { provide: OrderService, useValue: { placeOrder, loadSettings: () => of(FALLBACK_ORDER_SETTINGS) } },
-                { provide: QuoteService, useValue: { uploadModel, requestQuote: vi.fn() } },
+                { provide: QuoteService, useValue: { uploadModel, requestQuote: vi.fn(), loadOptions: () => of(options) } },
                 { provide: AccountService, useValue: { state: accountState, account, load: () => Promise.resolve() } }
             ]
         }).compileComponents();
@@ -198,7 +208,7 @@ describe('CheckoutComponent', () => {
         await create();
 
         expect(component.isEmpty()).toBe(true);
-        expect((fixture.nativeElement as HTMLElement).textContent).toContain('kein Modell im Warenkorb');
+        expect((fixture.nativeElement as HTMLElement).textContent).toContain('Warenkorb ist leer');
     });
 
     it('lists every line and sums them with the flat shipping before ordering', async () => {
@@ -215,6 +225,10 @@ describe('CheckoutComponent', () => {
         expect(lines[0].textContent).toContain('CHF 11.00');
         expect(lines[1].textContent).toContain('1 x cube.stl');
         expect(lines[1].textContent).toContain('PETG White');
+        // Quality tiers are shown by their catalogue label, never by the code the cart stores.
+        expect(lines[0].textContent).toContain('Qualitaet Standard 0.20 mm');
+        expect(lines[1].textContent).toContain('Qualitaet Fein 0.12 mm');
+        expect(lines[0].textContent).not.toContain('medium');
         expect((fixture.nativeElement as HTMLElement).querySelector('a[href="/warenkorb"]')).not.toBeNull();
     });
 
