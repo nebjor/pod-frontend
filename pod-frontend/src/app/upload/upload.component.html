@@ -23,11 +23,20 @@
             <section class="preview-card">
                 <div class="viewer-shell">
                     @if (isModelLoading()) {
+                        <!-- The bytes come from a local blob URL, so the bar fills at once; the
+                             wait after that is the parser, which has no progress to report. -->
                         <div class="viewer-loading">
-                            <p>Lade Modell... {{ modelLoadProgress() }}%</p>
-                            <div class="loading-track">
-                                <div class="loading-fill" [style.width.%]="modelLoadProgress()"></div>
-                            </div>
+                            @if (modelLoadProgress() < 100) {
+                                <p>Lade Modell... {{ modelLoadProgress() }}%</p>
+                                <div class="loading-track">
+                                    <div class="loading-fill" [style.width.%]="modelLoadProgress()"></div>
+                                </div>
+                            } @else {
+                                <p>Modell wird aufbereitet...</p>
+                                <div class="loading-track indeterminate">
+                                    <div class="loading-fill"></div>
+                                </div>
+                            }
                         </div>
                     }
 
@@ -91,7 +100,18 @@
 
                     <label>
                         Menge
-                        <input formControlName="quantity" type="number" min="1" [max]="maxQuantity()" />
+                        <input formControlName="quantity" type="number" min="1" [max]="maxQuantity()"
+                            [class.invalid]="quantityErrorVisible" [attr.aria-invalid]="quantityErrorVisible"
+                            [attr.aria-describedby]="quantityErrorVisible ? 'quantity-error' : null" />
+                        @if (quantityErrorVisible) {
+                            <span id="quantity-error" class="field-error" role="alert">
+                                @if (orderForm.controls.quantity.hasError('required')) {
+                                    Bitte eine Menge eingeben
+                                } @else {
+                                    Bitte 1 bis {{ maxQuantity() }} Stueck
+                                }
+                            </span>
+                        }
                     </label>
 
                     <fieldset class="color-field">
@@ -110,23 +130,32 @@
                 </form>
 
                 <div class="estimate" [class.inactive]="quoteState() !== 'ready'" aria-live="polite">
-                    @if (uploadState() === 'uploading') {
-                        <p class="estimate-line estimate-status">
-                            <span class="spinner" aria-hidden="true"></span>
-                            Modell wird hochgeladen... {{ uploadProgress() }}%
-                        </p>
-                    } @else {
-                        @switch (quoteState()) {
-                            @case ('loading') {
-                                <p class="estimate-line estimate-status">
+                    @if (quoteInProgress() || quoteDoneFlash()) {
+                        <!-- One bar for all pending phases: it keeps its width transition when the
+                             upload hands over to the slicer, and only the label fades. -->
+                        <div class="quote-phase" [attr.data-phase]="quoteDoneFlash() ? 'done' : quotePhase()">
+                            <p class="estimate-line estimate-status">
+                                @if (quoteDoneFlash()) {
+                                    <span class="check" aria-hidden="true"></span>
+                                } @else {
                                     <span class="spinner" aria-hidden="true"></span>
-                                    @if (quote()) {
-                                        Preis wird neu berechnet...
-                                    } @else {
-                                        Slicer berechnet dein Angebot...
+                                }
+                                @if (quotePhase() === 'uploading') {
+                                    Modell wird hochgeladen... {{ uploadProgress() }}%
+                                } @else {
+                                    <!-- Keyed by its text: every stage is a fresh node, so the fade replays. -->
+                                    @for (text of [quoteStatusText()]; track text) {
+                                        <span class="phase-text">{{ text }}</span>
                                     }
-                                </p>
-                            }
+                                }
+                            </p>
+                            <div class="loading-track" [class.indeterminate]="quoteBarPercent() === null" role="progressbar"
+                                aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="quoteBarPercent()">
+                                <div class="loading-fill" [style.width.%]="quoteBarPercent()"></div>
+                            </div>
+                        </div>
+                    } @else {
+                        @switch (quotePhase()) {
                             @case ('error') {
                                 <p class="estimate-line estimate-error">{{ quoteError() }}</p>
                                 <button type="button" class="retry-btn" (click)="requestQuote(true)">Erneut berechnen</button>
@@ -139,7 +168,15 @@
 
                     <!-- The last quote stays visible, dimmed, while a new one is computed. -->
                     @if (quote(); as q) {
-                        <div class="quote-body" [class.stale]="quoteState() !== 'ready'">
+                        <div class="quote-body" [class.stale]="quoteIsStale()">
+                        @if (!quoteMatchesForm()) {
+                            <p class="estimate-line quote-stale-note">
+                                Angebot gilt fuer {{ q.quantity }} x {{ q.filament }}, {{ quoteQualityLabel() }}.
+                                @if (orderForm.invalid) {
+                                    <strong>Menge korrigieren.</strong>
+                                }
+                            </p>
+                        }
                         <p class="estimate-line estimate-total">
                             Preis gesamt: <strong>{{ q.currency }} {{ q.totalPriceChf | number:'1.2-2' }}</strong>
                         </p>
