@@ -70,6 +70,13 @@ function quoteKey(modelId: string, filament: string, quality: string, quantity: 
     return `${modelId}|${filament}|${quality}|${quantity}|${pricePerKgChf}`;
 }
 
+/**
+ * Largest 3MF the browser is asked to preview. A 3MF is zipped XML and is parsed on the main
+ * thread; a 20 MB file unpacks to over 100 MB of text and a million triangles, which freezes
+ * the page for a long time. Binary STL parses fast and stays within the backend's 50 MB cap.
+ */
+export const PREVIEW_LIMIT_BYTES_3MF = 8 * 1024 * 1024;
+
 /** Chosen when the catalogue arrives, if the backend offers it; otherwise the first tier. */
 const PREFERRED_QUALITY = 'medium';
 
@@ -129,6 +136,8 @@ export class UploadComponent {
     readonly uploadState = signal<UploadState>('idle');
     readonly uploadProgress = signal(0);
     readonly modelUrl = signal<string | undefined>(undefined);
+    /** True when the file is too heavy for the in-browser preview; the quote is unaffected. */
+    readonly previewDisabled = signal(false);
     readonly modelFormat = signal<UploadFormat | undefined>(undefined);
 
     readonly quote = signal<QuoteResponse | null>(null);
@@ -515,7 +524,9 @@ export class UploadComponent {
         this.selectedFile.set(file);
         this.modelFormat.set(extension);
         this.modelLoadProgress.set(0);
-        this.isModelLoading.set(true);
+        const previewable = extension !== '3mf' || file.size <= PREVIEW_LIMIT_BYTES_3MF;
+        this.previewDisabled.set(!previewable);
+        this.isModelLoading.set(previewable);
         this.modelUrl.set(URL.createObjectURL(file));
 
         this.startUpload(file);
@@ -551,6 +562,7 @@ export class UploadComponent {
         this.releaseModelUrl();
         this.selectedFile.set(null);
         this.modelFormat.set(undefined);
+        this.previewDisabled.set(false);
         this.quote.set(null);
         this.quoteError.set('');
         this.quoteState.set('idle');
