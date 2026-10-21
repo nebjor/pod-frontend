@@ -2,7 +2,7 @@
     <header class="admin-header">
         <div>
             <p class="kicker">ADMIN</p>
-            <h1>{{ tab() === 'calibration' ? 'Kalibrierung' : 'Bestellungen' }}</h1>
+            <h1>{{ tab() === 'slices' ? 'Slice-Daten' : 'Bestellungen' }}</h1>
         </div>
         @if (state() !== 'login' && state() !== 'checking') {
             <div class="header-actions">
@@ -39,8 +39,8 @@
             <nav class="tabs" aria-label="Bereich">
                 <button type="button" class="tab" [class.active]="tab() === 'orders'" [attr.aria-current]="tab() === 'orders' ? 'page' : null"
                     (click)="showTab('orders')">Bestellungen</button>
-                <button type="button" class="tab" [class.active]="tab() === 'calibration'" [attr.aria-current]="tab() === 'calibration' ? 'page' : null"
-                    (click)="showTab('calibration')">Kalibrierung</button>
+                <button type="button" class="tab" [class.active]="tab() === 'slices'" [attr.aria-current]="tab() === 'slices' ? 'page' : null"
+                    (click)="showTab('slices')">Slice-Daten</button>
             </nav>
 
             @if (tab() === 'orders') {
@@ -179,14 +179,6 @@
                                                     [attr.aria-label]="item.fileName + ' herunterladen'">
                                                     Download
                                                 </button>
-                                                @if (isEnqueued(order, item)) {
-                                                    <span class="tag tag-muted">In Warteschlange</span>
-                                                } @else {
-                                                    <button type="button" class="ghost-btn small" (click)="enqueue(order, item)"
-                                                        [attr.aria-label]="item.fileName + ' kalibrieren'">
-                                                        Kalibrieren
-                                                    </button>
-                                                }
                                             </td>
                                         </tr>
                                         @if (item.warnings.length > 0) {
@@ -221,226 +213,224 @@
                 }
             } @else {
                 <section class="toolbar">
-                    <button type="button" class="order-btn" [disabled]="busy()" (click)="runCalibrationNow()">Jetzt ausfuehren</button>
-                    <button type="button" class="ghost-btn" (click)="exportCalibrationCsv()">CSV exportieren</button>
-                    <button type="button" class="ghost-btn" (click)="loadCalibration()">Aktualisieren</button>
+                    <button type="button" class="ghost-btn" (click)="exportSlicesCsv()">CSV exportieren</button>
+                    <button type="button" class="ghost-btn" (click)="loadSlices()">Aktualisieren</button>
                     @if (notice()) {
                         <span class="notice" aria-live="polite">{{ notice() }}</span>
                     }
                 </section>
 
-                @if (calibrationError()) {
-                    <p class="error" role="alert">{{ calibrationError() }}</p>
+                @if (sliceError()) {
+                    <p class="error" role="alert">{{ sliceError() }}</p>
                 }
 
-                @if (calibrationState() === 'loading' || calibrationState() === 'idle') {
-                    <p class="status">Lade Kalibrierung...</p>
+                @if (sliceState() === 'loading' || sliceState() === 'idle') {
+                    <p class="status">Lade Slice-Daten...</p>
                 } @else if (report(); as report) {
                     <p class="summary">
-                        <strong>{{ modelCount() }} Modelle, {{ report.rows }} Messungen</strong>
-                        <span class="muted">Naechtlich um 03:00, bis zu 5 Modelle pro Nacht</span>
+                        <strong>{{ report.rows }} gespeicherte Slices ({{ modelCount() }} Modelle)</strong>
+                        <span class="muted">aus Kundenanfragen: {{ report.sources.quote }}, manuell: {{ report.sources.manual }}</span>
                     </p>
 
-                    @if (modelCount() === 0) {
-                        <p class="status empty">Noch keine Messungen. Nach der naechsten Nacht erscheinen hier die ersten Werte.</p>
+                    @if (report.rows === 0) {
+                        <p class="status empty">Noch keine Slices gespeichert. Jede Preisberechnung eines Kunden legt hier eine Zeile ab.</p>
                     } @else {
-                        <h2 class="section-title">Zeitfaktor je Filament</h2>
-                        <div class="table-wrap">
-                            <table class="orders factors">
-                                <thead>
-                                    <tr>
-                                        <th>Filament (konfiguriert)</th>
-                                        @for (quality of qualities; track quality) {
-                                            <th class="num">{{ quality }}</th>
-                                        }
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @for (filament of filaments(); track filament) {
+                        <div class="source-filter" role="group" aria-label="Quelle">
+                            @for (option of sourceFilters; track option.value) {
+                                <button type="button" class="ghost-btn small" [class.active]="sourceFilter() === option.value"
+                                    [attr.aria-pressed]="sourceFilter() === option.value" (click)="setSourceFilter(option.value)">
+                                    {{ option.label }}
+                                </button>
+                            }
+                        </div>
+
+                        @if (rows().length === 0) {
+                            <p class="status">Keine Slices aus dieser Quelle.</p>
+                        } @else {
+                            <div class="table-wrap">
+                                <table class="orders slices">
+                                    <thead>
                                         <tr>
-                                            <th scope="row">
-                                                {{ filament }}
-                                                <span class="muted">(konfiguriert {{ report.configured.timeFactor[filament] | number:'1.2-2' }})</span>
-                                            </th>
+                                            <th>Datum</th>
+                                            <th>Modell</th>
+                                            <th>Quelle</th>
+                                            <th>Filament</th>
+                                            <th>Qualitaet</th>
+                                            <th class="num">Stueck</th>
+                                            <th class="num">Platten</th>
+                                            <th class="num">Druckzeit</th>
+                                            <th class="num">Material g</th>
+                                            <th class="num">Dreiecke</th>
+                                            <th>Mesh</th>
+                                            <th class="num">Hinweise</th>
+                                            <th class="num">Dauer (s)</th>
+                                            <th>Slicer-Version</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (row of rows(); track row.id) {
+                                            <tr>
+                                                <td>{{ row.measuredAt | date:'dd.MM.yyyy HH:mm' }}</td>
+                                                <td class="file" [title]="row.modelName + ' (' + row.modelSha256 + ')'">
+                                                    {{ row.modelName }}
+                                                    <span class="muted sha">{{ shortSha(row) }}</span>
+                                                </td>
+                                                <td>
+                                                    {{ sourceLabels[row.source] }}
+                                                    @if (row.orderNumber) {
+                                                        <button type="button" class="link-btn" (click)="openOrder(row.orderNumber)">{{ row.orderNumber }}</button>
+                                                    }
+                                                </td>
+                                                <td>{{ row.filament }}</td>
+                                                <td>{{ row.quality }}</td>
+                                                <td class="num">{{ row.copies }}</td>
+                                                <td class="num">{{ row.plates }}</td>
+                                                <td class="num">{{ rowPrintTime(row) }}</td>
+                                                <td class="num">{{ row.filamentGrams | number:'1.0-1' }}</td>
+                                                <td class="num">{{ row.triangleCount | number:'1.0-0' }}</td>
+                                                <td>
+                                                    <span class="tag" [class]="'tag mesh-' + mesh(row)">{{ meshLabels[mesh(row)] }}</span>
+                                                </td>
+                                                <td class="num" [class.deviates]="row.warningsCount > 0">{{ row.warningsCount }}</td>
+                                                <td class="num">{{ row.durationMs / 1000 | number:'1.1-1' }}</td>
+                                                <td>{{ row.slicerVersion }}</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    }
+
+                    @if (showFactors()) {
+                        <details class="factors-details">
+                            <summary>Faktoren pruefen (nur mit manuellen Messreihen)</summary>
+
+                            <p class="note explain">
+                                Der Zeitfaktor ist das Verhaeltnis der vom Slicer berechneten Druckzeit zur Schaetzung des Preisrechners,
+                                der Laengenfaktor dasselbe fuer die Filamentlaenge; der Median je Qualitaet wird mit dem konfigurierten
+                                Wert verglichen und ab 5 % Abweichung markiert. Bei den Mengen zeigt das Verhaeltnis je Stueck, wie viel
+                                eine Kopie auf einer vollen Platte gegenueber einem Einzeldruck kostet, der Plattenaufschlag die feste
+                                Zeit je Platte und der Rechenfehler, wie weit die arithmetische Mengenschaetzung vom Slicer abweicht.
+                                Die konfigurierten Werte liegen in der Backend-Konfiguration (application.yml); eine Anpassung ist
+                                eine Backend-Aenderung.
+                            </p>
+
+                            <h2 class="section-title">Zeitfaktor je Filament</h2>
+                            <div class="table-wrap">
+                                <table class="orders factors">
+                                    <thead>
+                                        <tr>
+                                            <th>Filament (konfiguriert)</th>
                                             @for (quality of qualities; track quality) {
-                                                <td class="num" [class.deviates]="factorDeviates(report.timeFactor, report.configured.timeFactor, filament, quality)">
-                                                    @if (median(report.timeFactor, filament, quality); as value) {
-                                                        {{ value | number:'1.2-2' }}
-                                                        <span class="muted">(n={{ sampleSize(report.timeFactor, filament, quality) }})</span>
+                                                <th class="num">{{ quality }}</th>
+                                            }
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (filament of filaments(); track filament) {
+                                            <tr>
+                                                <th scope="row">
+                                                    {{ filament }}
+                                                    <span class="muted">(konfiguriert {{ report.configured.timeFactor[filament] | number:'1.2-2' }})</span>
+                                                </th>
+                                                @for (quality of qualities; track quality) {
+                                                    <td class="num" [class.deviates]="factorDeviates(report.timeFactor, report.configured.timeFactor, filament, quality)">
+                                                        @if (median(report.timeFactor, filament, quality); as value) {
+                                                            {{ value | number:'1.2-2' }}
+                                                            <span class="muted">(n={{ sampleSize(report.timeFactor, filament, quality) }})</span>
+                                                        } @else {
+                                                            <span class="muted">-</span>
+                                                        }
+                                                    </td>
+                                                }
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <h2 class="section-title">Laengenfaktor je Filament</h2>
+                            <div class="table-wrap">
+                                <table class="orders factors">
+                                    <thead>
+                                        <tr>
+                                            <th>Filament (konfiguriert)</th>
+                                            @for (quality of qualities; track quality) {
+                                                <th class="num">{{ quality }}</th>
+                                            }
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (filament of filaments(); track filament) {
+                                            <tr>
+                                                <th scope="row">
+                                                    {{ filament }}
+                                                    <span class="muted">(konfiguriert {{ report.configured.lengthFactor[filament] | number:'1.2-2' }})</span>
+                                                </th>
+                                                @for (quality of qualities; track quality) {
+                                                    <td class="num" [class.deviates]="factorDeviates(report.lengthFactor, report.configured.lengthFactor, filament, quality)">
+                                                        @if (median(report.lengthFactor, filament, quality); as value) {
+                                                            {{ value | number:'1.2-2' }}
+                                                            <span class="muted">(n={{ sampleSize(report.lengthFactor, filament, quality) }})</span>
+                                                        } @else {
+                                                            <span class="muted">-</span>
+                                                        }
+                                                    </td>
+                                                }
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <h2 class="section-title">Mengen</h2>
+                            <div class="table-wrap">
+                                <table class="orders quantities">
+                                    <thead>
+                                        <tr>
+                                            <th class="num">Stueck</th>
+                                            <th class="num">Verhaeltnis je Stueck</th>
+                                            <th class="num">Plattenaufschlag</th>
+                                            <th class="num">Rechenfehler</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (copies of quantities(); track copies) {
+                                            @let quantity = report.quantity[copies];
+                                            @let arithmetic = report.arithmeticError[copies];
+                                            <tr [class.deviates]="arithmeticDeviates(copies)">
+                                                <td class="num">{{ copies }} <span class="muted">(n={{ quantity?.n ?? arithmetic?.n ?? 0 }})</span></td>
+                                                <td class="num">
+                                                    @if (quantity?.perCopyRatio?.median != null) {
+                                                        {{ quantity.perCopyRatio.median | number:'1.2-2' }}
+                                                        <span class="muted">({{ quantity.perCopyRatio.min | number:'1.2-2' }} bis {{ quantity.perCopyRatio.max | number:'1.2-2' }})</span>
                                                     } @else {
                                                         <span class="muted">-</span>
                                                     }
                                                 </td>
-                                            }
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <h2 class="section-title">Laengenfaktor je Filament</h2>
-                        <div class="table-wrap">
-                            <table class="orders factors">
-                                <thead>
-                                    <tr>
-                                        <th>Filament (konfiguriert)</th>
-                                        @for (quality of qualities; track quality) {
-                                            <th class="num">{{ quality }}</th>
-                                        }
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @for (filament of filaments(); track filament) {
-                                        <tr>
-                                            <th scope="row">
-                                                {{ filament }}
-                                                <span class="muted">(konfiguriert {{ report.configured.lengthFactor[filament] | number:'1.2-2' }})</span>
-                                            </th>
-                                            @for (quality of qualities; track quality) {
-                                                <td class="num" [class.deviates]="factorDeviates(report.lengthFactor, report.configured.lengthFactor, filament, quality)">
-                                                    @if (median(report.lengthFactor, filament, quality); as value) {
-                                                        {{ value | number:'1.2-2' }}
-                                                        <span class="muted">(n={{ sampleSize(report.lengthFactor, filament, quality) }})</span>
+                                                <td class="num">
+                                                    @if (quantity?.plateOverheadSeconds?.median != null) {
+                                                        {{ quantity.plateOverheadSeconds.median | number:'1.0-0' }} s
+                                                        <span class="muted">(konfiguriert {{ configuredPlateOverhead() }} s)</span>
                                                     } @else {
                                                         <span class="muted">-</span>
                                                     }
                                                 </td>
-                                            }
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <h2 class="section-title">Mengen</h2>
-                        <div class="table-wrap">
-                            <table class="orders quantities">
-                                <thead>
-                                    <tr>
-                                        <th class="num">Stueck</th>
-                                        <th class="num">Verhaeltnis je Stueck</th>
-                                        <th class="num">Plattenaufschlag</th>
-                                        <th class="num">Rechenfehler</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @for (copies of quantities(); track copies) {
-                                        @let quantity = report.quantity[copies];
-                                        @let arithmetic = report.arithmeticError[copies];
-                                        <tr [class.deviates]="arithmeticDeviates(copies)">
-                                            <td class="num">{{ copies }} <span class="muted">(n={{ quantity?.n ?? arithmetic?.n ?? 0 }})</span></td>
-                                            <td class="num">
-                                                @if (quantity?.perCopyRatio?.median != null) {
-                                                    {{ quantity.perCopyRatio.median | number:'1.2-2' }}
-                                                    <span class="muted">({{ quantity.perCopyRatio.min | number:'1.2-2' }} bis {{ quantity.perCopyRatio.max | number:'1.2-2' }})</span>
-                                                } @else {
-                                                    <span class="muted">-</span>
-                                                }
-                                            </td>
-                                            <td class="num">
-                                                @if (quantity?.plateOverheadSeconds?.median != null) {
-                                                    {{ quantity.plateOverheadSeconds.median | number:'1.0-0' }} s
-                                                    <span class="muted">(konfiguriert {{ configuredPlateOverhead() }} s)</span>
-                                                } @else {
-                                                    <span class="muted">-</span>
-                                                }
-                                            </td>
-                                            <td class="num">
-                                                @if (arithmetic?.meanAbsPercent != null) {
-                                                    {{ arithmetic.meanAbsPercent | number:'1.1-1' }} %
-                                                    <span class="muted">(max {{ arithmetic.maxAbsPercent | number:'1.1-1' }} %)</span>
-                                                } @else {
-                                                    <span class="muted">-</span>
-                                                }
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    }
-
-                    <p class="note explain">
-                        Der Zeitfaktor ist das Verhaeltnis der vom Slicer berechneten Druckzeit zur Schaetzung des Preisrechners,
-                        der Laengenfaktor dasselbe fuer die Filamentlaenge; der Median je Qualitaet wird mit dem konfigurierten
-                        Wert verglichen und ab 5 % Abweichung markiert. Bei den Mengen zeigt das Verhaeltnis je Stueck, wie viel
-                        eine Kopie auf einer vollen Platte gegenueber einem Einzeldruck kostet, der Plattenaufschlag die feste
-                        Zeit je Platte und der Rechenfehler, wie weit die arithmetische Mengenschaetzung vom Slicer abweicht.
-                        Die konfigurierten Werte liegen in der Backend-Konfiguration (application.yml); eine Anpassung ist
-                        eine Backend-Aenderung.
-                    </p>
-
-                    @if (calibratedModels().length > 0) {
-                        <h2 class="section-title">Kalibrierte Modelle</h2>
-                        <div class="table-wrap">
-                            <table class="orders models">
-                                <thead>
-                                    <tr>
-                                        <th>Modell</th>
-                                        <th>Quelle</th>
-                                        <th class="num">Zellen</th>
-                                        <th class="num">Dreiecke</th>
-                                        <th>Abmessungen</th>
-                                        <th>Gemessen</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @for (model of calibratedModels(); track model.modelSha256 + model.measuredAt) {
-                                        <tr>
-                                            <td class="file" [title]="model.modelName">{{ model.modelName }}</td>
-                                            <td>
-                                                {{ model.source }}
-                                                @if (model.orderNumber) {
-                                                    <button type="button" class="link-btn" (click)="openOrder(model.orderNumber)">{{ model.orderNumber }}</button>
-                                                }
-                                            </td>
-                                            <td class="num">{{ model.cells }}</td>
-                                            <td class="num">{{ model.triangleCount | number:'1.0-0' }}</td>
-                                            <td>{{ model.bbox.widthMm | number:'1.0-1' }} x {{ model.bbox.depthMm | number:'1.0-1' }} x {{ model.bbox.heightMm | number:'1.0-1' }} mm</td>
-                                            <td>{{ model.measuredAt | date:'dd.MM.yyyy HH:mm' }}</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    }
-
-                    <h2 class="section-title">Warteschlange</h2>
-                    @if (queue().length === 0) {
-                        <p class="status">Warteschlange leer.</p>
-                    } @else {
-                        <div class="table-wrap">
-                            <table class="orders queue">
-                                <thead>
-                                    <tr>
-                                        <th>Modell</th>
-                                        <th>Quelle</th>
-                                        <th>Eingereiht</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @for (entry of queue(); track entry.id) {
-                                        <tr>
-                                            <td class="file" [title]="entry.modelName">{{ entry.modelName }}</td>
-                                            <td>
-                                                {{ entry.source }}
-                                                @if (entry.orderNumber) {
-                                                    <button type="button" class="link-btn" (click)="openOrder(entry.orderNumber)">{{ entry.orderNumber }}</button>
-                                                }
-                                            </td>
-                                            <td>{{ entry.queuedAt | date:'dd.MM.yyyy HH:mm' }}</td>
-                                            <td>
-                                                <span class="badge" [class]="'badge queue-' + queueStatus(entry)">{{ queueStatusLabels[queueStatus(entry)] }}</span>
-                                                @if (entry.error) {
-                                                    <span class="queue-error">{{ entry.error }}</span>
-                                                }
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
+                                                <td class="num">
+                                                    @if (arithmetic?.meanAbsPercent != null) {
+                                                        {{ arithmetic.meanAbsPercent | number:'1.1-1' }} %
+                                                        <span class="muted">(max {{ arithmetic.maxAbsPercent | number:'1.1-1' }} %)</span>
+                                                    } @else {
+                                                        <span class="muted">-</span>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </details>
                     }
                 }
             }
