@@ -5,7 +5,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { OrderStatus } from '../order/order.models';
 import { describeQuoteError } from '../quote/quote.service';
 import { formatPrintDuration } from '../quote/print-duration';
-import { AdminApiService, AdminOrder } from './admin-api.service';
+import { AdminApiService, AdminOrder, AdminOrderItem } from './admin-api.service';
 import { AdminAuthService } from './admin-auth.service';
 
 /** Owner-facing labels for each state and for the button that moves an order into it. */
@@ -56,7 +56,13 @@ export class AdminComponent {
     readonly busy = signal(false);
 
     readonly selected = computed(() => this.orders().find((order) => order.orderNumber === this.selectedNumber()) ?? null);
-    readonly selectedPrintTime = computed(() => formatPrintDuration(this.selected()?.totalPrintTimeSeconds ?? 0));
+    /** Print time and material of the whole order; each line already covers all its copies. */
+    readonly selectedPrintTime = computed(() =>
+        formatPrintDuration((this.selected()?.items ?? []).reduce((sum, item) => sum + item.printTimeSeconds, 0))
+    );
+    readonly selectedFilamentGrams = computed(() =>
+        (this.selected()?.items ?? []).reduce((sum, item) => sum + item.filamentGrams, 0)
+    );
 
     readonly loginForm = new FormGroup({
         username: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
@@ -100,6 +106,16 @@ export class AdminComponent {
         this.selectedNumber.set(this.selectedNumber() === orderNumber ? null : orderNumber);
     }
 
+    /** One line for the list: the file name alone, or the count and the names of all lines. */
+    itemSummary(order: AdminOrder): string {
+        const names = order.items.map((item) => item.fileName);
+        return names.length === 1 ? names[0] : `${names.length} Positionen: ${names.join(', ')}`;
+    }
+
+    printTime(item: AdminOrderItem): string {
+        return formatPrintDuration(item.printTimeSeconds);
+    }
+
     load() {
         this.state.set('loading');
         this.errorMessage.set('');
@@ -137,12 +153,12 @@ export class AdminComponent {
             });
     }
 
-    download(order: AdminOrder) {
+    download(order: AdminOrder, item: AdminOrderItem) {
         this.api
-            .downloadModel(order.orderNumber)
+            .downloadModel(order.orderNumber, item.position)
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
-                next: (blob) => saveBlob(blob, `${order.orderNumber}_${order.fileName}`),
+                next: (blob) => saveBlob(blob, `${order.orderNumber}_${item.position}_${item.fileName}`),
                 error: (error: unknown) => this.errorMessage.set(describeQuoteError(error))
             });
     }

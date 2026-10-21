@@ -1,9 +1,43 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
-import { AdminApiService, AdminOrder } from './admin-api.service';
+import { AdminApiService, AdminOrder, AdminOrderItem } from './admin-api.service';
 import { AdminAuthService } from './admin-auth.service';
 import { AdminComponent } from './admin.component';
+
+const benchy: AdminOrderItem = {
+    position: 1,
+    fileName: 'benchy.stl',
+    fileSizeBytes: 11257784,
+    fileSha256: 'a'.repeat(64),
+    filament: 'PLA',
+    color: { code: 'red', label: 'Red', hex: '#d62828', pricePerKgChf: 45 },
+    quality: 'medium',
+    quantity: 2,
+    machineProfile: 'Bambu Lab A1 0.4 nozzle',
+    layerHeightMm: 0.2,
+    plateCount: 1,
+    printTimeSeconds: 3903,
+    filamentGrams: 23.1,
+    unitPriceChf: 3,
+    setupFeeChf: 5,
+    lineTotalChf: 11
+};
+
+const holder: AdminOrderItem = {
+    ...benchy,
+    position: 2,
+    fileName: 'halter.3mf',
+    fileSizeBytes: 524288,
+    filament: 'PETG',
+    color: { code: 'white', label: 'White', hex: '#f2f2f2', pricePerKgChf: 45 },
+    quality: 'high',
+    quantity: 1,
+    printTimeSeconds: 1952,
+    filamentGrams: 11.5,
+    unitPriceChf: 1.85,
+    lineTotalChf: 6.85
+};
 
 const paidOrder: AdminOrder = {
     orderNumber: 'POD-1000',
@@ -21,20 +55,16 @@ const paidOrder: AdminOrder = {
     postalCode: '8001',
     city: 'Zürich',
     country: 'CH',
-    fileName: 'benchy.stl',
-    fileSizeBytes: 11257784,
-    filament: 'PLA',
-    colorCode: 'red',
-    colorLabel: 'Red',
-    quality: 'medium',
-    quantity: 2,
-    machineProfile: 'Bambu Lab A1 0.4 nozzle',
-    layerHeightMm: 0.2,
-    plateCount: 1,
-    totalPrintTimeSeconds: 3903,
-    totalFilamentGrams: 23.1,
-    totals: { setupFee: 5, unitPrice: 3, itemsTotal: 11, shipping: 9, vatRate: 0, vatAmount: 0, total: 20, currency: 'CHF' },
+    items: [benchy, holder],
+    totals: { itemsTotal: 17.85, shipping: 9, vatRate: 0, vatAmount: 0, total: 26.85, currency: 'CHF' },
     paymentProvider: 'mock'
+};
+
+const singleOrder: AdminOrder = {
+    ...paidOrder,
+    orderNumber: 'POD-1001',
+    items: [benchy],
+    totals: { ...paidOrder.totals, itemsTotal: 11, total: 20 }
 };
 
 describe('AdminComponent', () => {
@@ -43,15 +73,17 @@ describe('AdminComponent', () => {
     let auth: AdminAuthService;
     let listOrders: ReturnType<typeof vi.fn>;
     let setStatus: ReturnType<typeof vi.fn>;
+    let downloadModel: ReturnType<typeof vi.fn>;
 
     beforeEach(async () => {
         sessionStorage.clear();
-        listOrders = vi.fn(() => of([paidOrder]));
+        listOrders = vi.fn(() => of([paidOrder, singleOrder]));
         setStatus = vi.fn((_: string, status: string) => of({ ...paidOrder, status, allowedTransitions: ['APPROVED', 'CANCELLED'] }));
+        downloadModel = vi.fn(() => of(new Blob(['solid x'])));
 
         await TestBed.configureTestingModule({
             imports: [AdminComponent],
-            providers: [{ provide: AdminApiService, useValue: { listOrders, setStatus, downloadModel: vi.fn(), resetRateLimits: vi.fn() } }]
+            providers: [{ provide: AdminApiService, useValue: { listOrders, setStatus, downloadModel, resetRateLimits: vi.fn() } }]
         }).compileComponents();
 
         auth = TestBed.inject(AdminAuthService);
@@ -60,19 +92,40 @@ describe('AdminComponent', () => {
         fixture.detectChanges();
     });
 
+    function logIn() {
+        component.loginForm.setValue({ username: 'admin', password: 'secret' });
+        component.login();
+        fixture.detectChanges();
+    }
+
+    function host() {
+        return fixture.nativeElement as HTMLElement;
+    }
+
     it('asks for credentials when none are remembered', () => {
         expect(component.state()).toBe('login');
         expect(listOrders).not.toHaveBeenCalled();
     });
 
     it('logs in and lists the orders', () => {
-        component.loginForm.setValue({ username: 'admin', password: 'secret' });
-        component.login();
+        logIn();
 
         expect(auth.loggedIn()).toBe('Basic ' + btoa('admin:secret'));
         expect(listOrders).toHaveBeenCalledWith(undefined);
         expect(component.state()).toBe('ready');
-        expect(component.orders()).toHaveLength(1);
+        expect(component.orders()).toHaveLength(2);
+    });
+
+    it('summarises the lines of each order in the list', () => {
+        logIn();
+
+        const rows = host().querySelectorAll('table.orders tbody tr');
+        expect(rows).toHaveLength(2);
+        expect(rows[0].textContent).toContain('2 Positionen: benchy.stl, halter.3mf');
+        expect(rows[0].textContent).toContain('CHF 26.85');
+        expect(rows[1].textContent).toContain('benchy.stl');
+        expect(rows[1].textContent).not.toContain('Positionen');
+        expect(component.itemSummary(singleOrder)).toBe('benchy.stl');
     });
 
     it('returns to the login when the backend rejects the credentials', () => {
@@ -87,9 +140,44 @@ describe('AdminComponent', () => {
         expect(component.errorMessage()).toContain('Anmeldung fehlgeschlagen');
     });
 
+    it('shows the lines of the selected order with a download per line', () => {
+        logIn();
+        component.select('POD-1000');
+        fixture.detectChanges();
+
+        expect(component.selectedPrintTime()).toBe('1 h 38 min');
+        expect(component.selectedFilamentGrams()).toBeCloseTo(34.6);
+        const rows = host().querySelectorAll('table.items tbody tr');
+        expect(rows).toHaveLength(2);
+        expect(rows[0].textContent).toContain('benchy.stl');
+        expect(rows[0].textContent).toContain('10.7 MB');
+        expect(rows[0].textContent).toContain('PLA Red');
+        expect(rows[0].textContent).toContain('medium (0.2 mm)');
+        expect(rows[0].textContent).toContain('CHF 11.00');
+        expect((rows[0].querySelector('.swatch-dot') as HTMLElement).style.background).toContain('rgb(214, 40, 40)');
+        expect(rows[1].textContent).toContain('halter.3mf');
+
+        (rows[1].querySelector('button') as HTMLButtonElement).click();
+        expect(downloadModel).toHaveBeenCalledWith('POD-1000', 2);
+    });
+
+    it('leaves the swatch out when a legacy line has no colour hex', () => {
+        const legacy: AdminOrder = {
+            ...singleOrder,
+            items: [{ ...benchy, color: { code: 'red', label: 'Red', hex: null as unknown as string, pricePerKgChf: null as unknown as number } }]
+        };
+        listOrders.mockReturnValue(of([legacy]));
+        logIn();
+        component.select('POD-1001');
+        fixture.detectChanges();
+
+        const row = host().querySelector('table.items tbody tr');
+        expect(row?.querySelector('.swatch-dot')).toBeNull();
+        expect(row?.textContent).toContain('PLA Red');
+    });
+
     it('moves an order along the state machine and keeps it selected', () => {
-        component.loginForm.setValue({ username: 'admin', password: 'secret' });
-        component.login();
+        logIn();
         component.select('POD-1000');
 
         component.transition(component.selected()!, 'IN_REVIEW');
@@ -101,8 +189,7 @@ describe('AdminComponent', () => {
     });
 
     it('filters by status', () => {
-        component.loginForm.setValue({ username: 'admin', password: 'secret' });
-        component.login();
+        logIn();
 
         component.setFilter('SHIPPED');
 
