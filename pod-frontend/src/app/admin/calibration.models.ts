@@ -54,7 +54,7 @@ export interface CalibrationBoundingBox {
     heightMm: number;
 }
 
-/** One model that went through the nightly calibration pass. */
+/** One model the report lists as measured. */
 export interface CalibrationModel {
     modelName: string;
     modelSha256: string;
@@ -74,13 +74,44 @@ export interface CalibrationReport {
      */
     models: number | CalibrationModel[];
     calibratedModels?: CalibrationModel[];
-    /** Number of measurement rows (model x filament x quality x quantity cells). */
+    /** Number of stored slice rows (model x filament x quality x quantity cells). */
     rows: number;
+    /** How many of the rows each source contributed. */
+    sources: Record<SliceSource, number>;
     configured: CalibrationConfigured;
     timeFactor: CalibrationFactorStats;
     lengthFactor: CalibrationFactorStats;
     quantity: Record<string, CalibrationQuantityStats>;
     arithmeticError: Record<string, CalibrationArithmeticError>;
+}
+
+/** Where a stored slice came from: a customer's quote, an order, or a manual run. */
+export type SliceSource = 'quote' | 'order' | 'manual';
+
+/** One stored slice, as GET /api/admin/calibration/rows lists them (newest first). */
+export interface SliceCalibrationRow {
+    id: number | string;
+    measuredAt: string;
+    source: SliceSource;
+    modelName: string;
+    modelSha256: string;
+    modelSizeBytes: number;
+    triangleCount: number;
+    bbox: CalibrationBoundingBox;
+    filament: string;
+    quality: string;
+    copies: number;
+    plates: number;
+    printSeconds: number;
+    filamentLengthMm: number;
+    filamentGrams: number;
+    warningsCount: number;
+    /** Null when the mesh check did not run. */
+    manifold: boolean | null;
+    /** Wall-clock time of the slicer run. */
+    durationMs: number;
+    slicerVersion: string;
+    orderNumber: string | null;
 }
 
 /** One entry of the calibration work queue (last 50, newest first). */
@@ -100,31 +131,38 @@ export interface CalibrationQueueEntry {
 
 /* ------------------------------ end of hand-written types ----------------------------------- */
 
-export type CalibrationQueueStatus = 'queued' | 'running' | 'done' | 'failed';
-
-export const QUEUE_STATUS_LABELS: Record<CalibrationQueueStatus, string> = {
-    queued: 'wartend',
-    running: 'laeuft',
-    done: 'fertig',
-    failed: 'Fehler'
+export const SLICE_SOURCE_LABELS: Record<SliceSource, string> = {
+    quote: 'Kundenanfrage',
+    order: 'Bestellung',
+    manual: 'manuell'
 };
 
-export function queueStatus(entry: CalibrationQueueEntry): CalibrationQueueStatus {
-    if (entry.error) {
-        return 'failed';
-    }
-    if (entry.finishedAt) {
-        return 'done';
-    }
-    return entry.startedAt ? 'running' : 'queued';
-}
+export type MeshState = 'ok' | 'open' | 'unchecked';
 
-export function calibratedModels(report: CalibrationReport): CalibrationModel[] {
-    return Array.isArray(report.models) ? report.models : (report.calibratedModels ?? []);
+export const MESH_LABELS: Record<MeshState, string> = {
+    ok: 'ok',
+    open: 'nicht wasserdicht',
+    unchecked: 'ungeprueft'
+};
+
+export function meshState(manifold: boolean | null): MeshState {
+    if (manifold === null) {
+        return 'unchecked';
+    }
+    return manifold ? 'ok' : 'open';
 }
 
 export function calibratedModelCount(report: CalibrationReport): number {
     return Array.isArray(report.models) ? report.models.length : report.models;
+}
+
+/** True once any factor or quantity cell was computed from at least one measurement. */
+export function hasFactorStats(report: CalibrationReport): boolean {
+    const factorCells = [report.timeFactor, report.lengthFactor].flatMap((stats) =>
+        Object.values(stats ?? {}).flatMap((byQuality) => Object.values(byQuality))
+    );
+    const quantityCells = [...Object.values(report.quantity ?? {}), ...Object.values(report.arithmeticError ?? {})];
+    return [...factorCells, ...quantityCells].some((cell) => cell.n > 0);
 }
 
 /** True when the measured median is more than `tolerance` (default 5 %) away from the configured value. */

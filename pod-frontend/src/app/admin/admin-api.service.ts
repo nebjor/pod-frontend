@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import type { components } from '../api/openapi';
 import { OrderStatus } from '../order/order.models';
 import { ADMIN_API_PREFIX } from './admin-auth.interceptor';
-import { CalibrationQueueEntry, CalibrationReport } from './calibration.models';
+import { CalibrationQueueEntry, CalibrationReport, SliceCalibrationRow, SliceSource } from './calibration.models';
 
 /** The owner's view of an order, as the backend publishes it. */
 export type AdminOrder = components['schemas']['AdminOrderResponse'];
@@ -42,6 +42,15 @@ export class AdminApiService {
         return this.http.get<CalibrationReport>(`${ADMIN_API_PREFIX}/calibration/report`);
     }
 
+    /** The latest stored slices, newest first; `source` narrows them to one origin. */
+    getCalibrationRows(options: { limit?: number; source?: SliceSource } = {}): Observable<SliceCalibrationRow[]> {
+        const params: Record<string, string> = { limit: String(options.limit ?? 200) };
+        if (options.source) {
+            params['source'] = options.source;
+        }
+        return this.http.get<SliceCalibrationRow[]>(`${ADMIN_API_PREFIX}/calibration/rows`, { params });
+    }
+
     getCalibrationQueue(): Observable<CalibrationQueueEntry[]> {
         return this.http.get<CalibrationQueueEntry[]>(`${ADMIN_API_PREFIX}/calibration/queue`);
     }
@@ -54,12 +63,12 @@ export class AdminApiService {
         );
     }
 
-    /** Starts a calibration pass right away instead of waiting for the nightly run; 202. */
+    /** Starts a manual calibration pass right away; 202. */
     runCalibrationNow(): Observable<void> {
         return this.http.post<void>(`${ADMIN_API_PREFIX}/calibration/run-now`, null);
     }
 
-    /** All measurement rows as CSV; the caller turns the blob into a download. */
+    /** All stored slice rows as CSV; the caller turns the blob into a download. */
     downloadCalibrationRows(): Observable<Blob> {
         return this.http.get(`${ADMIN_API_PREFIX}/calibration/rows.csv`, { responseType: 'blob' });
     }

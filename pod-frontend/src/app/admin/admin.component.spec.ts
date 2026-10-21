@@ -3,8 +3,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { AdminApiService, AdminOrder, AdminOrderItem } from './admin-api.service';
 import { AdminAuthService } from './admin-auth.service';
-import { AdminComponent, RUN_NOW_REFRESH_MS } from './admin.component';
-import { CalibrationQueueEntry, CalibrationReport, CalibrationStat } from './calibration.models';
+import { AdminComponent, SLICE_ROW_LIMIT } from './admin.component';
+import { CalibrationReport, CalibrationStat, SliceCalibrationRow } from './calibration.models';
 
 const benchy: AdminOrderItem = {
     position: 1,
@@ -81,6 +81,7 @@ const unmeasured: CalibrationStat = { n: 0, mean: null, median: null, min: null,
 const report: CalibrationReport = {
     models: 2,
     rows: 24,
+    sources: { quote: 20, order: 0, manual: 4 },
     configured: { timeFactor: { PETG: 1.38, PCTG: 1.48 }, lengthFactor: { PETG: 0.97, PCTG: 0.97 }, plateOverheadSeconds: 300 },
     timeFactor: {
         PETG: { coarse: stat(1.36), medium: stat(1.37), high: stat(1.5, 3), all: stat(1.38, 27) },
@@ -125,6 +126,7 @@ const report: CalibrationReport = {
 const emptyReport: CalibrationReport = {
     models: 0,
     rows: 0,
+    sources: { quote: 0, order: 0, manual: 0 },
     configured: report.configured,
     timeFactor: {},
     lengthFactor: {},
@@ -133,12 +135,62 @@ const emptyReport: CalibrationReport = {
     calibratedModels: []
 };
 
-const queue: CalibrationQueueEntry[] = [
-    { id: 4, modelName: 'd.stl', source: 'order', orderNumber: 'POD-1000', queuedAt: '2026-10-21T10:00:00Z', startedAt: null, finishedAt: null, error: null },
-    { id: 3, modelName: 'c.stl', source: 'order', orderNumber: 'POD-1000', queuedAt: '2026-10-21T09:00:00Z', startedAt: '2026-10-21T09:30:00Z', finishedAt: null, error: null },
-    { id: 2, modelName: 'b.stl', source: 'sample', orderNumber: null, queuedAt: '2026-10-21T08:00:00Z', startedAt: '2026-10-21T08:30:00Z', finishedAt: '2026-10-21T08:45:00Z', error: null },
-    { id: 1, modelName: 'a.stl', source: 'order', orderNumber: 'POD-1001', queuedAt: '2026-10-21T07:00:00Z', startedAt: '2026-10-21T07:30:00Z', finishedAt: '2026-10-21T07:31:00Z', error: 'Slicer exited with 1' }
-];
+/** The report with rows but without a single computed stat: every factor cell is still empty. */
+const noStats: CalibrationReport = {
+    ...report,
+    timeFactor: { PETG: { coarse: unmeasured, medium: unmeasured, high: unmeasured, all: unmeasured } },
+    lengthFactor: { PETG: { coarse: unmeasured, medium: unmeasured, high: unmeasured, all: unmeasured } },
+    quantity: { '4': { n: 0, perCopyRatio: unmeasured, plateOverheadSeconds: unmeasured } },
+    arithmeticError: { '4': { n: 0, meanAbsPercent: null, maxAbsPercent: null } }
+};
+
+const quoteRow: SliceCalibrationRow = {
+    id: 42,
+    measuredAt: '2026-10-21T10:32:00Z',
+    source: 'quote',
+    modelName: 'benchy.stl',
+    modelSha256: 'a'.repeat(64),
+    modelSizeBytes: 11257784,
+    triangleCount: 225154,
+    bbox: { widthMm: 60, depthMm: 31, heightMm: 48 },
+    filament: 'PETG',
+    quality: 'medium',
+    copies: 2,
+    plates: 1,
+    printSeconds: 3903,
+    filamentLengthMm: 7700,
+    filamentGrams: 23.1,
+    warningsCount: 0,
+    manifold: true,
+    durationMs: 4300,
+    slicerVersion: '02.02.01.60',
+    orderNumber: null
+};
+
+const orderRow: SliceCalibrationRow = {
+    ...quoteRow,
+    id: 41,
+    source: 'order',
+    orderNumber: 'POD-1001',
+    modelName: 'halter.3mf',
+    modelSha256: 'b'.repeat(64),
+    warningsCount: 2,
+    manifold: false
+};
+
+const manualRow: SliceCalibrationRow = {
+    ...quoteRow,
+    id: 40,
+    source: 'manual',
+    modelName: 'cube.stl',
+    modelSha256: 'c'.repeat(64),
+    copies: 4,
+    plates: 2,
+    printSeconds: 1952,
+    manifold: null
+};
+
+const rows = [quoteRow, orderRow, manualRow];
 
 describe('AdminComponent', () => {
     let fixture: ComponentFixture<AdminComponent>;
@@ -148,9 +200,7 @@ describe('AdminComponent', () => {
     let setStatus: ReturnType<typeof vi.fn>;
     let downloadModel: ReturnType<typeof vi.fn>;
     let getCalibrationReport: ReturnType<typeof vi.fn>;
-    let getCalibrationQueue: ReturnType<typeof vi.fn>;
-    let enqueueCalibration: ReturnType<typeof vi.fn>;
-    let runCalibrationNow: ReturnType<typeof vi.fn>;
+    let getCalibrationRows: ReturnType<typeof vi.fn>;
     let downloadCalibrationRows: ReturnType<typeof vi.fn>;
 
     beforeEach(async () => {
@@ -159,9 +209,7 @@ describe('AdminComponent', () => {
         setStatus = vi.fn((_: string, status: string) => of({ ...paidOrder, status, allowedTransitions: ['APPROVED', 'CANCELLED'] }));
         downloadModel = vi.fn(() => of(new Blob(['solid x'])));
         getCalibrationReport = vi.fn(() => of(report));
-        getCalibrationQueue = vi.fn(() => of(queue));
-        enqueueCalibration = vi.fn(() => of(undefined));
-        runCalibrationNow = vi.fn(() => of(undefined));
+        getCalibrationRows = vi.fn(() => of(rows));
         downloadCalibrationRows = vi.fn(() => of(new Blob(['model,filament\n'], { type: 'text/csv' })));
 
         await TestBed.configureTestingModule({
@@ -175,9 +223,7 @@ describe('AdminComponent', () => {
                         downloadModel,
                         resetRateLimits: vi.fn(),
                         getCalibrationReport,
-                        getCalibrationQueue,
-                        enqueueCalibration,
-                        runCalibrationNow,
+                        getCalibrationRows,
                         downloadCalibrationRows
                     }
                 }
@@ -255,7 +301,9 @@ describe('AdminComponent', () => {
         expect((rows[0].querySelector('.swatch-dot') as HTMLElement).style.background).toContain('rgb(214, 40, 40)');
         expect(rows[1].textContent).toContain('halter.3mf');
 
-        (rows[1].querySelector('button') as HTMLButtonElement).click();
+        const buttons = rows[1].querySelectorAll('button');
+        expect(Array.from(buttons).map((button) => button.textContent?.trim())).toEqual(['Download']);
+        buttons[0].click();
         expect(downloadModel).toHaveBeenCalledWith('POD-1000', 2);
     });
 
@@ -338,29 +386,53 @@ describe('AdminComponent', () => {
         expect(listOrders).toHaveBeenLastCalledWith('SHIPPED');
     });
 
-    describe('calibration tab', () => {
-        function openCalibration() {
+    describe('slice data tab', () => {
+        function openSlices() {
             logIn();
             (host().querySelector('.tabs button:nth-child(2)') as HTMLButtonElement).click();
             fixture.detectChanges();
         }
 
-        it('starts on the orders and loads the report and queue once the tab is opened', () => {
+        function sliceRows() {
+            return host().querySelectorAll('table.slices tbody tr');
+        }
+
+        function toolbarButton(label: string) {
+            const buttons = Array.from(host().querySelectorAll('.toolbar button'));
+            return buttons.find((button) => button.textContent?.trim() === label) as HTMLButtonElement | undefined;
+        }
+
+        function filterButton(label: string) {
+            const buttons = Array.from(host().querySelectorAll('.source-filter button'));
+            return buttons.find((button) => button.textContent?.trim() === label) as HTMLButtonElement;
+        }
+
+        it('starts on the orders and loads the report and the rows once the tab is opened', () => {
             logIn();
             expect(component.tab()).toBe('orders');
             expect(host().querySelector('h1')?.textContent).toBe('Bestellungen');
             expect(getCalibrationReport).not.toHaveBeenCalled();
 
-            openCalibration();
+            openSlices();
 
-            expect(component.tab()).toBe('calibration');
-            expect(host().querySelector('h1')?.textContent).toBe('Kalibrierung');
+            expect(component.tab()).toBe('slices');
+            expect(host().querySelector('h1')?.textContent).toBe('Slice-Daten');
+            expect(host().querySelector('.tabs button:nth-child(2)')?.textContent?.trim()).toBe('Slice-Daten');
             expect(host().querySelector('.tabs button:nth-child(2)')?.classList).toContain('active');
             expect(getCalibrationReport).toHaveBeenCalledTimes(1);
-            expect(getCalibrationQueue).toHaveBeenCalledTimes(1);
-            expect(host().querySelector('table.orders tbody')).not.toBeNull();
-            expect(host().querySelector('.summary')?.textContent).toContain('2 Modelle, 24 Messungen');
-            expect(host().querySelector('.summary')?.textContent).toContain('Naechtlich um 03:00, bis zu 5 Modelle pro Nacht');
+            expect(getCalibrationRows).toHaveBeenCalledTimes(1);
+            expect(getCalibrationRows).toHaveBeenCalledWith({ limit: SLICE_ROW_LIMIT });
+            const summary = host().querySelector('.summary')?.textContent?.replace(/\s+/g, ' ') ?? '';
+            expect(summary).toContain('24 gespeicherte Slices (2 Modelle)');
+            expect(summary).toContain('aus Kundenanfragen: 20, manuell: 4');
+
+            // The owner only reads here: no manual run, no queue, no nightly schedule.
+            expect(Array.from(host().querySelectorAll('.toolbar button')).map((button) => button.textContent?.trim())).toEqual([
+                'CSV exportieren',
+                'Aktualisieren'
+            ]);
+            expect(host().textContent).not.toContain('Warteschlange');
+            expect(host().textContent).not.toContain('Nacht');
 
             component.showTab('orders');
             fixture.detectChanges();
@@ -369,8 +441,127 @@ describe('AdminComponent', () => {
             expect(getCalibrationReport).toHaveBeenCalledTimes(1);
         });
 
+        it('lists the latest slices with their fields and the mesh state', () => {
+            openSlices();
+
+            const list = sliceRows();
+            expect(list).toHaveLength(3);
+            const headers = Array.from(host().querySelectorAll('table.slices thead th')).map((th) => th.textContent?.trim());
+            expect(headers).toEqual([
+                'Datum', 'Modell', 'Quelle', 'Filament', 'Qualitaet', 'Stueck', 'Platten', 'Druckzeit',
+                'Material g', 'Dreiecke', 'Mesh', 'Hinweise', 'Dauer (s)', 'Slicer-Version'
+            ]);
+
+            const cells = Array.from(list[0].querySelectorAll('td')).map((td) => td.textContent?.replace(/\s+/g, ' ').trim());
+            expect(cells[0]).toContain('21.10.2026');
+            expect(cells[1]).toBe('benchy.stl aaaaaaaa');
+            expect(list[0].querySelector('.sha')?.textContent).toBe('aaaaaaaa');
+            expect(cells.slice(2)).toEqual([
+                'Kundenanfrage', 'PETG', 'medium', '2', '1', '1 h 05 min', '23.1', '225,154', 'ok', '0', '4.3', '02.02.01.60'
+            ]);
+            expect(list[0].querySelector('.tag')?.classList).toContain('mesh-ok');
+            expect(list[0].querySelector('.link-btn')).toBeNull();
+            expect(list[0].querySelectorAll('td')[11].classList).not.toContain('deviates');
+
+            const order = list[1];
+            expect(order.querySelectorAll('td')[2].textContent).toContain('Bestellung');
+            expect(order.querySelector('.link-btn')?.textContent).toBe('POD-1001');
+            expect(order.querySelector('.tag')?.textContent).toBe('nicht wasserdicht');
+            expect(order.querySelector('.tag')?.classList).toContain('mesh-open');
+            const warnings = order.querySelectorAll('td')[11];
+            expect(warnings.textContent?.trim()).toBe('2');
+            expect(warnings.classList).toContain('deviates');
+
+            const manual = list[2];
+            expect(manual.querySelectorAll('td')[2].textContent?.trim()).toBe('manuell');
+            expect(manual.querySelector('.tag')?.textContent).toBe('ungeprueft');
+            expect(manual.querySelector('.tag')?.classList).toContain('mesh-unchecked');
+            expect(manual.querySelectorAll('td')[7].textContent?.trim()).toBe('33 min');
+        });
+
+        it('jumps from a slice row into its order', () => {
+            openSlices();
+
+            (sliceRows()[1].querySelector('.link-btn') as HTMLButtonElement).click();
+            fixture.detectChanges();
+
+            expect(component.tab()).toBe('orders');
+            expect(component.selected()?.orderNumber).toBe('POD-1001');
+            expect(host().querySelector('.detail h2')?.textContent).toContain('POD-1001');
+        });
+
+        it('reloads the rows with the chosen source and leaves the report alone', () => {
+            openSlices();
+            expect(filterButton('alle').classList).toContain('active');
+            expect(filterButton('alle').getAttribute('aria-pressed')).toBe('true');
+
+            getCalibrationRows.mockReturnValueOnce(of([quoteRow]));
+            filterButton('Kundenanfragen').click();
+            fixture.detectChanges();
+
+            expect(getCalibrationRows).toHaveBeenCalledTimes(2);
+            expect(getCalibrationRows).toHaveBeenLastCalledWith({ limit: SLICE_ROW_LIMIT, source: 'quote' });
+            expect(getCalibrationReport).toHaveBeenCalledTimes(1);
+            expect(sliceRows()).toHaveLength(1);
+            expect(filterButton('Kundenanfragen').classList).toContain('active');
+            expect(filterButton('alle').classList).not.toContain('active');
+            expect(host().querySelector('.summary')?.textContent).toContain('24 gespeicherte Slices');
+
+            // The active filter is not fetched twice.
+            filterButton('Kundenanfragen').click();
+            expect(getCalibrationRows).toHaveBeenCalledTimes(2);
+
+            getCalibrationRows.mockReturnValueOnce(of([]));
+            filterButton('manuell').click();
+            fixture.detectChanges();
+            expect(getCalibrationRows).toHaveBeenLastCalledWith({ limit: SLICE_ROW_LIMIT, source: 'manual' });
+            expect(host().querySelector('table.slices')).toBeNull();
+            expect(host().textContent).toContain('Keine Slices aus dieser Quelle.');
+
+            filterButton('alle').click();
+            fixture.detectChanges();
+            expect(getCalibrationRows).toHaveBeenLastCalledWith({ limit: SLICE_ROW_LIMIT });
+            expect(sliceRows()).toHaveLength(3);
+        });
+
+        it('shows the empty state while nothing has been stored', () => {
+            getCalibrationReport.mockReturnValue(of(emptyReport));
+            getCalibrationRows.mockReturnValue(of([]));
+            openSlices();
+
+            expect(host().querySelector('.summary')?.textContent).toContain('0 gespeicherte Slices (0 Modelle)');
+            expect(host().querySelector('.empty')?.textContent).toBe(
+                'Noch keine Slices gespeichert. Jede Preisberechnung eines Kunden legt hier eine Zeile ab.'
+            );
+            expect(host().querySelector('.source-filter')).toBeNull();
+            expect(host().querySelector('table.slices')).toBeNull();
+            expect(host().querySelector('details')).toBeNull();
+        });
+
+        it('folds the factor tables away and hides them while no cell has a sample', () => {
+            openSlices();
+
+            const details = host().querySelector('details.factors-details') as HTMLDetailsElement;
+            expect(details).not.toBeNull();
+            expect(details.open).toBe(false);
+            expect(details.querySelector('summary')?.textContent?.trim()).toBe('Faktoren pruefen (nur mit manuellen Messreihen)');
+            expect(details.querySelectorAll('table.factors')).toHaveLength(2);
+            expect(details.querySelector('table.quantities')).not.toBeNull();
+            expect(details.querySelector('.explain')?.textContent).toContain('application.yml');
+
+            getCalibrationReport.mockReturnValue(of(noStats));
+            component.loadSlices();
+            fixture.detectChanges();
+
+            expect(component.showFactors()).toBe(false);
+            expect(host().querySelector('details')).toBeNull();
+            expect(host().querySelector('table.factors')).toBeNull();
+            expect(host().textContent).not.toContain('application.yml');
+            expect(sliceRows()).toHaveLength(3);
+        });
+
         it('renders the factor tables with medians, sample sizes and deviation highlights', () => {
-            openCalibration();
+            openSlices();
 
             const tables = host().querySelectorAll('table.factors');
             expect(tables).toHaveLength(2);
@@ -397,113 +588,54 @@ describe('AdminComponent', () => {
         });
 
         it('renders the quantity table and flags a large arithmetic error', () => {
-            openCalibration();
+            openSlices();
 
-            const rows = host().querySelectorAll('table.quantities tbody tr');
-            expect(rows).toHaveLength(2);
-            const four = rows[0].textContent?.replace(/\s+/g, ' ') ?? '';
+            const list = host().querySelectorAll('table.quantities tbody tr');
+            expect(list).toHaveLength(2);
+            const four = list[0].textContent?.replace(/\s+/g, ' ') ?? '';
             expect(four).toContain('4 (n=12)');
             expect(four).toContain('0.88 (0.80 bis 0.95)');
             expect(four).toContain('300 s (konfiguriert 300 s)');
             expect(four).toContain('2.1 % (max 4.0 %)');
-            expect(rows[0].classList).not.toContain('deviates');
-            expect(rows[1].textContent).toContain('6.4 %');
-            expect(rows[1].classList).toContain('deviates');
-            expect(host().textContent).toContain('application.yml');
-        });
-
-        it('lists the calibrated models with a link into the order', () => {
-            openCalibration();
-
-            const rows = host().querySelectorAll('table.models tbody tr');
-            expect(rows).toHaveLength(2);
-            const text = rows[0].textContent?.replace(/\s+/g, ' ') ?? '';
-            expect(text).toContain('benchy.stl');
-            expect(text).toContain('order');
-            expect(text).toContain('11');
-            expect(text).toContain('225,154');
-            expect(text).toContain('60 x 31 x 48 mm');
-            expect(rows[1].querySelector('.link-btn')).toBeNull();
-
-            (rows[0].querySelector('.link-btn') as HTMLButtonElement).click();
-            fixture.detectChanges();
-            expect(component.tab()).toBe('orders');
-            expect(component.selected()?.orderNumber).toBe('POD-1001');
-            expect(host().querySelector('.detail h2')?.textContent).toContain('POD-1001');
-        });
-
-        it('shows the queue with one badge per state and the error text', () => {
-            openCalibration();
-
-            const rows = host().querySelectorAll('table.queue tbody tr');
-            expect(rows).toHaveLength(4);
-            const badges = Array.from(rows).map((row) => row.querySelector('.badge'));
-            expect(badges.map((badge) => badge?.textContent?.trim())).toEqual(['wartend', 'laeuft', 'fertig', 'Fehler']);
-            expect(badges[0]?.classList).toContain('queue-queued');
-            expect(badges[1]?.classList).toContain('queue-running');
-            expect(badges[2]?.classList).toContain('queue-done');
-            expect(badges[3]?.classList).toContain('queue-failed');
-            expect(rows[3].querySelector('.queue-error')?.textContent).toBe('Slicer exited with 1');
-            expect(rows[0].querySelector('.queue-error')).toBeNull();
-        });
-
-        it('shows the empty state while nothing has been measured', () => {
-            getCalibrationReport.mockReturnValue(of(emptyReport));
-            getCalibrationQueue.mockReturnValue(of([]));
-            openCalibration();
-
-            expect(host().querySelector('.summary')?.textContent).toContain('0 Modelle, 0 Messungen');
-            expect(host().querySelector('.empty')?.textContent).toBe('Noch keine Messungen. Nach der naechsten Nacht erscheinen hier die ersten Werte.');
-            expect(host().querySelector('table.factors')).toBeNull();
-            expect(host().querySelector('table.models')).toBeNull();
-            expect(host().textContent).toContain('Warteschlange leer.');
+            expect(list[0].classList).not.toContain('deviates');
+            expect(list[1].textContent).toContain('6.4 %');
+            expect(list[1].classList).toContain('deviates');
         });
 
         it('accepts the model list under the models key as well', () => {
             getCalibrationReport.mockReturnValue(of({ ...report, models: report.calibratedModels, calibratedModels: undefined }));
-            openCalibration();
+            openSlices();
 
             expect(component.modelCount()).toBe(2);
-            expect(host().querySelectorAll('table.models tbody tr')).toHaveLength(2);
-        });
-
-        it('starts a pass now and reads the queue again after a moment', () => {
-            vi.useFakeTimers();
-            try {
-                openCalibration();
-                expect(getCalibrationQueue).toHaveBeenCalledTimes(1);
-
-                (host().querySelector('.toolbar .order-btn') as HTMLButtonElement).click();
-                fixture.detectChanges();
-
-                expect(runCalibrationNow).toHaveBeenCalledTimes(1);
-                expect(component.notice()).toBe('Kalibrierung gestartet.');
-                expect(getCalibrationQueue).toHaveBeenCalledTimes(1);
-                vi.advanceTimersByTime(RUN_NOW_REFRESH_MS);
-                expect(getCalibrationQueue).toHaveBeenCalledTimes(2);
-            } finally {
-                vi.useRealTimers();
-            }
+            expect(host().querySelector('.summary')?.textContent).toContain('(2 Modelle)');
         });
 
         it('exports the rows as a CSV download', () => {
             const createObjectURL = vi.fn(() => 'blob:rows');
             URL.createObjectURL = createObjectURL;
             URL.revokeObjectURL = vi.fn();
-            openCalibration();
+            openSlices();
 
-            const buttons = Array.from(host().querySelectorAll('.toolbar button'));
-            (buttons.find((button) => button.textContent?.trim() === 'CSV exportieren') as HTMLButtonElement).click();
+            toolbarButton('CSV exportieren')!.click();
 
             expect(downloadCalibrationRows).toHaveBeenCalledTimes(1);
             expect(createObjectURL).toHaveBeenCalledTimes(1);
         });
 
-        it('shows the error of a failed report load and keeps the login on a 401', () => {
-            getCalibrationReport.mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 500, error: { detail: 'Report kaputt' } })));
-            openCalibration();
+        it('reads report and rows again on refresh', () => {
+            openSlices();
 
-            expect(component.calibrationState()).toBe('error');
+            toolbarButton('Aktualisieren')!.click();
+
+            expect(getCalibrationReport).toHaveBeenCalledTimes(2);
+            expect(getCalibrationRows).toHaveBeenCalledTimes(2);
+        });
+
+        it('shows the error of a failed load and keeps the login on a 401', () => {
+            getCalibrationReport.mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 500, error: { detail: 'Report kaputt' } })));
+            openSlices();
+
+            expect(component.sliceState()).toBe('error');
             expect(host().querySelector('.error')?.textContent).toContain('Report kaputt');
             expect(component.state()).toBe('ready');
 
@@ -511,28 +643,8 @@ describe('AdminComponent', () => {
                 auth.logout();
                 return new HttpErrorResponse({ status: 401 });
             }));
-            component.loadCalibration();
+            component.loadSlices();
             expect(component.state()).toBe('login');
-        });
-
-        it('puts an order line on the queue from the order detail', () => {
-            logIn();
-            component.select('POD-1000');
-            fixture.detectChanges();
-
-            const row = host().querySelectorAll('table.items tbody tr')[1];
-            const buttons = Array.from(row.querySelectorAll('button'));
-            expect(buttons.map((button) => button.textContent?.trim())).toEqual(['Download', 'Kalibrieren']);
-
-            buttons[1].click();
-            fixture.detectChanges();
-
-            expect(enqueueCalibration).toHaveBeenCalledWith('POD-1000', 2);
-            expect(row.querySelector('.tag')?.textContent).toBe('In Warteschlange');
-            expect(row.querySelectorAll('button')).toHaveLength(1);
-            expect(component.notice()).toContain('halter.3mf');
-            // The queue was never loaded, so there is nothing to refresh yet.
-            expect(getCalibrationQueue).not.toHaveBeenCalled();
         });
     });
 });

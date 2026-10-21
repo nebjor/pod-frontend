@@ -244,11 +244,11 @@
         color: var(--text-300);
         font-size: 0.78rem;
     }
+}
 
-    .small {
-        padding: 0.35rem 0.6rem;
-        font-size: 0.72rem;
-    }
+.ghost-btn.small {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.72rem;
 }
 
 .swatch-dot {
@@ -392,8 +392,7 @@
 
 .factors,
 .quantities,
-.models,
-.queue {
+.slices {
     th[scope='row'] {
         text-transform: none;
         letter-spacing: 0;
@@ -426,18 +425,55 @@
     cursor: pointer;
 }
 
-.badge {
-    &.queue-queued { color: var(--text-300); }
-    &.queue-running { border-color: var(--accent-450); color: var(--accent-450); }
-    &.queue-done { border-color: var(--accent-300); color: var(--accent-300); }
-    &.queue-failed { border-color: #d99898; color: #d99898; }
+.source-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 0.75rem;
+
+    .active {
+        border-color: var(--accent-300);
+        color: var(--accent-300);
+    }
 }
 
-.queue-error {
-    display: block;
-    margin-top: 0.25rem;
-    color: #d99898;
-    font-size: 0.76rem;
-    white-space: normal;
-    overflow-wrap: anywhere;
+.slices {
+    .sha {
+        margin-left: 0.3rem;
+        font-size: 0.7rem;
+        letter-spacing: 0.04rem;
+    }
+
+    .tag {
+        margin-left: 0;
+
+        &.mesh-ok {
+            border-color: var(--accent-300);
+            color: var(--accent-300);
+        }
+
+        &.mesh-open {
+            border-color: #d99898;
+            color: #d99898;
+        }
+
+        &.mesh-unchecked {
+            color: var(--text-300);
+        }
+    }
+}
+
+.factors-details {
+    margin-top: 1.5rem;
+
+    summary {
+        color: var(--text-300);
+        font-size: 0.85rem;
+        letter-spacing: 0.04rem;
+        cursor: pointer;
+    }
+
+    .explain {
+        margin-top: 0.75rem;
+    }
 }

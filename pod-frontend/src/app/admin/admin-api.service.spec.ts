@@ -82,6 +82,24 @@ describe('AdminApiService with the auth interceptor', () => {
         queue.flush([]);
     });
 
+    it('lists the stored slice rows with a limit and an optional source', () => {
+        auth.login('admin', 'secret');
+
+        api.getCalibrationRows().subscribe();
+        const all = http.expectOne((r) => r.url === '/api/admin/calibration/rows');
+        expect(all.request.method).toBe('GET');
+        expect(all.request.params.get('limit')).toBe('200');
+        expect(all.request.params.has('source')).toBe(false);
+        expect(all.request.headers.get('Authorization')).toBe('Basic ' + btoa('admin:secret'));
+        all.flush([]);
+
+        api.getCalibrationRows({ limit: 50, source: 'quote' }).subscribe();
+        const quotes = http.expectOne((r) => r.url === '/api/admin/calibration/rows');
+        expect(quotes.request.params.get('limit')).toBe('50');
+        expect(quotes.request.params.get('source')).toBe('quote');
+        quotes.flush([]);
+    });
+
     it('enqueues an order line and starts a pass now', () => {
         auth.login('admin', 'secret');
 

@@ -11,16 +11,17 @@ import { AdminAuthService } from './admin-auth.service';
 import {
     CALIBRATION_QUALITIES,
     CalibrationFactorStats,
-    CalibrationModel,
     CalibrationQuality,
-    CalibrationQueueEntry,
-    CalibrationQueueStatus,
     CalibrationReport,
-    QUEUE_STATUS_LABELS,
+    MESH_LABELS,
+    MeshState,
+    SLICE_SOURCE_LABELS,
+    SliceCalibrationRow,
+    SliceSource,
     calibratedModelCount,
-    calibratedModels,
     deviates,
-    queueStatus
+    hasFactorStats,
+    meshState
 } from './calibration.models';
 
 /** Owner-facing labels for each state and for the button that moves an order into it. */
@@ -45,11 +46,19 @@ export const TRANSITION_LABELS: Record<OrderStatus, string> = {
 };
 
 type ListState = 'checking' | 'login' | 'loading' | 'ready' | 'error';
-type AdminTab = 'orders' | 'calibration';
-type CalibrationState = 'idle' | 'loading' | 'ready' | 'error';
+type AdminTab = 'orders' | 'slices';
+type SliceState = 'idle' | 'loading' | 'ready' | 'error';
+/** The source filter of the slice table; the empty string lists every source. */
+export type SliceSourceFilter = SliceSource | '';
 
-/** How long the backend gets to pick up a "run now" before the queue is read again. */
-export const RUN_NOW_REFRESH_MS = 2000;
+/** How many of the newest slice rows the tab shows. */
+export const SLICE_ROW_LIMIT = 200;
+/** The filter buttons above the slice table, in display order. */
+export const SLICE_SOURCE_FILTERS: { value: SliceSourceFilter; label: string }[] = [
+    { value: '', label: 'alle' },
+    { value: 'quote', label: 'Kundenanfragen' },
+    { value: 'manual', label: 'manuell' }
+];
 /** The plate overhead the quantity table compares against when the report carries none. */
 const DEFAULT_PLATE_OVERHEAD_SECONDS = 300;
 
@@ -78,17 +87,19 @@ export class AdminComponent {
     readonly notice = signal('');
     readonly busy = signal(false);
 
-    readonly calibrationState = signal<CalibrationState>('idle');
+    readonly sliceState = signal<SliceState>('idle');
     readonly report = signal<CalibrationReport | null>(null);
-    readonly queue = signal<CalibrationQueueEntry[]>([]);
-    readonly calibrationError = signal('');
-    /** Order lines put on the calibration queue from this page, as "orderNumber/position". */
-    readonly enqueued = signal<ReadonlySet<string>>(new Set());
+    readonly rows = signal<SliceCalibrationRow[]>([]);
+    readonly sourceFilter = signal<SliceSourceFilter>('');
+    readonly sliceError = signal('');
 
     readonly qualities = CALIBRATION_QUALITIES;
-    readonly queueStatusLabels = QUEUE_STATUS_LABELS;
+    readonly sourceFilters = SLICE_SOURCE_FILTERS;
+    readonly sourceLabels = SLICE_SOURCE_LABELS;
+    readonly meshLabels = MESH_LABELS;
     readonly modelCount = computed(() => (this.report() ? calibratedModelCount(this.report()!) : 0));
-    readonly calibratedModels = computed<CalibrationModel[]>(() => (this.report() ? calibratedModels(this.report()!) : []));
+    /** The factor tables only mean something once a manual series produced at least one stat. */
+    readonly showFactors = computed(() => (this.report() ? hasFactorStats(this.report()!) : false));
     /** Filaments in the order the report lists them; the configured map adds any without measurements. */
     readonly filaments = computed(() => {
         const report = this.report();
@@ -146,16 +157,17 @@ export class AdminComponent {
         this.orders.set([]);
         this.selectedNumber.set(null);
         this.report.set(null);
-        this.queue.set([]);
-        this.calibrationState.set('idle');
+        this.rows.set([]);
+        this.sourceFilter.set('');
+        this.sliceState.set('idle');
         this.tab.set('orders');
         this.state.set('login');
     }
 
     showTab(tab: AdminTab) {
         this.tab.set(tab);
-        if (tab === 'calibration' && this.calibrationState() === 'idle') {
-            this.loadCalibration();
+        if (tab === 'slices' && this.sliceState() === 'idle') {
+            this.loadSlices();
         }
     }
 
@@ -235,89 +247,62 @@ export class AdminComponent {
             });
     }
 
-    loadCalibration() {
-        this.calibrationState.set('loading');
-        this.calibrationError.set('');
-        forkJoin({ report: this.api.getCalibrationReport(), queue: this.api.getCalibrationQueue() })
+    loadSlices() {
+        this.sliceState.set('loading');
+        this.sliceError.set('');
+        forkJoin({ report: this.api.getCalibrationReport(), rows: this.api.getCalibrationRows(this.rowsQuery()) })
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
-                next: ({ report, queue }) => {
+                next: ({ report, rows }) => {
                     this.report.set(report);
-                    this.queue.set(queue);
-                    this.calibrationState.set('ready');
+                    this.rows.set(rows);
+                    this.sliceState.set('ready');
                 },
-                error: (error: unknown) => this.failCalibration(error)
+                error: (error: unknown) => this.failSlices(error)
             });
     }
 
-    loadQueue() {
-        this.api
-            .getCalibrationQueue()
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe({
-                next: (queue) => this.queue.set(queue),
-                error: (error: unknown) => this.failCalibration(error)
-            });
-    }
-
-    runCalibrationNow() {
-        if (this.busy()) {
+    /** Narrows the table to one source; the summary above it keeps counting every source. */
+    setSourceFilter(source: SliceSourceFilter) {
+        if (this.sourceFilter() === source) {
             return;
         }
-        this.busy.set(true);
-        this.calibrationError.set('');
+        this.sourceFilter.set(source);
+        this.sliceError.set('');
         this.api
-            .runCalibrationNow()
+            .getCalibrationRows(this.rowsQuery())
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
-                next: () => {
-                    this.busy.set(false);
-                    this.notice.set('Kalibrierung gestartet.');
-                    setTimeout(() => this.loadQueue(), RUN_NOW_REFRESH_MS);
-                },
-                error: (error: unknown) => {
-                    this.busy.set(false);
-                    this.calibrationError.set(describeQuoteError(error));
-                }
+                next: (rows) => this.rows.set(rows),
+                error: (error: unknown) => this.failSlices(error)
             });
     }
 
-    exportCalibrationCsv() {
+    exportSlicesCsv() {
         this.api
             .downloadCalibrationRows()
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
-                next: (blob) => saveBlob(blob, 'kalibrierung.csv'),
-                error: (error: unknown) => this.calibrationError.set(describeQuoteError(error))
+                next: (blob) => saveBlob(blob, 'slices.csv'),
+                error: (error: unknown) => this.sliceError.set(describeQuoteError(error))
             });
     }
 
-    isEnqueued(order: AdminOrder, item: AdminOrderItem): boolean {
-        return this.enqueued().has(enqueueKey(order, item));
+    /** Print time of one row the way the order pages show it ("1 h 04 min"). */
+    rowPrintTime(row: SliceCalibrationRow): string {
+        return formatPrintDuration(row.printSeconds);
     }
 
-    /** Puts one order line on the calibration queue; the line then reads "In Warteschlange". */
-    enqueue(order: AdminOrder, item: AdminOrderItem) {
-        if (this.isEnqueued(order, item)) {
-            return;
-        }
-        this.api
-            .enqueueCalibration(order.orderNumber, item.position)
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe({
-                next: () => {
-                    this.enqueued.update((set) => new Set(set).add(enqueueKey(order, item)));
-                    this.notice.set(`${item.fileName}: in der Kalibrierungs-Warteschlange.`);
-                    // The queue list is stale now; refresh it when it has been loaded already.
-                    if (this.calibrationState() === 'ready') {
-                        this.loadQueue();
-                    }
-                },
-                error: (error: unknown) => this.errorMessage.set(describeQuoteError(error))
-            });
+    /** The first characters of the model hash, enough to tell two uploads of the same name apart. */
+    shortSha(row: SliceCalibrationRow): string {
+        return row.modelSha256.slice(0, 8);
     }
 
-    /** Jumps from a calibrated model to its order; loads the unfiltered list when the order is not in it. */
+    mesh(row: SliceCalibrationRow): MeshState {
+        return meshState(row.manifold);
+    }
+
+    /** Jumps from a slice row to its order; loads the unfiltered list when the order is not in it. */
     openOrder(orderNumber: string) {
         this.tab.set('orders');
         this.selectedNumber.set(orderNumber);
@@ -351,17 +336,18 @@ export class AdminComponent {
         return mean != null && mean > 5;
     }
 
-    queueStatus(entry: CalibrationQueueEntry): CalibrationQueueStatus {
-        return queueStatus(entry);
+    private rowsQuery(): { limit: number; source?: SliceSource } {
+        const source = this.sourceFilter();
+        return source ? { limit: SLICE_ROW_LIMIT, source } : { limit: SLICE_ROW_LIMIT };
     }
 
-    private failCalibration(error: unknown) {
+    private failSlices(error: unknown) {
         if (!this.auth.loggedIn()) {
             this.fail(error);
             return;
         }
-        this.calibrationState.set('error');
-        this.calibrationError.set(describeQuoteError(error));
+        this.sliceState.set('error');
+        this.sliceError.set(describeQuoteError(error));
     }
 
     private fail(error: unknown) {
@@ -374,10 +360,6 @@ export class AdminComponent {
         this.state.set('error');
         this.errorMessage.set(describeQuoteError(error));
     }
-}
-
-function enqueueKey(order: AdminOrder, item: AdminOrderItem): string {
-    return `${order.orderNumber}/${item.position}`;
 }
 
 /** Triggers a browser download for a blob; no-op outside the browser. */
