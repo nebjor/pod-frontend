@@ -88,15 +88,18 @@ Done on 2026-10-21, here so the next person knows the shape of the box.
 ## Update
 
 ```bash
-cd /opt/3dburg/pod-frontend && git pull
-cd /opt/3dburg/cad-slicer-engine && git pull
-cd /opt/3dburg/pod-frontend/deploy && docker compose up -d --build slicer-engine pod-frontend
+/opt/3dburg/pod-frontend/deploy/update.sh                 # backup, pull both repositories, rebuild, verify
+/opt/3dburg/pod-frontend/deploy/update.sh pod-frontend    # one service only
+/opt/3dburg/pod-frontend/deploy/update.sh --no-backup pod-frontend
 ```
 
-Inside `deploy/` no `-f` is needed: the file has the default name `compose.yaml`. Name the
-services to rebuild only those; a bare `up -d --build` rebuilds whatever changed anyway.
-Database migrations run at backend start (Flyway). Images are rebuilt only for services whose
-sources changed; the frontend takes about two minutes, the backend about four.
+The script takes a backup, pulls `main` of both repositories, runs `docker compose up -d --build`
+for the named services (all when none is named), waits for the backend's health check, prints the
+Flyway and startup lines, and checks the public URLs. It exits non-zero when the backend is not
+healthy or a check fails. Database migrations run at backend start (Flyway). Images are rebuilt
+only for services whose sources changed; the frontend takes about two minutes, the backend about
+four. Inside `deploy/` the same steps by hand are `docker compose up -d --build slicer-engine
+pod-frontend`, no `-f` needed because the file has the default name `compose.yaml`.
 
 ## Roll back
 
