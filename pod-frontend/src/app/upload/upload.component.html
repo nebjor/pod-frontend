@@ -130,35 +130,28 @@
                 </form>
 
                 <div class="estimate" [class.inactive]="quoteState() !== 'ready'" aria-live="polite">
-                    @if (quoteInProgress()) {
+                    @if (quoteInProgress() || quoteDoneFlash()) {
                         <!-- One bar for all pending phases: it keeps its width transition when the
                              upload hands over to the slicer, and only the label fades. -->
-                        <div class="quote-phase" [attr.data-phase]="quotePhase()">
-                            @switch (quotePhase()) {
-                                @case ('uploading') {
-                                    <p class="estimate-line estimate-status">
-                                        <span class="spinner" aria-hidden="true"></span>
-                                        Modell wird hochgeladen... {{ uploadProgress() }}%
-                                    </p>
+                        <div class="quote-phase" [attr.data-phase]="quoteDoneFlash() ? 'done' : quotePhase()">
+                            <p class="estimate-line estimate-status">
+                                @if (quoteDoneFlash()) {
+                                    <span class="check" aria-hidden="true"></span>
+                                } @else {
+                                    <span class="spinner" aria-hidden="true"></span>
                                 }
-                                @case ('slicing') {
-                                    <p class="estimate-line estimate-status">
-                                        <span class="spinner" aria-hidden="true"></span>
-                                        Slicer berechnet dein Angebot...
-                                    </p>
+                                @if (quotePhase() === 'uploading') {
+                                    Modell wird hochgeladen... {{ uploadProgress() }}%
+                                } @else {
+                                    <!-- Keyed by its text: every stage is a fresh node, so the fade replays. -->
+                                    @for (text of [quoteStatusText()]; track text) {
+                                        <span class="phase-text">{{ text }}</span>
+                                    }
                                 }
-                                @case ('repricing') {
-                                    <p class="estimate-line estimate-status">
-                                        <span class="spinner" aria-hidden="true"></span>
-                                        Preis wird neu berechnet...
-                                    </p>
-                                }
-                            }
-                            <div class="loading-track" [class.indeterminate]="quotePhase() !== 'uploading'" role="progressbar"
-                                aria-valuemin="0" aria-valuemax="100"
-                                [attr.aria-valuenow]="quotePhase() === 'uploading' ? uploadProgress() : null">
-                                <div class="loading-fill"
-                                    [style.width.%]="quotePhase() === 'uploading' ? uploadProgress() : null"></div>
+                            </p>
+                            <div class="loading-track" [class.indeterminate]="quoteBarPercent() === null" role="progressbar"
+                                aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="quoteBarPercent()">
+                                <div class="loading-fill" [style.width.%]="quoteBarPercent()"></div>
                             </div>
                         </div>
                     } @else {

@@ -211,13 +211,24 @@
 }
 
 .quote-phase {
-    .estimate-line {
+    .phase-text {
         animation: phaseIn 0.25s ease;
     }
 
     .loading-track {
         margin: 0.5rem 0 0.25rem;
     }
+}
+
+// Check mark drawn from two borders; it takes the spinner's place in the "Fertig." line.
+.check {
+    width: 5px;
+    height: 10px;
+    margin: 0 5px 3px 4px;
+    border: solid var(--accent-300);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    flex: none;
 }
 
 @keyframes phaseIn {
@@ -531,7 +542,7 @@
         animation: loadingPulse 2s ease-in-out infinite alternate;
     }
 
-    .quote-phase .estimate-line {
+    .quote-phase .phase-text {
         animation: none;
     }
 }

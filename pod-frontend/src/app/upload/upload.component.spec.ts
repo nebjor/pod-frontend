@@ -10,6 +10,9 @@ import {
     PREFETCH_DELAY_MS,
     PREVIEW_LIMIT_BYTES_3MF,
     QUOTE_DEBOUNCE_MS,
+    QUOTE_DONE_FLASH_MS,
+    REPRICING_FINAL_TEXT,
+    SLICING_STEPS,
     UPLOAD_PROGRESS_MIN_BYTES,
     UploadComponent
 } from './upload.component';
@@ -346,6 +349,7 @@ describe('UploadComponent', () => {
 
         expect(requestQuote).toHaveBeenCalledTimes(5);
         expect(component.quoteState()).toBe('ready');
+        expect(component.quoteDoneFlash()).toBe(false);
         expect(component.quote()?.totalPriceChf).toBe(9);
 
         component.orderForm.controls.filament.setValue('PLA');
@@ -476,7 +480,7 @@ describe('UploadComponent', () => {
         expect(component.quoteState()).toBe('loading');
         expect(component.quotePhase()).toBe('repricing');
         expect(component.quoteMatchesForm()).toBe(false);
-        expect(host.querySelector('.quote-phase')?.textContent).toContain('Preis wird neu berechnet...');
+        expect(host.querySelector('.quote-phase')?.textContent).toContain(SLICING_STEPS[2].text);
         expect(host.querySelector('.quote-stale-note')?.textContent).toContain('Angebot gilt fuer 1 x PLA, Standard');
         expect(host.querySelector('.quote-stale-note')?.textContent).not.toContain('Menge korrigieren');
         expect(host.querySelector('.quote-body.stale')).not.toBeNull();
@@ -486,10 +490,85 @@ describe('UploadComponent', () => {
         pending.complete();
         fixture.detectChanges();
         expect(component.quoteMatchesForm()).toBe(true);
-        expect(component.quoteIsStale()).toBe(false);
-        expect(host.querySelector('.quote-stale-note')).toBeNull();
-        expect(host.querySelector('.quote-body.stale')).toBeNull();
         expect(component.canSubmitOrder()).toBe(true);
+        expect(host.querySelector('.quote-stale-note')).toBeNull();
+
+        // "Fertig." lingers for a moment; the body brightens once it is gone.
+        expect(component.quoteIsStale()).toBe(true);
+        vi.advanceTimersByTime(QUOTE_DONE_FLASH_MS);
+        fixture.detectChanges();
+        expect(component.quoteIsStale()).toBe(false);
+        expect(host.querySelector('.quote-body.stale')).toBeNull();
+    });
+
+    it('cycles through the staged slicer texts while the quote is pending, then flashes "Fertig."', async () => {
+        const { Subject } = await import('rxjs');
+        const pending = new Subject<QuoteResponse>();
+        requestQuote.mockImplementation(() => pending);
+        const host = fixture.nativeElement as HTMLElement;
+        const text = () => host.querySelector('.quote-phase .phase-text')?.textContent;
+        const showAfter = (ms: number) => {
+            vi.advanceTimersByTime(ms);
+            fixture.detectChanges();
+            return text();
+        };
+
+        component.onDrop(dropEvent(benchy));
+        fixture.detectChanges();
+        expect(component.quotePhase()).toBe('slicing');
+        expect(text()).toBe(SLICING_STEPS[0].text);
+
+        expect(showAfter(1499)).toBe(SLICING_STEPS[0].text);
+        expect(showAfter(1)).toBe(SLICING_STEPS[1].text);
+        expect(showAfter(2000)).toBe(SLICING_STEPS[2].text);
+        expect(showAfter(4500)).toBe(SLICING_STEPS[3].text);
+        // The last stage stays however long the slicer takes.
+        expect(showAfter(30000)).toBe(SLICING_STEPS[3].text);
+        expect(requestQuote).toHaveBeenCalledTimes(1);
+
+        pending.next(quoteFor({ filament: 'PLA', color: 'black', quality: 'medium', quantity: 1 }));
+        fixture.detectChanges();
+        expect(component.quoteState()).toBe('ready');
+        expect(component.canSubmitOrder()).toBe(true);
+        expect(component.quoteDoneFlash()).toBe(true);
+        expect(text()).toBe('Fertig.');
+        expect(host.querySelector('.quote-phase .check')).not.toBeNull();
+        expect(host.querySelector('.quote-phase .spinner')).toBeNull();
+        expect(host.querySelector('.quote-phase .loading-track')?.classList.contains('indeterminate')).toBe(false);
+        expect(host.querySelector<HTMLElement>('.quote-phase .loading-fill')?.style.width).toBe('100%');
+        expect(host.querySelector('.quote-body.stale')).not.toBeNull();
+
+        expect(showAfter(QUOTE_DONE_FLASH_MS - 1)).toBe('Fertig.');
+        expect(showAfter(1)).toBeUndefined();
+        expect(component.quoteDoneFlash()).toBe(false);
+        expect(host.querySelector('.quote-phase')).toBeNull();
+        expect(host.querySelector('.quote-body.stale')).toBeNull();
+    });
+
+    it('starts a re-price at the layer stage and ends with its own text', async () => {
+        const { Subject } = await import('rxjs');
+        component.onDrop(dropEvent(benchy));
+        settle();
+        const pending = new Subject<QuoteResponse>();
+        requestQuote.mockImplementation((_id: string, params: QuoteRequestParams) =>
+            params.quantity === 3 ? pending : of(quoteFor(params))
+        );
+        const host = fixture.nativeElement as HTMLElement;
+        const text = () => host.querySelector('.quote-phase .phase-text')?.textContent;
+
+        component.orderForm.controls.quantity.setValue(3);
+        fixture.detectChanges();
+        expect(component.quotePhase()).toBe('repricing');
+        expect(text()).toBe(SLICING_STEPS[2].text);
+        expect(component.quote()?.totalPriceChf).toBe(8);
+
+        vi.advanceTimersByTime(4499);
+        fixture.detectChanges();
+        expect(text()).toBe(SLICING_STEPS[2].text);
+        vi.advanceTimersByTime(1);
+        fixture.detectChanges();
+        expect(text()).toBe(REPRICING_FINAL_TEXT);
+        expect(requestQuote.mock.calls.some((call) => call[1].quantity === 3)).toBe(true);
     });
 
     it('treats a quote for another material price as stale until the form matches again', () => {
@@ -528,7 +607,7 @@ describe('UploadComponent', () => {
         fixture.detectChanges();
         expect(component.uploadState()).toBe('done');
         expect(component.quotePhase()).toBe('slicing');
-        expect(host.querySelector('.quote-phase')?.textContent).toContain('Slicer berechnet dein Angebot...');
+        expect(host.querySelector('.quote-phase')?.textContent).toContain(SLICING_STEPS[0].text);
         expect(host.querySelector('.quote-phase .loading-track')?.classList.contains('indeterminate')).toBe(true);
         expect(host.querySelector('.quote-phase .loading-track')?.hasAttribute('aria-valuenow')).toBe(false);
 
@@ -545,7 +624,7 @@ describe('UploadComponent', () => {
         fixture.detectChanges();
         expect(component.uploadState()).toBe('uploading');
         expect(component.quotePhase()).toBe('slicing');
-        expect(host.querySelector('.quote-phase')?.textContent).toContain('Slicer berechnet dein Angebot...');
+        expect(host.querySelector('.quote-phase')?.textContent).toContain(SLICING_STEPS[0].text);
         expect(host.querySelector('.quote-phase')?.textContent).not.toContain('hochgeladen');
         expect(host.querySelector('.quote-phase .loading-track')?.classList.contains('indeterminate')).toBe(true);
     });

@@ -7,12 +7,13 @@ import {
     computed,
     effect,
     inject,
-    signal
+    signal,
+    untracked
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { EMPTY, Subject, catchError, concatMap, debounce, from, map, of, switchMap, tap, timer } from 'rxjs';
+import { EMPTY, Subject, catchError, concatMap, debounce, from, map, merge, of, switchMap, tap, timer } from 'rxjs';
 import { CART_MAX_ITEMS, CartItem, CartService } from '../cart/cart.service';
 import { ModelViewerComponent } from '../model-viewer/model-viewer.component';
 import { formatPrintDuration } from '../quote/print-duration';
@@ -90,6 +91,44 @@ export const PREVIEW_LIMIT_BYTES_3MF = 8 * 1024 * 1024;
  */
 export const UPLOAD_PROGRESS_MIN_BYTES = 2 * 1024 * 1024;
 
+export interface SlicingStep {
+    /** Milliseconds after the phase began at which this text takes over. */
+    atMs: number;
+    text: string;
+}
+
+/**
+ * What the status line says while the slicer runs. The backend reports nothing until it is
+ * done, so the stages are timed, not measured; they follow what a slice actually does and
+ * the last one stays until the quote arrives.
+ */
+export const SLICING_STEPS: ReadonlyArray<SlicingStep> = [
+    { atMs: 0, text: 'Modell wird gescannt...' },
+    { atMs: 1500, text: 'Geometrie wird analysiert...' },
+    { atMs: 3500, text: 'Schichten werden berechnet...' },
+    { atMs: 8000, text: 'Druckzeit und Material werden ermittelt...' }
+];
+
+/** A re-price of a known model skips the scanning stages and ends with its own text. */
+export const REPRICING_FIRST_STEP = 2;
+export const REPRICING_FINAL_TEXT = 'Preis wird neu berechnet...';
+
+/** How long "Fertig." lingers after the quote arrived before the box shows the price. */
+export const QUOTE_DONE_FLASH_MS = 400;
+
+/** The timed stages for a pending phase, rebased so that the first one starts at zero. */
+export function slicingStepsFor(phase: 'slicing' | 'repricing'): ReadonlyArray<SlicingStep> {
+    if (phase === 'slicing') {
+        return SLICING_STEPS;
+    }
+    const steps = SLICING_STEPS.slice(REPRICING_FIRST_STEP);
+    const offset = steps[0]?.atMs ?? 0;
+    return steps.map((step, index) => ({
+        atMs: step.atMs - offset,
+        text: index === steps.length - 1 ? REPRICING_FINAL_TEXT : step.text
+    }));
+}
+
 /** Chosen when the catalogue arrives, if the backend offers it; otherwise the first tier. */
 const PREFERRED_QUALITY = 'medium';
 
@@ -113,6 +152,7 @@ export class UploadComponent {
     private readonly uploads = new Subject<File | null>();
     private readonly quoteJobs = new Subject<QuoteJob | null>();
     private readonly prefetchRuns = new Subject<QuoteJob | null>();
+    private readonly doneFlashes = new Subject<void>();
     /** One re-upload per file when the backend has dropped it; a second expiry is an error. */
     private reuploaded = false;
 
@@ -151,6 +191,10 @@ export class UploadComponent {
     readonly quote = signal<QuoteResponse | null>(null);
     readonly quoteState = signal<QuoteState>('idle');
     readonly quoteError = signal('');
+    /** Index into {@link slicingStepsFor} of the current phase; advanced by timers. */
+    readonly slicingStep = signal(0);
+    /** True for a moment after a quote arrived: the box says "Fertig." before the price. */
+    readonly quoteDoneFlash = signal(false);
 
     readonly orderForm = new FormGroup({
         filament: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
@@ -218,7 +262,9 @@ export class UploadComponent {
     });
     /** The quote on screen is shown dimmed: a new one is pending or the form has moved on. */
     readonly quoteIsStale = computed(
-        () => this.quote() !== null && (this.quoteState() !== 'ready' || !this.quoteMatchesForm())
+        () =>
+            this.quote() !== null &&
+            (this.quoteState() !== 'ready' || this.quoteDoneFlash() || !this.quoteMatchesForm())
     );
     /** Which status the price box shows; see {@link QuotePhase}. */
     readonly quotePhase = computed<QuotePhase>(() => {
@@ -242,6 +288,25 @@ export class UploadComponent {
     readonly quoteInProgress = computed(() => {
         const phase = this.quotePhase();
         return phase === 'uploading' || phase === 'slicing' || phase === 'repricing';
+    });
+    /** Fill of the status bar in percent; null means indeterminate (the slicer is running). */
+    readonly quoteBarPercent = computed<number | null>(() => {
+        if (this.quoteDoneFlash()) {
+            return 100;
+        }
+        return this.quotePhase() === 'uploading' ? this.uploadProgress() : null;
+    });
+    /** The staged text next to the indeterminate bar, or "Fertig." right after the quote came. */
+    readonly quoteStatusText = computed(() => {
+        if (this.quoteDoneFlash()) {
+            return 'Fertig.';
+        }
+        const phase = this.quotePhase();
+        if (phase !== 'slicing' && phase !== 'repricing') {
+            return '';
+        }
+        const steps = slicingStepsFor(phase);
+        return steps[Math.min(this.slicingStep(), steps.length - 1)].text;
     });
     readonly canSubmitOrder = computed(
         () => this.quoteState() === 'ready' && this.quote() !== null && this.quoteMatchesForm()
@@ -322,6 +387,26 @@ export class UploadComponent {
                 takeUntilDestroyed()
             )
             .subscribe();
+
+        // The staged texts advance on timers that live exactly as long as the pending phase.
+        effect((onCleanup) => {
+            const phase = this.quotePhase();
+            if (phase !== 'slicing' && phase !== 'repricing') {
+                return;
+            }
+            untracked(() => this.slicingStep.set(0));
+            const subscription = merge(
+                ...slicingStepsFor(phase).map((step, index) => timer(step.atMs).pipe(map(() => index)))
+            ).subscribe((index) => this.slicingStep.set(index));
+            onCleanup(() => subscription.unsubscribe());
+        });
+
+        this.doneFlashes
+            .pipe(
+                switchMap(() => timer(QUOTE_DONE_FLASH_MS)),
+                takeUntilDestroyed()
+            )
+            .subscribe(() => this.quoteDoneFlash.set(false));
 
         this.orderForm.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
             // A changed configuration is a new line; the confirmation for the previous one goes.
@@ -447,6 +532,7 @@ export class UploadComponent {
             return;
         }
 
+        this.quoteDoneFlash.set(false);
         this.quoteState.set('loading');
         this.quoteError.set('');
         this.quoteJobs.next(job);
@@ -520,6 +606,7 @@ export class UploadComponent {
         this.modelId.set(null);
         this.uploadState.set('uploading');
         this.uploadProgress.set(0);
+        this.quoteDoneFlash.set(false);
         this.quoteState.set('loading');
         this.quoteError.set('');
         this.uploads.next(file);
@@ -630,6 +717,11 @@ export class UploadComponent {
 
     private applyQuoteOutcome(outcome: QuoteOutcome) {
         if (outcome.quote) {
+            // A quote the customer waited for gets a short "Fertig."; a cache hit is instant.
+            if (this.quoteState() === 'loading') {
+                this.quoteDoneFlash.set(true);
+                this.doneFlashes.next();
+            }
             this.quoteCache.set(outcome.job.key, outcome.quote);
             this.quote.set(outcome.quote);
             this.quoteError.set('');
@@ -662,6 +754,7 @@ export class UploadComponent {
         this.quote.set(null);
         this.quoteError.set('');
         this.quoteState.set('idle');
+        this.quoteDoneFlash.set(false);
         this.isModelLoading.set(false);
         this.modelLoadProgress.set(0);
         this.lastRequestedKey = '';
