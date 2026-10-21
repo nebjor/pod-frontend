@@ -6,8 +6,7 @@ import { CART_MAX_ITEMS, CartService } from '../cart/cart.service';
 import { formatPrintDuration } from '../quote/print-duration';
 import { QuoteOptions, QuoteResponse } from '../quote/quote.models';
 import { QuoteService, UploadEvent } from '../quote/quote.service';
-import { PREFETCH_DELAY_MS, PREVIEW_LIMIT_BYTES_3MF, QUOTE_DEBOUNCE_MS, UploadComponent, formatPrintDuration } from './upload.component';
-import { PREFETCH_DELAY_MS, QUOTE_DEBOUNCE_MS, UploadComponent } from './upload.component';
+import { PREFETCH_DELAY_MS, PREVIEW_LIMIT_BYTES_3MF, QUOTE_DEBOUNCE_MS, UploadComponent } from './upload.component';
 
 const sampleQuote: QuoteResponse = {
     fileName: 'benchy.stl',
