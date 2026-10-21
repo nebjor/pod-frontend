@@ -3,6 +3,8 @@ import { ChangeDetectionStrategy, Component, DestroyRef, afterNextRender, comput
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { AccountResponse } from '../account/account.models';
+import { AccountService } from '../account/account.service';
 import { CartItem, CartService } from '../cart/cart.service';
 import { FALLBACK_ORDER_SETTINGS, OrderFailure, OrderRequest, OrderResponse, OrderSettings } from '../order/order.models';
 import { OrderService, describeOrderError, rememberLastOrder } from '../order/order.service';
@@ -20,11 +22,14 @@ type CheckoutState = 'idle' | 'submitting' | 'placed';
 export class CheckoutComponent {
     private readonly cart = inject(CartService);
     private readonly orderService = inject(OrderService);
+    private readonly account = inject(AccountService);
     private readonly router = inject(Router);
     private readonly destroyRef = inject(DestroyRef);
     /** Lines uploaded again during the current submit; a second expiry of the same line is an error. */
     private reuploaded = new Set<string>();
 
+    readonly accountState = this.account.state;
+    readonly customer = this.account.account;
     readonly items = this.cart.items;
     readonly ready = this.cart.ready;
     readonly isEmpty = this.cart.isEmpty;
@@ -61,6 +66,12 @@ export class CheckoutComponent {
 
     constructor() {
         afterNextRender(() => {
+            void this.account.load().then(() => {
+                const customer = this.customer();
+                if (customer) {
+                    this.prefillFrom(customer);
+                }
+            });
             this.orderService
                 .loadSettings()
                 .pipe(takeUntilDestroyed(this.destroyRef))
@@ -179,6 +190,24 @@ export class CheckoutComponent {
             default:
                 this.errorMessage.set(failure.message);
                 this.state.set('idle');
+        }
+    }
+
+    /** Fills in what the account knows, leaving anything the customer has typed already alone. */
+    private prefillFrom(customer: AccountResponse) {
+        const controls = this.customerForm.controls;
+        const fill = (control: FormControl<string>, value: string | null) => {
+            if (value && control.value.trim() === '') {
+                control.setValue(value);
+            }
+        };
+        fill(controls.customerName, customer.name);
+        fill(controls.email, customer.email);
+        fill(controls.street, customer.street);
+        fill(controls.postalCode, customer.postalCode);
+        fill(controls.city, customer.city);
+        if (customer.country && controls.country.pristine) {
+            controls.country.setValue(customer.country);
         }
     }
 

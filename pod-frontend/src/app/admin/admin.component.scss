@@ -172,6 +172,55 @@
     &.status-printing { border-color: var(--accent-450); color: var(--accent-450); }
     &.status-shipped { opacity: 0.7; }
     &.status-cancelled { border-color: #d99898; color: #d99898; }
+
+    &.inspect {
+        margin-left: 0.4rem;
+        border-color: #e0b457;
+        color: #e0b457;
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04rem;
+    }
+}
+
+.orders tbody tr.needs-inspection td:first-child {
+    box-shadow: inset 3px 0 0 #e0b457;
+}
+
+.tag {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-650);
+    font-size: 0.7rem;
+    white-space: nowrap;
+
+    &.tag-danger {
+        border-color: #d99898;
+        color: #d99898;
+    }
+
+    &.tag-muted {
+        color: var(--text-300);
+    }
+}
+
+.warnings-row td {
+    padding-top: 0;
+    border-top: 0;
+}
+
+.warnings {
+    margin: 0 0 0.3rem;
+    padding-left: 1.1rem;
+    color: #e0b457;
+    font-size: 0.76rem;
+    line-height: 1.45;
+
+    li {
+        overflow-wrap: anywhere;
+    }
 }
 
 .detail {

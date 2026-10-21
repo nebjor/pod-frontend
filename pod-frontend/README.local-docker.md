@@ -117,6 +117,39 @@ curl.exe -F "file=@public/3DBenchy.stl" http://localhost:8080/api/models   # tak
 curl.exe -H "Content-Type: application/json" -d '{"customer":{"name":"Anna Muster","email":"anna@example.com","street":"Bahnhofstrasse 1","postalCode":"8001","city":"Zuerich","country":"CH"},"items":[{"modelId":"<modelId>","fileName":"3DBenchy.stl","filament":"PLA","color":"red","quality":"medium","quantity":2}],"expectedTotalChf":11.00}' http://localhost:8080/api/orders
 ```
 
+### Order status page
+`/bestellung` ("Meine Bestellung") looks an order up with `GET /api/orders/{number}?email=`,
+the two things the order mail carries; the mail links to `/bestellung?nr=<number>&email=<email>`,
+and with both present the page asks right away. It shows a status timeline (Neu, Bezahlt,
+In Pruefung, Freigegeben, Im Druck, Versendet; Storniert instead of the steps), the lines, the
+totals and the dates, and for a `NEW` order with a `paymentUrl` a "Jetzt bezahlen" link. A `404`
+reads "Keine Bestellung mit dieser Nummer und E-Mail gefunden", whichever of the two was wrong.
+
+## Customer account
+Passwordless: `/konto/anmelden` asks for the e-mail, `POST /api/account/login-links` answers
+`202` either way and mails a link to `/konto/anmelden?token=<token>`; opening it calls
+`POST /api/account/sessions`, which sets the HttpOnly cookie `pod_session`. `?returnTo=<path>`
+(paths of this app only) says where to go afterwards, `/konto` otherwise; because the mail
+carries only the token, the login page keeps the path in `localStorage` (`pod.loginReturnTo`)
+until the link is opened.
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/account` | The account, or `401 not-logged-in` |
+| `PUT /api/account` (`name`, `street`, `postalCode`, `city`, `country`) | Save the delivery address, `400` with `errors` per field |
+| `GET /api/account/orders` | The account's orders (`OrderResponse[]`) |
+| `DELETE /api/account/sessions` | Log out |
+| `DELETE /api/account` | Delete the account; the orders stay |
+
+`AccountService` asks `GET /api/account` once after the first render in the browser (never
+during prerendering) and keeps `state` as `unknown`, `loading`, `anonymous` or `signedIn`; a
+`401` is the anonymous visitor, not an error. The header shows "Anmelden" or "Mein Konto" once
+the state is known. `/konto` lists the orders newest first (linking to the status page), holds
+the address form, logout and "Konto loeschen" with a confirm step; an anonymous visitor is sent
+to the login. The checkout prefills empty address fields from the account and shows "Angemeldet
+als"; a visitor sees "Schon Kunde? Anmelden" with `returnTo=/checkout`. The account types are
+hand-written in `src/app/account/account.models.ts` until the generated contract carries them.
+
 ### Protection against runaway slicing
 - At most two slicer processes run at once (`slicer.capacity.max-concurrent`); a request that
   cannot get a slot within 20 s gets `503` with `Retry-After`.

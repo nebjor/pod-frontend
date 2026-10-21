@@ -3,6 +3,70 @@
  * Do not edit by hand; run `npm run api:types` against a running backend instead.
  */
 export interface paths {
+    "/api/account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["account"];
+        put: operations["update"];
+        post?: never;
+        delete: operations["deleteAccount"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/account/login-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["requestLoginLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/account/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["orders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/account/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["openSession"];
+        delete: operations["logout"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/orders": {
         parameters: {
             query?: never;
@@ -231,6 +295,25 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AccountResponse: {
+            city: string | null;
+            country: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            email: string;
+            /** Format: date-time */
+            lastLoginAt: string;
+            name: string | null;
+            postalCode: string | null;
+            street: string | null;
+        };
+        AccountUpdateRequest: {
+            city: string;
+            country: string;
+            name: string;
+            postalCode: string;
+            street: string;
+        };
         AdminOrderItemResponse: {
             color: components["schemas"]["ColorOption"];
             filament: string;
@@ -242,6 +325,8 @@ export interface components {
             layerHeightMm: number;
             lineTotalChf: number;
             machineProfile: string;
+            /** @description Whether the mesh is watertight; null when not checked */
+            manifold: boolean | null;
             /** Format: int32 */
             plateCount: number;
             /**
@@ -256,8 +341,11 @@ export interface components {
             quantity: number;
             setupFeeChf: number;
             unitPriceChf: number;
+            /** @description Slicer warnings about the model, as the slicer printed them */
+            warnings: string[];
         };
         AdminOrderResponse: {
+            accountEmail: string | null;
             allowedTransitions: ("NEW" | "PAID" | "IN_REVIEW" | "APPROVED" | "PRINTING" | "SHIPPED" | "CANCELLED")[];
             city: string;
             country: string;
@@ -270,6 +358,8 @@ export interface components {
             /** Format: date-time */
             erasedAt: string | null;
             items: components["schemas"]["AdminOrderItemResponse"][];
+            /** @description True when an item carries slicer warnings or is not manifold; open those models before printing */
+            needsInspection: boolean;
             orderNumber: string;
             /** Format: date-time */
             paidAt: string | null;
@@ -313,6 +403,10 @@ export interface components {
             colors: components["schemas"]["ColorOption"][];
             label: string;
             profileName: string;
+        };
+        LoginLinkRequest: {
+            /** Format: email */
+            email: string;
         };
         OrderItemRequest: {
             color?: string | null;
@@ -420,6 +514,8 @@ export interface components {
             /** Format: double */
             machineCostChf: number;
             machineProfile: string;
+            /** @description Whether the mesh is watertight; null when the check was not possible */
+            manifold: boolean | null;
             /** Format: double */
             materialCostChf: number;
             /** Format: int32 */
@@ -441,6 +537,11 @@ export interface components {
             triangleCount: number;
             /** Format: double */
             unitPriceChf: number;
+            /** @description Slicer warnings about the model, as the slicer printed them */
+            warnings: string[];
+        };
+        SessionRequest: {
+            token: string;
         };
         StatusChange: {
             /** @enum {string} */
@@ -461,6 +562,152 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    account: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AccountResponse"];
+                };
+            };
+        };
+    };
+    update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AccountResponse"];
+                };
+            };
+        };
+    };
+    deleteAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    requestLoginLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    orders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrderResponse"][];
+                };
+            };
+        };
+    };
+    openSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SessionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AccountResponse"];
+                };
+            };
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     list: {
         parameters: {
             query?: {

@@ -26,7 +26,9 @@ const sampleQuote: QuoteResponse = {
     unitPriceChf: 4.7,
     totalPriceChf: 19.1,
     currency: 'CHF',
-    leadTimeDays: 4
+    leadTimeDays: 4,
+    warnings: [],
+    manifold: true
 };
 
 describe('QuoteService', () => {

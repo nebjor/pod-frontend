@@ -401,6 +401,37 @@
         color: var(--text-300);
         font-size: 0.82rem;
     }
+
+    .manifold-note {
+        margin: 0.75rem 0 0;
+        padding: 0.6rem 0.75rem;
+        border-radius: 8px;
+        border: 1px solid rgba(224, 180, 87, 0.6);
+        background: rgba(224, 180, 87, 0.1);
+        color: #e8c77a;
+        font-size: 0.84rem;
+        line-height: 1.45;
+    }
+
+    .warnings-toggle {
+        margin-top: 0.6rem;
+        border: 0;
+        padding: 0;
+        background: transparent;
+        color: var(--text-300);
+        font: inherit;
+        font-size: 0.8rem;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+
+    .warnings-list {
+        margin: 0.4rem 0 0;
+        padding-left: 1.1rem;
+        color: var(--text-300);
+        font-size: 0.78rem;
+        overflow-wrap: anywhere;
+    }
 }
 
 .estimate .quote-body.stale {

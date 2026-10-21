@@ -1,7 +1,10 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
+import { AccountResponse, AccountState } from '../account/account.models';
+import { AccountService } from '../account/account.service';
 import { CartService, NewCartItem } from '../cart/cart.service';
 import { FALLBACK_ORDER_SETTINGS, LAST_ORDER_STORAGE_KEY, OrderRequest, OrderResponse } from '../order/order.models';
 import { OrderService } from '../order/order.service';
@@ -31,7 +34,9 @@ const quote: QuoteResponse = {
     unitPriceChf: 3,
     totalPriceChf: 11,
     currency: 'CHF',
-    leadTimeDays: 3
+    leadTimeDays: 3,
+    warnings: [],
+    manifold: true
 };
 
 const cubeQuote: QuoteResponse = {
@@ -91,6 +96,17 @@ const placedOrder: OrderResponse = {
     paymentUrl: '/pay/mock?session=mock_1&order=POD-1000&amount=26.85&currency=CHF'
 };
 
+const anna: AccountResponse = {
+    email: 'anna@example.com',
+    name: 'Anna Muster',
+    street: 'Bahnhofstrasse 1',
+    postalCode: '8001',
+    city: 'Zürich',
+    country: 'CH',
+    createdAt: '2026-10-01T09:00:00Z',
+    lastLoginAt: '2026-10-20T09:00:00Z'
+};
+
 function benchy(): NewCartItem {
     const file = new File(['solid benchy endsolid benchy'], 'benchy.stl');
     return {
@@ -128,17 +144,22 @@ describe('CheckoutComponent', () => {
     let placeOrder: ReturnType<typeof vi.fn>;
     let uploadModel: ReturnType<typeof vi.fn>;
     let navigateByUrl: ReturnType<typeof vi.spyOn>;
+    let accountState: ReturnType<typeof signal<AccountState>>;
+    let account: ReturnType<typeof signal<AccountResponse | null>>;
 
     beforeEach(async () => {
         placeOrder = vi.fn(() => of(placedOrder));
         uploadModel = vi.fn(() => of<UploadEvent>({ kind: 'done', model: { modelId: FRESH_MODEL_ID, fileName: 'benchy.stl', sizeBytes: 28 } }));
+        accountState = signal<AccountState>('anonymous');
+        account = signal<AccountResponse | null>(null);
 
         await TestBed.configureTestingModule({
             imports: [CheckoutComponent],
             providers: [
                 provideRouter([]),
                 { provide: OrderService, useValue: { placeOrder, loadSettings: () => of(FALLBACK_ORDER_SETTINGS) } },
-                { provide: QuoteService, useValue: { uploadModel, requestQuote: vi.fn() } }
+                { provide: QuoteService, useValue: { uploadModel, requestQuote: vi.fn() } },
+                { provide: AccountService, useValue: { state: accountState, account, load: () => Promise.resolve() } }
             ]
         }).compileComponents();
 
@@ -195,6 +216,59 @@ describe('CheckoutComponent', () => {
         expect(lines[1].textContent).toContain('1 x cube.stl');
         expect(lines[1].textContent).toContain('PETG White');
         expect((fixture.nativeElement as HTMLElement).querySelector('a[href="/warenkorb"]')).not.toBeNull();
+    });
+
+    it('invites a visitor to sign in and come back to the checkout', async () => {
+        cart.add(benchy());
+        await create();
+
+        const hint = (fixture.nativeElement as HTMLElement).querySelector('.account-hint');
+        expect(hint?.textContent).toContain('Schon Kunde?');
+        expect(hint?.querySelector('a')?.getAttribute('href')).toContain('/konto/anmelden?returnTo=');
+        expect(hint?.querySelector('a')?.getAttribute('href')).toContain('checkout');
+    });
+
+    it('prefills the address of a signed-in customer and says who is signed in', async () => {
+        accountState.set('signedIn');
+        account.set(anna);
+        cart.add(benchy());
+        await create();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        expect(component.customerForm.getRawValue()).toEqual({
+            customerName: 'Anna Muster',
+            email: 'anna@example.com',
+            street: 'Bahnhofstrasse 1',
+            postalCode: '8001',
+            city: 'Zürich',
+            country: 'CH',
+            termsAccepted: false
+        });
+        const hint = (fixture.nativeElement as HTMLElement).querySelector('.account-hint');
+        expect(hint?.textContent).toContain('Angemeldet als');
+        expect(hint?.textContent).toContain('anna@example.com');
+        expect(hint?.querySelector('a')).toBeNull();
+    });
+
+    it('leaves what the customer typed alone when prefilling', async () => {
+        accountState.set('signedIn');
+        account.set({ ...anna, street: null, postalCode: null });
+        cart.add(benchy());
+        navigateByUrl = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+        fixture = TestBed.createComponent(CheckoutComponent);
+        component = fixture.componentInstance;
+        component.customerForm.controls.email.setValue('other@example.com');
+        fixture.detectChanges();
+        await cart.whenReady();
+        await fixture.whenStable();
+
+        const value = component.customerForm.getRawValue();
+        expect(value.email).toBe('other@example.com');
+        expect(value.customerName).toBe('Anna Muster');
+        expect(value.street).toBe('');
+        expect(value.postalCode).toBe('');
+        expect(value.city).toBe('Zürich');
     });
 
     it('does not submit without the terms accepted', async () => {

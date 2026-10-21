@@ -30,7 +30,9 @@ const sampleQuote: QuoteResponse = {
     unitPriceChf: 3,
     totalPriceChf: 8,
     currency: 'CHF',
-    leadTimeDays: 3
+    leadTimeDays: 3,
+    warnings: [],
+    manifold: true
 };
 
 /** What the backend publishes; the component holds no catalogue of its own. */
@@ -179,6 +181,41 @@ describe('UploadComponent', () => {
         expect(component.quoteState()).toBe('ready');
         expect(component.quote()?.totalPriceChf).toBe(8);
         expect(component.canSubmitOrder()).toBe(true);
+    });
+
+    it('warns about a model that is not watertight and keeps the slicer warnings behind a toggle', () => {
+        requestQuote.mockReturnValue(of({ ...sampleQuote, manifold: false, warnings: ['Open edges: 12', 'Non-manifold edges: 4'] }));
+        component.onDrop(dropEvent(benchy));
+        settle();
+        fixture.detectChanges();
+
+        const host = fixture.nativeElement as HTMLElement;
+        expect(host.querySelector('.manifold-note')?.textContent).toContain('nicht wasserdicht');
+        const toggle = host.querySelector<HTMLButtonElement>('.warnings-toggle');
+        expect(toggle?.textContent?.trim()).toBe('Hinweise vom Slicer (2)');
+        expect(toggle?.getAttribute('aria-expanded')).toBe('false');
+        expect(host.querySelector('.warnings-list')).toBeNull();
+
+        toggle?.click();
+        fixture.detectChanges();
+        const items = host.querySelectorAll('.warnings-list li');
+        expect(Array.from(items).map((li) => li.textContent)).toEqual(['Open edges: 12', 'Non-manifold edges: 4']);
+        expect(toggle?.getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('says nothing about the mesh when it is fine or was not checked', () => {
+        component.onDrop(dropEvent(benchy));
+        settle();
+        fixture.detectChanges();
+        const host = fixture.nativeElement as HTMLElement;
+        expect(host.querySelector('.manifold-note')).toBeNull();
+        expect(host.querySelector('.slicer-warnings')).toBeNull();
+
+        requestQuote.mockReturnValue(of({ ...sampleQuote, manifold: null }));
+        component.orderForm.controls.quantity.setValue(2);
+        settle();
+        fixture.detectChanges();
+        expect(host.querySelector('.manifold-note')).toBeNull();
     });
 
     it('collapses rapid changes into a single request', () => {

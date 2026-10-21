@@ -144,6 +144,16 @@
     line-height: 1.5;
 }
 
+.account-hint {
+    margin: -0.3rem 0 0.9rem;
+    color: var(--text-300);
+    font-size: 0.82rem;
+
+    strong {
+        color: var(--text-100);
+    }
+}
+
 .customer-form {
     display: grid;
     gap: 0.85rem;

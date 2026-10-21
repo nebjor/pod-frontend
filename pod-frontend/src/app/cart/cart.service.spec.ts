@@ -29,7 +29,9 @@ const quote: QuoteResponse = {
     unitPriceChf: 3,
     totalPriceChf: 8,
     currency: 'CHF',
-    leadTimeDays: 3
+    leadTimeDays: 3,
+    warnings: [],
+    manifold: true
 };
 
 const MODEL_ID = 'a'.repeat(64);

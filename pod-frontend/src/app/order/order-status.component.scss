@@ -1,0 +1,73 @@
+.lookup-form {
+    @media (min-width: 640px) {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+    }
+}
+
+.order-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+
+    h2 {
+        margin: 0;
+    }
+}
+
+app-order-status-timeline {
+    margin-bottom: 1.25rem;
+}
+
+.pay-now {
+    padding: 0.9rem;
+    border-radius: 10px;
+    border: 1px solid var(--accent-300);
+    background: rgba(12, 28, 42, 0.75);
+
+    .note {
+        margin: 0 0 0.4rem;
+        color: var(--text-100);
+    }
+}
+
+.table-wrap {
+    overflow-x: auto;
+    margin-bottom: 1rem;
+}
+
+.items-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+
+    th,
+    td {
+        padding: 0.45rem 0.5rem;
+        text-align: left;
+        vertical-align: top;
+        border-bottom: 1px dashed rgba(53, 84, 107, 0.6);
+    }
+
+    th {
+        color: var(--text-300);
+        font-weight: 400;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04rem;
+    }
+
+    td {
+        color: var(--text-100);
+    }
+
+    .file-name {
+        overflow-wrap: anywhere;
+    }
+
+    .num {
+        text-align: right;
+        white-space: nowrap;
+    }
+}

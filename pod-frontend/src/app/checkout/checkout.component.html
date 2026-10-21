@@ -82,6 +82,15 @@
 
             <section class="card">
                 <h2>2. Lieferadresse</h2>
+                @if (accountState() === 'signedIn' && customer(); as c) {
+                    <p class="account-hint signed-in">Angemeldet als <strong>{{ c.email }}</strong></p>
+                } @else if (accountState() === 'anonymous') {
+                    <p class="account-hint">
+                        Schon Kunde?
+                        <a routerLink="/konto/anmelden" [queryParams]="{ returnTo: '/checkout' }">Anmelden</a>
+                        und die Adresse wird ausgefuellt.
+                    </p>
+                }
                 <form [formGroup]="customerForm" class="customer-form" (ngSubmit)="submit()" novalidate>
                     <label>
                         Name

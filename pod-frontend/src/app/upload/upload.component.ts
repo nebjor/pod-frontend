@@ -183,6 +183,12 @@ export class UploadComponent {
         () => this.quoteState() === 'ready' && this.quote() !== null && this.formStatus() === 'VALID'
     );
     readonly canAddToCart = computed(() => this.canSubmitOrder() && !this.cartIsFull());
+    /** The slicer's warnings are collapsed by default; most customers do not need them. */
+    readonly warningsOpen = signal(false);
+
+    toggleWarnings() {
+        this.warningsOpen.update((open) => !open);
+    }
 
     constructor() {
         // A new file cancels the upload of the previous one.

@@ -1,5 +1,8 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { AccountState } from '../account/account.models';
+import { AccountService } from '../account/account.service';
 import { CartService, NewCartItem } from '../cart/cart.service';
 import { QuoteResponse } from '../quote/quote.models';
 import { HeaderComponent } from './header.component';
@@ -26,7 +29,9 @@ const quote: QuoteResponse = {
     unitPriceChf: 3,
     totalPriceChf: 11,
     currency: 'CHF',
-    leadTimeDays: 3
+    leadTimeDays: 3,
+    warnings: [],
+    manifold: true
 };
 
 function item(name: string, quantity: number, totalPriceChf: number): NewCartItem {
@@ -48,11 +53,13 @@ describe('HeaderComponent', () => {
     let component: HeaderComponent;
     let fixture: ComponentFixture<HeaderComponent>;
     let cart: CartService;
+    let accountState: ReturnType<typeof signal<AccountState>>;
 
     beforeEach(async () => {
+        accountState = signal<AccountState>('unknown');
         await TestBed.configureTestingModule({
             imports: [HeaderComponent],
-            providers: [provideRouter([])]
+            providers: [provideRouter([]), { provide: AccountService, useValue: { state: accountState } }]
         }).compileComponents();
 
         cart = TestBed.inject(CartService);
@@ -86,6 +93,30 @@ describe('HeaderComponent', () => {
         expect(link?.querySelector('.cart-count')?.textContent?.trim()).toBe('3');
         expect(link?.querySelector('.cart-total')?.textContent).toContain('CHF 17.85');
         expect(link?.getAttribute('aria-label')).toBe('Warenkorb: 3 Stueck, CHF 17.85');
+    });
+
+    function accountLink() {
+        return (fixture.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>('.account-link');
+    }
+
+    it('shows no account link until the session is known, so nothing flickers', () => {
+        expect(accountLink()).toBeNull();
+    });
+
+    it('invites a visitor to sign in', async () => {
+        accountState.set('anonymous');
+        await fixture.whenStable();
+
+        expect(accountLink()?.textContent?.trim()).toBe('Anmelden');
+        expect(accountLink()?.getAttribute('href')).toBe('/konto/anmelden');
+    });
+
+    it('links a signed-in customer to the account page', async () => {
+        accountState.set('signedIn');
+        await fixture.whenStable();
+
+        expect(accountLink()?.textContent?.trim()).toBe('Mein Konto');
+        expect(accountLink()?.getAttribute('href')).toBe('/konto');
     });
 
     it('hides the indicator again when the cart is cleared', async () => {

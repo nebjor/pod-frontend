@@ -21,7 +21,9 @@ const benchy: AdminOrderItem = {
     filamentGrams: 23.1,
     unitPriceChf: 3,
     setupFeeChf: 5,
-    lineTotalChf: 11
+    lineTotalChf: 11,
+    warnings: [],
+    manifold: true
 };
 
 const holder: AdminOrderItem = {
@@ -57,7 +59,9 @@ const paidOrder: AdminOrder = {
     country: 'CH',
     items: [benchy, holder],
     totals: { itemsTotal: 17.85, shipping: 9, vatRate: 0, vatAmount: 0, total: 26.85, currency: 'CHF' },
-    paymentProvider: 'mock'
+    paymentProvider: 'mock',
+    needsInspection: false,
+    accountEmail: null
 };
 
 const singleOrder: AdminOrder = {
@@ -186,6 +190,50 @@ describe('AdminComponent', () => {
         expect(component.selected()?.status).toBe('IN_REVIEW');
         expect(component.selected()?.allowedTransitions).toEqual(['APPROVED', 'CANCELLED']);
         expect(component.notice()).toContain('In Pruefung');
+    });
+
+    it('flags an order whose model needs an inspection and lists the slicer warnings', () => {
+        const flagged: AdminOrder = {
+            ...singleOrder,
+            needsInspection: true,
+            accountEmail: 'anna@example.com',
+            items: [{ ...benchy, manifold: false, warnings: ['Open edges: 12', 'Self-intersecting faces: 3'] }]
+        };
+        listOrders.mockReturnValue(of([flagged]));
+        logIn();
+
+        const row = host().querySelector('table.orders tbody tr');
+        expect(row?.classList).toContain('needs-inspection');
+        expect(row?.querySelector('.badge.inspect')?.textContent?.trim()).toBe('Pruefen');
+
+        component.select('POD-1001');
+        fixture.detectChanges();
+
+        const detail = host().querySelector('.detail');
+        expect(detail?.textContent).toContain('Konto');
+        expect(detail?.textContent).toContain('anna@example.com');
+        const rows = host().querySelectorAll('table.items tbody tr');
+        expect(rows).toHaveLength(2);
+        expect(rows[0].querySelector('.tag-danger')?.textContent).toBe('nicht wasserdicht');
+        const warnings = rows[1].querySelectorAll('.warnings li');
+        expect(Array.from(warnings).map((li) => li.textContent)).toEqual(['Open edges: 12', 'Self-intersecting faces: 3']);
+    });
+
+    it('tells when the mesh was not checked and stays quiet for a clean one', () => {
+        const unchecked: AdminOrder = { ...paidOrder, items: [{ ...benchy, manifold: null }, holder] };
+        listOrders.mockReturnValue(of([unchecked]));
+        logIn();
+        component.select('POD-1000');
+        fixture.detectChanges();
+
+        expect(host().querySelector('table.orders tbody tr')?.classList).not.toContain('needs-inspection');
+        expect(host().querySelector('.badge.inspect')).toBeNull();
+        const rows = host().querySelectorAll('table.items tbody tr');
+        expect(rows).toHaveLength(2);
+        expect(rows[0].querySelector('.tag-muted')?.textContent).toBe('Mesh nicht geprueft');
+        expect(rows[1].querySelector('.tag')).toBeNull();
+        expect(host().querySelector('.warnings')).toBeNull();
+        expect(host().querySelector('.detail')?.textContent).not.toContain('Konto');
     });
 
     it('filters by status', () => {
