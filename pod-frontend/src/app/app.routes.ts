@@ -10,10 +10,14 @@ const admin = () => import('./admin/admin.component').then((m) => m.AdminCompone
 export const shopRoutes: Routes = [
     {
         path: '',
+        title: '3D-Druck auf Bestellung aus Winterthur',
+        data: { description: 'Modell hochladen, Preis sofort sehen, bestellen. 3D-Druck in PLA, PETG und PCTG aus Winterthur, Versand in der ganzen Schweiz.' },
         loadComponent: () => import('./landing/landing.component').then((m) => m.LandingComponent)
     },
     {
         path: 'upload',
+        title: 'Modell hochladen und Sofortpreis',
+        data: { description: 'STL oder 3MF hochladen, Filament, Farbe und Qualitaet waehlen und den Preis aus einem echten Slicer-Durchlauf sofort sehen.' },
         loadComponent: () => import('./upload/upload.component').then((m) => m.UploadComponent)
     },
     {
@@ -22,14 +26,20 @@ export const shopRoutes: Routes = [
     },
     {
         path: 'checkout/success',
+        title: 'Bestellung',
+        data: { noindex: true },
         loadComponent: () => import('./checkout/order-success.component').then((m) => m.OrderSuccessComponent)
     },
     {
         path: 'checkout',
+        title: 'Bestellung',
+        data: { noindex: true },
         loadComponent: () => import('./checkout/checkout.component').then((m) => m.CheckoutComponent)
     },
     {
         path: 'pay/mock',
+        title: 'Zahlung',
+        data: { noindex: true },
         loadComponent: () => import('./payment/mock-payment.component').then((m) => m.MockPaymentComponent)
     },
     {
@@ -53,18 +63,25 @@ export const shopRoutes: Routes = [
         // Kept in the shop table so the page is prerendered; on the shop host Caddy redirects
         // it to the admin host, where it is served as the root (see server.ts).
         path: 'admin',
+        title: 'Admin',
+        data: { noindex: true },
         loadComponent: admin
     },
     {
         path: 'impressum',
+        title: 'Impressum',
         loadComponent: () => import('./legal/imprint.component').then((m) => m.ImprintComponent)
     },
     {
         path: 'agb',
+        title: 'AGB',
+        data: { description: 'Allgemeine Geschaeftsbedingungen von 3DBurg: Bestellung, Preise, Zahlung, Lieferung und Widerruf bei individuell gefertigten 3D-Drucken.' },
         loadComponent: () => import('./legal/terms.component').then((m) => m.TermsComponent)
     },
     {
         path: 'datenschutz',
+        title: 'Datenschutz',
+        data: { description: 'Datenschutzerklaerung von 3DBurg: welche Daten wir fuer Angebot, Bestellung und Versand verarbeiten und wann wir sie loeschen.' },
         loadComponent: () => import('./legal/privacy.component').then((m) => m.PrivacyComponent)
     },
     { path: '**', redirectTo: '' }
@@ -76,8 +93,8 @@ export const shopRoutes: Routes = [
  * /admin (see server.ts); both paths render the same component, so hydration matches.
  */
 export const adminRoutes: Routes = [
-    { path: '', loadComponent: admin },
-    { path: 'admin', loadComponent: admin },
+    { path: '', title: 'Admin', data: { noindex: true }, loadComponent: admin },
+    { path: 'admin', title: 'Admin', data: { noindex: true }, loadComponent: admin },
     { path: '**', redirectTo: '' }
 ];
 
