@@ -1,11 +1,13 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, UrlTree, provideRouter } from '@angular/router';
-import { AccountState } from '../account/account.models';
+import { Subject, of, throwError } from 'rxjs';
+import { AccountResponse, AccountState } from '../account/account.models';
 import { AccountService } from '../account/account.service';
 import { CartService, NewCartItem } from '../cart/cart.service';
 import { QuoteResponse } from '../quote/quote.models';
-import { CART_PREVIEW_CLOSE_DELAY_MS, HeaderComponent } from './header.component';
+import { HeaderComponent } from './header.component';
+import { HOVER_MENU_CLOSE_DELAY_MS } from './hover-menu.directive';
 
 const quote: QuoteResponse = {
     fileName: 'benchy.stl',
@@ -54,12 +56,16 @@ describe('HeaderComponent', () => {
     let fixture: ComponentFixture<HeaderComponent>;
     let cart: CartService;
     let accountState: ReturnType<typeof signal<AccountState>>;
+    let account: ReturnType<typeof signal<AccountResponse | null>>;
+    let logout: ReturnType<typeof vi.fn>;
 
     beforeEach(async () => {
         accountState = signal<AccountState>('unknown');
+        account = signal<AccountResponse | null>(null);
+        logout = vi.fn(() => of(undefined));
         await TestBed.configureTestingModule({
             imports: [HeaderComponent],
-            providers: [provideRouter([]), { provide: AccountService, useValue: { state: accountState } }]
+            providers: [provideRouter([]), { provide: AccountService, useValue: { state: accountState, account, logout } }]
         }).compileComponents();
 
         cart = TestBed.inject(CartService);
@@ -81,8 +87,14 @@ describe('HeaderComponent', () => {
         expect(component).toBeTruthy();
     });
 
-    it('hides the cart indicator while the cart is empty', () => {
-        expect(cartLink()).toBeNull();
+    it('shows the cart indicator with a zero and no total while the cart is empty', () => {
+        const link = cartLink();
+        expect(link).not.toBeNull();
+        expect(link?.getAttribute('href')).toBe('/warenkorb');
+        expect(link?.querySelector('.cart-count')?.textContent?.trim()).toBe('0');
+        expect(link?.querySelector('.cart-count')?.classList.contains('empty')).toBe(true);
+        expect(link?.querySelector('.cart-total')).toBeNull();
+        expect(link?.getAttribute('aria-label')).toBe('Warenkorb: leer');
     });
 
     it('shows pieces and total once something is in the cart, linking to the cart page', async () => {
@@ -94,6 +106,7 @@ describe('HeaderComponent', () => {
         expect(link).not.toBeNull();
         expect(link?.getAttribute('href')).toBe('/warenkorb');
         expect(link?.querySelector('.cart-count')?.textContent?.trim()).toBe('3');
+        expect(link?.querySelector('.cart-count')?.classList.contains('empty')).toBe(false);
         expect(link?.querySelector('.cart-total')?.textContent).toContain('CHF 17.85');
         expect(link?.getAttribute('aria-label')).toBe('Warenkorb: 3 Stueck, CHF 17.85');
     });
@@ -122,14 +135,15 @@ describe('HeaderComponent', () => {
         expect(accountLink()?.getAttribute('href')).toBe('/konto');
     });
 
-    it('hides the indicator again when the cart is cleared', async () => {
+    it('drops the total and goes back to zero when the cart is cleared', async () => {
         cart.add(item('benchy.stl', 2, 11));
         await fixture.whenStable();
-        expect(cartLink()).not.toBeNull();
+        expect(cartLink()?.querySelector('.cart-total')).not.toBeNull();
 
         cart.clear();
         await fixture.whenStable();
-        expect(cartLink()).toBeNull();
+        expect(cartLink()?.querySelector('.cart-count')?.textContent?.trim()).toBe('0');
+        expect(cartLink()?.querySelector('.cart-total')).toBeNull();
     });
 
     describe('cart preview', () => {
@@ -153,9 +167,53 @@ describe('HeaderComponent', () => {
             await fixture.whenStable();
         }
 
-        it('renders nothing while the cart is empty', () => {
-            expect(widget()).toBeNull();
+        it('opens in an empty state with an invitation to upload while the cart is empty', () => {
             expect(panel()).toBeNull();
+            hover();
+
+            const open = panel();
+            expect(open).not.toBeNull();
+            expect(open?.classList.contains('is-empty')).toBe(true);
+            expect(open?.querySelector('.preview-empty')?.textContent?.trim()).toBe('Dein Warenkorb ist leer.');
+            expect(open?.querySelector('.preview-items')).toBeNull();
+            expect(open?.querySelector('.preview-subtotal')).toBeNull();
+
+            const buttons = open?.querySelectorAll<HTMLAnchorElement>('.preview-btn') ?? [];
+            expect(buttons.length).toBe(1);
+            expect(buttons[0].textContent?.trim()).toBe('Modell hochladen');
+            expect(buttons[0].classList.contains('primary')).toBe(true);
+            expect(buttons[0].getAttribute('href')).toBe('/upload');
+        });
+
+        it('opens the empty state on keyboard focus and closes it on Escape', () => {
+            cartLink()?.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+            fixture.detectChanges();
+            expect(panel()?.querySelector('.preview-empty')).not.toBeNull();
+            expect(cartLink()?.getAttribute('aria-expanded')).toBe('true');
+
+            cartLink()?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+            fixture.detectChanges();
+            expect(panel()).toBeNull();
+            expect(cartLink()?.getAttribute('aria-expanded')).toBe('false');
+        });
+
+        it('does not treat the empty panel as a link to the cart page', () => {
+            const navigateByUrl = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+            hover();
+
+            panel()?.querySelector<HTMLElement>('.preview-empty')?.click();
+
+            expect(navigateByUrl).not.toHaveBeenCalled();
+        });
+
+        it('switches from the empty state to the lines once something is added', async () => {
+            hover();
+            expect(panel()?.querySelector('.preview-empty')).not.toBeNull();
+
+            await fill(1);
+            fixture.detectChanges();
+            expect(panel()?.querySelector('.preview-empty')).toBeNull();
+            expect(panel()?.querySelectorAll('.preview-item').length).toBe(1);
         });
 
         it('stays hidden until the indicator is hovered or focused', async () => {
@@ -219,17 +277,17 @@ describe('HeaderComponent', () => {
             hover();
 
             widget()?.dispatchEvent(new MouseEvent('mouseleave'));
-            vi.advanceTimersByTime(CART_PREVIEW_CLOSE_DELAY_MS - 1);
+            vi.advanceTimersByTime(HOVER_MENU_CLOSE_DELAY_MS - 1);
             fixture.detectChanges();
             expect(panel()).not.toBeNull();
 
             hover();
-            vi.advanceTimersByTime(CART_PREVIEW_CLOSE_DELAY_MS * 2);
+            vi.advanceTimersByTime(HOVER_MENU_CLOSE_DELAY_MS * 2);
             fixture.detectChanges();
             expect(panel()).not.toBeNull();
 
             widget()?.dispatchEvent(new MouseEvent('mouseleave'));
-            vi.advanceTimersByTime(CART_PREVIEW_CLOSE_DELAY_MS);
+            vi.advanceTimersByTime(HOVER_MENU_CLOSE_DELAY_MS);
             fixture.detectChanges();
             expect(panel()).toBeNull();
             expect(cartLink()?.getAttribute('aria-expanded')).toBe('false');
@@ -282,6 +340,185 @@ describe('HeaderComponent', () => {
             expect(navigateByUrl).toHaveBeenCalledTimes(1);
             const [target] = navigateByUrl.mock.calls[0] as [UrlTree | string];
             expect(typeof target === 'string' ? target : router.serializeUrl(target)).toBe('/checkout');
+        });
+    });
+
+    describe('account menu', () => {
+        function widget() {
+            return (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.account-widget');
+        }
+
+        function menu() {
+            return (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.account-menu');
+        }
+
+        function items() {
+            return Array.from(menu()?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
+        }
+
+        function hover() {
+            widget()?.dispatchEvent(new MouseEvent('mouseenter'));
+            fixture.detectChanges();
+        }
+
+        async function signIn() {
+            account.set({ email: 'kunde@example.com' } as AccountResponse);
+            accountState.set('signedIn');
+            await fixture.whenStable();
+        }
+
+        it('is not offered to a visitor: "Anmelden" stays a plain link', async () => {
+            accountState.set('anonymous');
+            await fixture.whenStable();
+
+            expect(widget()).toBeNull();
+            expect(accountLink()?.getAttribute('aria-haspopup')).toBeNull();
+            accountLink()?.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+            fixture.detectChanges();
+            expect(menu()).toBeNull();
+        });
+
+        it('stays closed until "Mein Konto" is hovered or focused', async () => {
+            await signIn();
+
+            expect(menu()).toBeNull();
+            expect(accountLink()?.getAttribute('aria-haspopup')).toBe('menu');
+            expect(accountLink()?.getAttribute('aria-expanded')).toBe('false');
+        });
+
+        it('opens on hover with the e-mail and the three entries', async () => {
+            await signIn();
+            hover();
+
+            const open = menu();
+            expect(open).not.toBeNull();
+            expect(open?.getAttribute('role')).toBe('menu');
+            expect(open?.getAttribute('aria-label')).toBe('Mein Konto');
+            expect(accountLink()?.getAttribute('aria-expanded')).toBe('true');
+            expect(open?.querySelector('.account-email')?.textContent?.trim()).toBe('kunde@example.com');
+
+            const entries = items();
+            expect(entries.map((entry) => entry.textContent?.trim())).toEqual(['Bestellungen', 'Adresse', 'Abmelden']);
+            expect(entries[0].getAttribute('href')).toBe('/konto');
+            expect(entries[1].getAttribute('href')).toBe('/konto');
+            expect(entries[2].tagName).toBe('BUTTON');
+            expect(entries[2].getAttribute('type')).toBe('button');
+        });
+
+        it('opens when the link receives keyboard focus', async () => {
+            await signIn();
+
+            accountLink()?.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+            fixture.detectChanges();
+
+            expect(menu()).not.toBeNull();
+        });
+
+        it('moves the focus between the entries with the arrow keys', async () => {
+            await signIn();
+            accountLink()?.focus();
+            accountLink()?.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+            fixture.detectChanges();
+
+            const down = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true });
+            accountLink()?.dispatchEvent(down);
+            expect(down.defaultPrevented).toBe(true);
+            expect(document.activeElement).toBe(items()[0]);
+
+            items()[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
+            expect(document.activeElement).toBe(items()[2]);
+        });
+
+        it('closes after the grace period once the mouse has left', async () => {
+            await signIn();
+            vi.useFakeTimers();
+            hover();
+
+            widget()?.dispatchEvent(new MouseEvent('mouseleave'));
+            vi.advanceTimersByTime(HOVER_MENU_CLOSE_DELAY_MS - 1);
+            fixture.detectChanges();
+            expect(menu()).not.toBeNull();
+
+            vi.advanceTimersByTime(1);
+            fixture.detectChanges();
+            expect(menu()).toBeNull();
+            expect(accountLink()?.getAttribute('aria-expanded')).toBe('false');
+        });
+
+        it('closes on Escape and hands the focus back to the link', async () => {
+            await signIn();
+            hover();
+            const focus = vi.spyOn(accountLink() as HTMLAnchorElement, 'focus');
+
+            items()[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+            fixture.detectChanges();
+
+            expect(menu()).toBeNull();
+            expect(focus).toHaveBeenCalled();
+        });
+
+        it('closes when focus leaves the widget but not when it moves within it', async () => {
+            await signIn();
+            accountLink()?.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+            fixture.detectChanges();
+
+            const first = items()[0];
+            accountLink()?.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: first }));
+            fixture.detectChanges();
+            expect(menu()).not.toBeNull();
+
+            first.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: null }));
+            fixture.detectChanges();
+            expect(menu()).toBeNull();
+        });
+
+        it('closes when a navigation starts', async () => {
+            await signIn();
+            hover();
+
+            await TestBed.inject(Router).navigateByUrl('/');
+            fixture.detectChanges();
+
+            expect(menu()).toBeNull();
+        });
+
+        it('"Abmelden" ends the session and goes to the landing page', async () => {
+            const navigateByUrl = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+            await signIn();
+            hover();
+
+            items()[2].click();
+
+            expect(logout).toHaveBeenCalledTimes(1);
+            expect(navigateByUrl).toHaveBeenCalledWith('/');
+        });
+
+        it('disables "Abmelden" while the request runs and ignores a second click', async () => {
+            const pending = new Subject<void>();
+            logout.mockReturnValue(pending);
+            vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+            await signIn();
+            hover();
+
+            items()[2].click();
+            fixture.detectChanges();
+            expect((items()[2] as HTMLButtonElement).disabled).toBe(true);
+            items()[2].click();
+
+            expect(logout).toHaveBeenCalledTimes(1);
+        });
+
+        it('stays signed in and usable when the logout fails', async () => {
+            logout.mockReturnValue(throwError(() => new Error('offline')));
+            const navigateByUrl = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+            await signIn();
+            hover();
+
+            items()[2].click();
+            fixture.detectChanges();
+
+            expect(navigateByUrl).not.toHaveBeenCalled();
+            expect((items()[2] as HTMLButtonElement).disabled).toBe(false);
         });
     });
 });
