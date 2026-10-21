@@ -1,9 +1,10 @@
 # Production stack for 3dburg.ch on one host: Caddy (HTTPS) in front of the Angular SSR
 # server and the Spring backend, PostgreSQL and the order-files volume behind them.
-# Both repositories are cloned side by side; see README.md in this folder.
+# Both repositories are cloned side by side; see README.md in this folder. The file carries the
+# default name, so inside this folder plain `docker compose up -d --build slicer-engine pod-frontend` works.
 #
-#   /opt/3dburg/pod-frontend        (this repository)
-#   /opt/3dburg/cad-slicer-engine   (backend)
+#   /opt/3dburg/pod-frontend        (this repository, service pod-frontend)
+#   /opt/3dburg/cad-slicer-engine   (backend, service slicer-engine)
 #
 # Only Caddy publishes ports. Secrets come from .env next to this file (never committed).
 
@@ -25,14 +26,14 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      - frontend
-      - backend
+      - pod-frontend
+      - slicer-engine
     deploy:
       resources:
         limits:
           memory: 256M
 
-  frontend:
+  pod-frontend:
     build:
       context: ../pod-frontend
     restart: unless-stopped
@@ -44,7 +45,7 @@ services:
           memory: 512M
           cpus: "1.0"
 
-  backend:
+  slicer-engine:
     build:
       context: ../../cad-slicer-engine
     restart: unless-stopped

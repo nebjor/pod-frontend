@@ -1,5 +1,5 @@
 # Reverse proxy and TLS for the shop. Certificates come from Let's Encrypt automatically;
-# SITE_ADDRESS and ACME_EMAIL are set by docker-compose.prod.yml.
+# SITE_ADDRESS and ACME_EMAIL are set by compose.yaml.
 
 {
 	email {$ACME_EMAIL}
@@ -34,11 +34,11 @@ www.{$SITE_ADDRESS} {
 	# API and its contract go to Spring; everything else is rendered by the Angular server.
 	@backend path /api/* /v3/api-docs /v3/api-docs/* /api-docs /api-docs/* /swagger-ui/*
 	handle @backend {
-		reverse_proxy backend:8080
+		reverse_proxy slicer-engine:8080
 	}
 
 	handle {
-		reverse_proxy frontend:4000
+		reverse_proxy pod-frontend:4000
 	}
 }
 
@@ -51,10 +51,10 @@ admin.{$SITE_ADDRESS} {
 	redir /admin* / permanent
 
 	handle /api/* {
-		reverse_proxy backend:8080
+		reverse_proxy slicer-engine:8080
 	}
 
 	handle {
-		reverse_proxy frontend:4000
+		reverse_proxy pod-frontend:4000
 	}
 }
