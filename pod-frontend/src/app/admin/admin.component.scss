@@ -342,3 +342,102 @@
     margin: 0.8rem 0;
     color: #d99898;
 }
+
+.tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid var(--border-700);
+}
+
+.tab {
+    padding: 0.6rem 1rem;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    background: transparent;
+    color: var(--text-300);
+    text-transform: uppercase;
+    letter-spacing: 0.06rem;
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+
+    &.active {
+        color: var(--accent-300);
+        border-bottom-color: var(--accent-300);
+    }
+}
+
+.summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin: 0 0 1rem;
+    color: var(--text-100);
+}
+
+.muted {
+    color: var(--text-300);
+    font-size: 0.78rem;
+}
+
+.section-title {
+    margin: 1.5rem 0 0.6rem;
+    color: var(--text-100);
+    font-size: 0.95rem;
+    letter-spacing: 0.06rem;
+}
+
+.factors,
+.quantities,
+.models,
+.queue {
+    th[scope='row'] {
+        text-transform: none;
+        letter-spacing: 0;
+        font-size: 0.85rem;
+        color: var(--text-100);
+    }
+
+    tbody tr {
+        cursor: default;
+
+        &:hover {
+            background: transparent;
+        }
+    }
+
+    td.deviates,
+    tr.deviates td:first-child {
+        box-shadow: inset 3px 0 0 #e0b457;
+        color: #e0b457;
+    }
+}
+
+.link-btn {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--accent-300);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.badge {
+    &.queue-queued { color: var(--text-300); }
+    &.queue-running { border-color: var(--accent-450); color: var(--accent-450); }
+    &.queue-done { border-color: var(--accent-300); color: var(--accent-300); }
+    &.queue-failed { border-color: #d99898; color: #d99898; }
+}
+
+.queue-error {
+    display: block;
+    margin-top: 0.25rem;
+    color: #d99898;
+    font-size: 0.76rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
