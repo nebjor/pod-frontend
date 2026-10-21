@@ -34,11 +34,22 @@
         }
 
         @if (order(); as o) {
+            <ul class="item-list" aria-label="Positionen">
+                @for (line of items(); track line.position) {
+                    <li>
+                        <div class="item-line">
+                            <span class="item-name">{{ line.quantity }} x {{ line.fileName }}</span>
+                            <span class="item-price">{{ o.totals.currency }} {{ line.lineTotalChf | number:'1.2-2' }}</span>
+                        </div>
+                        <p class="item-config">
+                            <span class="swatch-dot" [style.background]="line.color.hex" aria-hidden="true"></span>
+                            {{ line.filament }} {{ line.color.label }} · {{ line.quality }}
+                        </p>
+                    </li>
+                }
+            </ul>
             <dl class="details">
-                <div><dt>Modell</dt><dd>{{ o.fileName }}</dd></div>
-                <div><dt>Konfiguration</dt><dd>{{ o.quantity }} x {{ o.filament }} {{ o.colorLabel }}, {{ o.quality }}</dd></div>
-                <div><dt>Druckzeit gesamt</dt><dd>{{ printTimeLabel() }}</dd></div>
-                <div><dt>Positionen</dt><dd>{{ o.totals.currency }} {{ o.totals.itemsTotal | number:'1.2-2' }}</dd></div>
+                <div><dt>Positionen ({{ items().length }})</dt><dd>{{ o.totals.currency }} {{ o.totals.itemsTotal | number:'1.2-2' }}</dd></div>
                 <div><dt>Versand</dt><dd>{{ o.totals.currency }} {{ o.totals.shipping | number:'1.2-2' }}</dd></div>
                 <div class="total"><dt>Gesamt</dt><dd>{{ o.totals.currency }} {{ o.totals.total | number:'1.2-2' }}</dd></div>
                 <div><dt>Status</dt><dd>{{ o.status }}</dd></div>

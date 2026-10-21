@@ -1,30 +1,35 @@
-import { Component } from '@angular/core';
-import { Router } from '@angular/router';
-import { MatToolbarModule } from '@angular/material/toolbar';
+import { DecimalPipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { Router, RouterLink } from '@angular/router';
+import { CartService } from '../cart/cart.service';
 
+/**
+ * Shared by the shop and the admin host. The cart indicator reads the cart, which is empty
+ * on the admin host (nothing there can fill it), so it does not show up there.
+ */
 @Component({
-  selector: 'app-header',
-  imports: [MatToolbarModule, MatButtonModule],
-  templateUrl: './header.component.html',
-  styleUrl: './header.component.scss',
+    selector: 'app-header',
+    imports: [MatToolbarModule, MatButtonModule, RouterLink, DecimalPipe],
+    templateUrl: './header.component.html',
+    styleUrl: './header.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class HeaderComponent {
-  constructor(private readonly router: Router) { }
+    private readonly router = inject(Router);
+    private readonly cart = inject(CartService);
 
-  goHome() {
-    this.router.navigate(['/']);
-  }
+    readonly cartIsEmpty = this.cart.isEmpty;
+    readonly cartCount = this.cart.count;
+    readonly cartTotal = this.cart.itemsTotal;
+    readonly cartCurrency = this.cart.currency;
 
-  goToUpload() {
-    this.router.navigate(['/upload']);
-  }
+    goHome() {
+        this.router.navigate(['/']);
+    }
 
-  goToHowItWorks() {
-    this.router.navigate(['/'], { fragment: 'how-it-works' });
-  }
-
-  goToCheckout() {
-    this.router.navigate(['/checkout']);
-  }
+    goToUpload() {
+        this.router.navigate(['/upload']);
+    }
 }

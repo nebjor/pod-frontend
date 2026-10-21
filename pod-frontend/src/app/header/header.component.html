@@ -4,6 +4,21 @@
     </button>
 
     <div class="actions">
+        @if (!cartIsEmpty()) {
+            <a class="cart-link" routerLink="/warenkorb"
+                [attr.aria-label]="'Warenkorb: ' + cartCount() + ' Stueck, ' + cartCurrency() + ' ' + (cartTotal() | number:'1.2-2')">
+                <span class="cart-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 4h2l2.4 11.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2L21 8H6.2" />
+                        <circle cx="9.5" cy="20" r="1.2" />
+                        <circle cx="17.5" cy="20" r="1.2" />
+                    </svg>
+                    <span class="cart-count">{{ cartCount() }}</span>
+                </span>
+                <span class="cart-total">{{ cartCurrency() }} {{ cartTotal() | number:'1.2-2' }}</span>
+            </a>
+        }
         <button mat-raised-button class="upload-btn" type="button" (click)="goToUpload()">Modell hochladen</button>
     </div>
 </mat-toolbar>

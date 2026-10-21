@@ -249,6 +249,33 @@
     margin-top: 0.6rem;
     color: var(--accent-300);
     font-size: 0.88rem;
+
+    strong {
+        color: var(--text-100);
+    }
+}
+
+.cart-added {
+    margin-top: 0.9rem;
+    padding: 0.9rem;
+    border-radius: 10px;
+    border: 1px solid var(--accent-300);
+    background: rgba(12, 28, 42, 0.75);
+
+    .cart-note {
+        margin-top: 0;
+    }
+
+    .checkout-actions {
+        margin-top: 0.75rem;
+    }
+}
+
+.link-btn {
+    display: block;
+    box-sizing: border-box;
+    text-decoration: none;
+    text-align: center;
 }
 
 .order-form {

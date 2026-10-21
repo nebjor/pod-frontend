@@ -11,10 +11,11 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { EMPTY, Subject, catchError, concatMap, debounce, from, map, of, switchMap, tap, timer } from 'rxjs';
-import { CartService } from '../cart/cart.service';
+import { CART_MAX_ITEMS, CartItem, CartService } from '../cart/cart.service';
 import { ModelViewerComponent } from '../model-viewer/model-viewer.component';
+import { formatPrintDuration } from '../quote/print-duration';
 import { ColorOption, FilamentOption, QualityOption, QuoteOptions, QuoteResponse } from '../quote/quote.models';
 import { QuoteService, UploadEvent, describeQuoteError, isModelExpired } from '../quote/quote.service';
 
@@ -73,26 +74,14 @@ function quoteKey(modelId: string, filament: string, quality: string, quantity: 
 /** Chosen when the catalogue arrives, if the backend offers it; otherwise the first tier. */
 const PREFERRED_QUALITY = 'medium';
 
-export function formatPrintDuration(totalSeconds: number): string {
-    const totalMinutes = Math.max(0, Math.round(totalSeconds / 60));
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-
-    if (hours === 0) {
-        return `${minutes} min`;
-    }
-
-    return `${hours} h ${minutes.toString().padStart(2, '0')} min`;
-}
-
 /**
- * Upload, configure, quote. The catalogue (filaments, colours, qualities, quantity limit)
- * comes from the backend and nothing here is hard-coded: a new material in the backend
- * configuration shows up without a frontend release.
+ * Upload, configure, quote, put in the cart. The catalogue (filaments, colours, qualities,
+ * quantity limit) comes from the backend and nothing here is hard-coded: a new material in
+ * the backend configuration shows up without a frontend release.
  */
 @Component({
     selector: 'app-upload',
-    imports: [ReactiveFormsModule, DecimalPipe, ModelViewerComponent],
+    imports: [ReactiveFormsModule, DecimalPipe, RouterLink, ModelViewerComponent],
     templateUrl: './upload.component.html',
     styleUrl: './upload.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -122,7 +111,14 @@ export class UploadComponent {
     readonly isModelLoading = signal(false);
     readonly modelLoadProgress = signal(0);
     readonly errorMessage = signal('');
-    readonly cartNotice = signal('');
+    /** The line just added; the confirmation with the next steps shows while it is set. */
+    readonly addedItem = signal<CartItem | null>(null);
+    readonly cartCount = this.cart.count;
+    readonly cartItemCount = computed(() => this.cart.items().length);
+    readonly cartTotal = this.cart.itemsTotal;
+    readonly cartCurrency = this.cart.currency;
+    readonly cartIsFull = this.cart.isFull;
+    readonly maxCartItems = CART_MAX_ITEMS;
     readonly selectedFile = signal<File | null>(null);
     /** Id the backend keeps the uploaded model under; quotes reference it instead of the file. */
     readonly modelId = signal<string | null>(null);
@@ -177,6 +173,7 @@ export class UploadComponent {
     readonly canSubmitOrder = computed(
         () => this.quoteState() === 'ready' && this.quote() !== null && this.formStatus() === 'VALID'
     );
+    readonly canAddToCart = computed(() => this.canSubmitOrder() && !this.cartIsFull());
 
     constructor() {
         // A new file cancels the upload of the previous one.
@@ -238,7 +235,11 @@ export class UploadComponent {
             )
             .subscribe();
 
-        this.orderForm.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.requestQuote());
+        this.orderForm.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+            // A changed configuration is a new line; the confirmation for the previous one goes.
+            this.addedItem.set(null);
+            this.requestQuote();
+        });
         this.destroyRef.onDestroy(() => this.releaseModelUrl());
 
         // A filament switch may drop the chosen colour; fall back to the first stocked one.
@@ -436,21 +437,27 @@ export class UploadComponent {
         this.uploads.next(file);
     }
 
-    onAddToCartAndUploadAnother() {
-        if (!this.putInCart()) {
-            return;
+    /** Adds the configured model as a cart line; the model stays on screen with the next steps. */
+    onAddToCart() {
+        const item = this.putInCart();
+        if (item) {
+            this.addedItem.set(item);
         }
-
-        this.cartNotice.set('Modell liegt im Warenkorb. Lade ein weiteres Modell hoch oder geh zur Kasse.');
-        this.resetModel();
     }
 
+    /** Adds the model and goes straight to the checkout. */
     onDirectCheckout() {
         if (!this.putInCart()) {
             return;
         }
 
-        this.router.navigate(['/checkout']);
+        void this.router.navigate(['/checkout']);
+    }
+
+    /** Back to the dropzone for the next model; the cart keeps what was added. */
+    onUploadAnother() {
+        this.addedItem.set(null);
+        this.resetModel();
     }
 
     private applyCatalog(options: QuoteOptions) {
@@ -486,18 +493,28 @@ export class UploadComponent {
         this.requestQuote();
     }
 
-    /** Hands the configured model and its quote to the checkout; one item per order in v1. */
-    private putInCart(): boolean {
+    /** Puts the configured model with its quote into the cart as a new line. */
+    private putInCart(): CartItem | null {
         const file = this.selectedFile();
+        const modelId = this.modelId();
         const quote = this.quote();
         const color = this.selectedColor();
-        if (!this.canSubmitOrder() || !file || !quote || !color) {
-            return false;
+        if (!this.canAddToCart() || !file || !modelId || !quote || !color) {
+            return null;
         }
 
         const { filament, quality, quantity } = this.orderForm.getRawValue();
-        this.cart.set({ file, filament, color, quality, quantity: Number(quantity), quote });
-        return true;
+        return this.cart.add({
+            file,
+            fileName: file.name,
+            sizeBytes: file.size,
+            modelId,
+            filament,
+            color,
+            quality,
+            quantity: Number(quantity),
+            quote
+        });
     }
 
     private handleFile(file: File) {
@@ -509,7 +526,7 @@ export class UploadComponent {
         }
 
         this.errorMessage.set('');
-        this.cartNotice.set('');
+        this.addedItem.set(null);
         this.resetModel();
 
         this.selectedFile.set(file);
