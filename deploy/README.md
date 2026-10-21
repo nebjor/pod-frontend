@@ -78,7 +78,10 @@ Done on 2026-10-21, here so the next person knows the shape of the box.
   file sorts first on purpose, sshd keeps the first value it reads.
 - `fail2ban` bans addresses after repeated SSH failures (default `sshd` jail). If you lock
   yourself out from a new network, use the Hetzner console: `fail2ban-client set sshd unbanip <ip>`.
-- `unattended-upgrades` installs security updates nightly; reboots are manual.
+- `unattended-upgrades` installs security updates nightly. Kernels are not among them: when the
+  login banner says "System restart required" or lists a `linux-image` update, run
+  `sudo apt full-upgrade -y && sudo reboot` (about a minute of downtime, containers come back
+  by themselves).
 - `ufw` allows 22, 80 and 443 only. The nightly backup runs from root's crontab.
 - Handy alias for the compose file: `alias dc="docker compose -f /opt/3dburg/pod-frontend/deploy/docker-compose.prod.yml"`.
 
