@@ -191,7 +191,39 @@
 .loading-fill {
     height: 100%;
     background: linear-gradient(90deg, var(--accent-300), var(--accent-500));
-    transition: width 120ms linear;
+    transition: width 0.3s ease;
+}
+
+// Slicing and parsing have no measurable progress: a short segment sweeps the track instead.
+.loading-track.indeterminate .loading-fill {
+    width: 40%;
+    animation: loadingSweep 1.3s ease-in-out infinite;
+}
+
+@keyframes loadingSweep {
+    from {
+        transform: translateX(-100%);
+    }
+
+    to {
+        transform: translateX(250%);
+    }
+}
+
+.quote-phase {
+    .estimate-line {
+        animation: phaseIn 0.25s ease;
+    }
+
+    .loading-track {
+        margin: 0.5rem 0 0.25rem;
+    }
+}
+
+@keyframes phaseIn {
+    from {
+        opacity: 0;
+    }
 }
 
 .file-meta {
@@ -299,6 +331,15 @@
         color: var(--text-100);
         padding: 0.62rem 0.75rem;
         font: inherit;
+    }
+
+    input.invalid {
+        border-color: #d99898;
+    }
+
+    .field-error {
+        color: #d99898;
+        font-size: 0.8rem;
     }
 }
 
@@ -439,6 +480,11 @@
     transition: opacity 0.2s ease;
 }
 
+.quote-stale-note {
+    color: #e8c77a;
+    font-size: 0.84rem;
+}
+
 .estimate-total {
     font-size: 1.05rem;
     color: var(--text-100);
@@ -477,6 +523,26 @@
 @media (prefers-reduced-motion: reduce) {
     .spinner {
         animation-duration: 2s;
+    }
+
+    // No sweeping segment: the full track pulses gently instead.
+    .loading-track.indeterminate .loading-fill {
+        width: 100%;
+        animation: loadingPulse 2s ease-in-out infinite alternate;
+    }
+
+    .quote-phase .estimate-line {
+        animation: none;
+    }
+}
+
+@keyframes loadingPulse {
+    from {
+        opacity: 0.35;
+    }
+
+    to {
+        opacity: 0.8;
     }
 }
 

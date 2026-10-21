@@ -24,6 +24,12 @@ type QuoteState = 'idle' | 'loading' | 'ready' | 'error';
 type UploadState = 'idle' | 'uploading' | 'done' | 'error';
 type CatalogState = 'loading' | 'ready' | 'error';
 type ModelLoadState = 'idle' | 'loading' | 'loaded' | 'error';
+/**
+ * What the price box reports. 'uploading' shows the real transfer progress; 'slicing' and
+ * 'repricing' wait for the backend with nothing to measure, the latter with a previous quote
+ * still on screen.
+ */
+export type QuotePhase = 'idle' | 'uploading' | 'slicing' | 'repricing' | 'ready' | 'error';
 
 interface QuoteJob {
     key: string;
@@ -77,6 +83,12 @@ function quoteKey(modelId: string, filament: string, quality: string, quantity: 
  * the page for a long time. Binary STL parses fast and stays within the backend's 50 MB cap.
  */
 export const PREVIEW_LIMIT_BYTES_3MF = 8 * 1024 * 1024;
+
+/**
+ * Below this size the upload finishes within one progress event, so a transfer bar would only
+ * flash at 100 %; the price box goes straight to the slicing phase instead.
+ */
+export const UPLOAD_PROGRESS_MIN_BYTES = 2 * 1024 * 1024;
 
 /** Chosen when the catalogue arrives, if the backend offers it; otherwise the first tier. */
 const PREFERRED_QUALITY = 'medium';
@@ -157,6 +169,9 @@ export class UploadComponent {
     readonly selectedQualityCode = toSignal(this.orderForm.controls.quality.valueChanges, {
         initialValue: this.orderForm.controls.quality.value
     });
+    private readonly quantityValue = toSignal(this.orderForm.controls.quantity.valueChanges, {
+        initialValue: this.orderForm.controls.quantity.value
+    });
 
     readonly selectedFilamentOption = computed<FilamentOption | undefined>(() =>
         this.filamentOptions().find((option) => option.code === this.selectedFilament())
@@ -179,8 +194,57 @@ export class UploadComponent {
     });
     readonly unitPrintTimeLabel = computed(() => formatPrintDuration(this.quote()?.printTimeSeconds ?? 0));
     readonly totalPrintTimeLabel = computed(() => formatPrintDuration(this.quote()?.totalPrintTimeSeconds ?? 0));
+    /**
+     * True when the quote on screen was computed for exactly what the form says now. It is
+     * false while a recalculation is pending and while the form is invalid, because then no
+     * request is sent at all and the previous price would otherwise pass for the current one.
+     */
+    readonly quoteMatchesForm = computed(() => {
+        const quote = this.quote();
+        if (!quote || this.formStatus() !== 'VALID') {
+            return false;
+        }
+        return (
+            quote.quantity === Number(this.quantityValue()) &&
+            quote.filament === this.selectedFilament() &&
+            quote.quality === this.selectedQualityCode() &&
+            quote.color.pricePerKgChf === (this.selectedColor()?.pricePerKgChf ?? 0)
+        );
+    });
+    /** Quality label of the quote on screen, for the stale marker; falls back to the code. */
+    readonly quoteQualityLabel = computed(() => {
+        const code = this.quote()?.quality;
+        return this.qualityOptions().find((option) => option.code === code)?.label ?? code ?? '';
+    });
+    /** The quote on screen is shown dimmed: a new one is pending or the form has moved on. */
+    readonly quoteIsStale = computed(
+        () => this.quote() !== null && (this.quoteState() !== 'ready' || !this.quoteMatchesForm())
+    );
+    /** Which status the price box shows; see {@link QuotePhase}. */
+    readonly quotePhase = computed<QuotePhase>(() => {
+        const pending: QuotePhase = this.quote() ? 'repricing' : 'slicing';
+        if (this.uploadState() === 'uploading') {
+            const file = this.selectedFile();
+            return file && file.size > UPLOAD_PROGRESS_MIN_BYTES ? 'uploading' : pending;
+        }
+        switch (this.quoteState()) {
+            case 'loading':
+                return pending;
+            case 'ready':
+                return 'ready';
+            case 'error':
+                return 'error';
+            default:
+                return 'idle';
+        }
+    });
+    /** A progress bar is shown for these phases; the other phases are a line of text. */
+    readonly quoteInProgress = computed(() => {
+        const phase = this.quotePhase();
+        return phase === 'uploading' || phase === 'slicing' || phase === 'repricing';
+    });
     readonly canSubmitOrder = computed(
-        () => this.quoteState() === 'ready' && this.quote() !== null && this.formStatus() === 'VALID'
+        () => this.quoteState() === 'ready' && this.quote() !== null && this.quoteMatchesForm()
     );
     readonly canAddToCart = computed(() => this.canSubmitOrder() && !this.cartIsFull());
     /** The slicer's warnings are collapsed by default; most customers do not need them. */
@@ -188,6 +252,15 @@ export class UploadComponent {
 
     toggleWarnings() {
         this.warningsOpen.update((open) => !open);
+    }
+
+    /**
+     * The quantity message appears once the customer has touched the field, not on first
+     * paint. Touched and dirty are not signals; the template reads this after every form event.
+     */
+    get quantityErrorVisible(): boolean {
+        const control = this.orderForm.controls.quantity;
+        return control.invalid && (control.touched || control.dirty);
     }
 
     constructor() {
