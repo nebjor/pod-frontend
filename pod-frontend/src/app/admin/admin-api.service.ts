@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import type { components } from '../api/openapi';
 import { OrderStatus } from '../order/order.models';
 import { ADMIN_API_PREFIX } from './admin-auth.interceptor';
+import { CalibrationQueueEntry, CalibrationReport } from './calibration.models';
 
 /** The owner's view of an order, as the backend publishes it. */
 export type AdminOrder = components['schemas']['AdminOrderResponse'];
@@ -35,5 +36,31 @@ export class AdminApiService {
 
     resetRateLimits(): Observable<{ reset: string }> {
         return this.http.post<{ reset: string }>(`${ADMIN_API_PREFIX}/rate-limits/reset`, null);
+    }
+
+    getCalibrationReport(): Observable<CalibrationReport> {
+        return this.http.get<CalibrationReport>(`${ADMIN_API_PREFIX}/calibration/report`);
+    }
+
+    getCalibrationQueue(): Observable<CalibrationQueueEntry[]> {
+        return this.http.get<CalibrationQueueEntry[]>(`${ADMIN_API_PREFIX}/calibration/queue`);
+    }
+
+    /** Puts one order line (1-based position) on the calibration queue; the backend answers 202. */
+    enqueueCalibration(orderNumber: string, position: number): Observable<void> {
+        return this.http.post<void>(
+            `${ADMIN_API_PREFIX}/calibration/queue/order/${encodeURIComponent(orderNumber)}/${position}`,
+            null
+        );
+    }
+
+    /** Starts a calibration pass right away instead of waiting for the nightly run; 202. */
+    runCalibrationNow(): Observable<void> {
+        return this.http.post<void>(`${ADMIN_API_PREFIX}/calibration/run-now`, null);
+    }
+
+    /** All measurement rows as CSV; the caller turns the blob into a download. */
+    downloadCalibrationRows(): Observable<Blob> {
+        return this.http.get(`${ADMIN_API_PREFIX}/calibration/rows.csv`, { responseType: 'blob' });
     }
 }

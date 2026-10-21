@@ -2,7 +2,7 @@
     <header class="admin-header">
         <div>
             <p class="kicker">ADMIN</p>
-            <h1>Bestellungen</h1>
+            <h1>{{ tab() === 'calibration' ? 'Kalibrierung' : 'Bestellungen' }}</h1>
         </div>
         @if (state() !== 'login' && state() !== 'checking') {
             <div class="header-actions">
@@ -36,172 +36,413 @@
             </section>
         }
         @default {
-            <section class="toolbar">
-                <label>
-                    Status
-                    <select [value]="filter()" (change)="setFilter($any($event.target).value)">
-                        <option value="">Alle</option>
-                        @for (status of statusOptions; track status) {
-                            <option [value]="status">{{ statusLabels[status] }}</option>
-                        }
-                    </select>
-                </label>
-                <button type="button" class="ghost-btn" (click)="load()">Aktualisieren</button>
-                @if (notice()) {
-                    <span class="notice" aria-live="polite">{{ notice() }}</span>
+            <nav class="tabs" aria-label="Bereich">
+                <button type="button" class="tab" [class.active]="tab() === 'orders'" [attr.aria-current]="tab() === 'orders' ? 'page' : null"
+                    (click)="showTab('orders')">Bestellungen</button>
+                <button type="button" class="tab" [class.active]="tab() === 'calibration'" [attr.aria-current]="tab() === 'calibration' ? 'page' : null"
+                    (click)="showTab('calibration')">Kalibrierung</button>
+            </nav>
+
+            @if (tab() === 'orders') {
+                <section class="toolbar">
+                    <label>
+                        Status
+                        <select [value]="filter()" (change)="setFilter($any($event.target).value)">
+                            <option value="">Alle</option>
+                            @for (status of statusOptions; track status) {
+                                <option [value]="status">{{ statusLabels[status] }}</option>
+                            }
+                        </select>
+                    </label>
+                    <button type="button" class="ghost-btn" (click)="load()">Aktualisieren</button>
+                    @if (notice()) {
+                        <span class="notice" aria-live="polite">{{ notice() }}</span>
+                    }
+                </section>
+
+                @if (errorMessage()) {
+                    <p class="error" role="alert">{{ errorMessage() }}</p>
                 }
-            </section>
 
-            @if (errorMessage()) {
-                <p class="error" role="alert">{{ errorMessage() }}</p>
-            }
-
-            @if (state() === 'loading') {
-                <p class="status">Lade Bestellungen...</p>
-            } @else if (orders().length === 0) {
-                <p class="status">Keine Bestellungen.</p>
-            } @else {
-                <div class="table-wrap">
-                    <table class="orders">
-                        <thead>
-                            <tr>
-                                <th>Nummer</th>
-                                <th>Datum</th>
-                                <th>Kunde</th>
-                                <th class="num">Pos.</th>
-                                <th>Modelle</th>
-                                <th class="num">Gesamt</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @for (order of orders(); track order.orderNumber) {
-                                <tr [class.selected]="selectedNumber() === order.orderNumber"
-                                    [class.needs-inspection]="order.needsInspection" (click)="select(order.orderNumber)">
-                                    <td>
-                                        {{ order.orderNumber }}
-                                        @if (order.needsInspection) {
-                                            <span class="badge inspect" title="Slicer-Hinweise oder nicht wasserdicht: Modell vor dem Druck oeffnen">Pruefen</span>
-                                        }
-                                    </td>
-                                    <td>{{ order.createdAt | date:'dd.MM.yyyy HH:mm' }}</td>
-                                    <td>{{ order.customerName }}</td>
-                                    <td class="num">{{ order.items.length }}</td>
-                                    <td class="file" [title]="itemSummary(order)">{{ itemSummary(order) }}</td>
-                                    <td class="num">{{ order.totals.currency }} {{ order.totals.total | number:'1.2-2' }}</td>
-                                    <td><span class="badge" [class]="'badge status-' + order.status.toLowerCase()">{{ statusLabels[order.status] }}</span></td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-
-            @if (selected(); as order) {
-                <section class="card detail">
-                    <h2>{{ order.orderNumber }} · {{ statusLabels[order.status] }}</h2>
-
-                    <div class="detail-grid">
-                        <dl class="details">
-                            <div><dt>Kunde</dt><dd>{{ order.customerName }}</dd></div>
-                            <div><dt>E-Mail</dt><dd>{{ order.customerEmail }}</dd></div>
-                            @if (order.accountEmail) {
-                                <div><dt>Konto</dt><dd>{{ order.accountEmail }}</dd></div>
-                            }
-                            <div><dt>Adresse</dt><dd>{{ order.street }}, {{ order.postalCode }} {{ order.city }} ({{ order.country }})</dd></div>
-                            <div><dt>Bestellt</dt><dd>{{ order.createdAt | date:'dd.MM.yyyy HH:mm' }}</dd></div>
-                            <div><dt>Bezahlt</dt><dd>{{ order.paidAt ? (order.paidAt | date:'dd.MM.yyyy HH:mm') : 'offen' }} @if (order.paymentProvider) { ({{ order.paymentProvider }}) }</dd></div>
-                            <div><dt>Preis gueltig bis</dt><dd>{{ order.quoteExpiresAt | date:'dd.MM.yyyy' }}</dd></div>
-                            @if (order.deleteAfter) {
-                                <div><dt>Loeschung nach</dt><dd>{{ order.deleteAfter | date:'dd.MM.yyyy' }}</dd></div>
-                            }
-                        </dl>
-                        <dl class="details">
-                            <div><dt>Positionen</dt><dd>{{ order.items.length }}</dd></div>
-                            <div><dt>Druckzeit gesamt</dt><dd>{{ selectedPrintTime() }}</dd></div>
-                            <div><dt>Material gesamt</dt><dd>{{ selectedFilamentGrams() | number:'1.0-1' }} g</dd></div>
-                            <div><dt>Positionen</dt><dd>{{ order.totals.currency }} {{ order.totals.itemsTotal | number:'1.2-2' }}</dd></div>
-                            <div><dt>Versand</dt><dd>{{ order.totals.currency }} {{ order.totals.shipping | number:'1.2-2' }}</dd></div>
-                            <div class="total"><dt>Gesamt</dt><dd>{{ order.totals.currency }} {{ order.totals.total | number:'1.2-2' }}</dd></div>
-                        </dl>
-                    </div>
-
-                    <div class="table-wrap items-wrap">
-                        <table class="orders items">
+                @if (state() === 'loading') {
+                    <p class="status">Lade Bestellungen...</p>
+                } @else if (orders().length === 0) {
+                    <p class="status">Keine Bestellungen.</p>
+                } @else {
+                    <div class="table-wrap">
+                        <table class="orders">
                             <thead>
                                 <tr>
+                                    <th>Nummer</th>
+                                    <th>Datum</th>
+                                    <th>Kunde</th>
                                     <th class="num">Pos.</th>
-                                    <th>Datei</th>
-                                    <th>Filament</th>
-                                    <th>Qualitaet</th>
-                                    <th class="num">Menge</th>
-                                    <th class="num">Platten</th>
-                                    <th class="num">Druckzeit</th>
-                                    <th class="num">Summe</th>
-                                    <th></th>
+                                    <th>Modelle</th>
+                                    <th class="num">Gesamt</th>
+                                    <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @for (item of order.items; track item.position) {
-                                    <tr>
-                                        <td class="num">{{ item.position }}</td>
-                                        <td class="file" [title]="item.fileName">
-                                            {{ item.fileName }}
-                                            <span class="muted">({{ item.fileSizeBytes / 1048576 | number:'1.1-1' }} MB)</span>
-                                            @if (item.manifold === false) {
-                                                <span class="tag tag-danger">nicht wasserdicht</span>
-                                            } @else if (item.manifold === null) {
-                                                <span class="tag tag-muted">Mesh nicht geprueft</span>
+                                @for (order of orders(); track order.orderNumber) {
+                                    <tr [class.selected]="selectedNumber() === order.orderNumber"
+                                        [class.needs-inspection]="order.needsInspection" (click)="select(order.orderNumber)">
+                                        <td>
+                                            {{ order.orderNumber }}
+                                            @if (order.needsInspection) {
+                                                <span class="badge inspect" title="Slicer-Hinweise oder nicht wasserdicht: Modell vor dem Druck oeffnen">Pruefen</span>
                                             }
                                         </td>
-                                        <td>
-                                            <!-- Legacy orders may carry a colour without hex; then only the label is shown. -->
-                                            @if (item.color.hex) {
-                                                <span class="swatch-dot" [style.background]="item.color.hex" aria-hidden="true"></span>
-                                            }
-                                            {{ item.filament }} {{ item.color.label }}
-                                        </td>
-                                        <td>{{ item.quality }} ({{ item.layerHeightMm }} mm)</td>
-                                        <td class="num">{{ item.quantity }}</td>
-                                        <td class="num">{{ item.plateCount }}</td>
-                                        <td class="num">{{ printTime(item) }}</td>
-                                        <td class="num">{{ order.totals.currency }} {{ item.lineTotalChf | number:'1.2-2' }}</td>
-                                        <td>
-                                            <button type="button" class="ghost-btn small" (click)="download(order, item)"
-                                                [attr.aria-label]="item.fileName + ' herunterladen'">
-                                                Download
-                                            </button>
-                                        </td>
+                                        <td>{{ order.createdAt | date:'dd.MM.yyyy HH:mm' }}</td>
+                                        <td>{{ order.customerName }}</td>
+                                        <td class="num">{{ order.items.length }}</td>
+                                        <td class="file" [title]="itemSummary(order)">{{ itemSummary(order) }}</td>
+                                        <td class="num">{{ order.totals.currency }} {{ order.totals.total | number:'1.2-2' }}</td>
+                                        <td><span class="badge" [class]="'badge status-' + order.status.toLowerCase()">{{ statusLabels[order.status] }}</span></td>
                                     </tr>
-                                    @if (item.warnings.length > 0) {
-                                        <tr class="warnings-row">
-                                            <td></td>
-                                            <td colspan="8">
-                                                <ul class="warnings" [attr.aria-label]="'Slicer-Hinweise zu ' + item.fileName">
-                                                    @for (warning of item.warnings; track $index) {
-                                                        <li>{{ warning }}</li>
-                                                    }
-                                                </ul>
-                                            </td>
-                                        </tr>
-                                    }
                                 }
                             </tbody>
                         </table>
                     </div>
+                }
 
-                    <div class="actions">
-                        @for (next of order.allowedTransitions; track next) {
-                            <button type="button" class="order-btn" [class.ghost-btn]="next === 'CANCELLED'"
-                                [disabled]="busy()" (click)="transition(order, next)">
-                                {{ transitionLabels[next] }}
-                            </button>
+                @if (selected(); as order) {
+                    <section class="card detail">
+                        <h2>{{ order.orderNumber }} · {{ statusLabels[order.status] }}</h2>
+
+                        <div class="detail-grid">
+                            <dl class="details">
+                                <div><dt>Kunde</dt><dd>{{ order.customerName }}</dd></div>
+                                <div><dt>E-Mail</dt><dd>{{ order.customerEmail }}</dd></div>
+                                @if (order.accountEmail) {
+                                    <div><dt>Konto</dt><dd>{{ order.accountEmail }}</dd></div>
+                                }
+                                <div><dt>Adresse</dt><dd>{{ order.street }}, {{ order.postalCode }} {{ order.city }} ({{ order.country }})</dd></div>
+                                <div><dt>Bestellt</dt><dd>{{ order.createdAt | date:'dd.MM.yyyy HH:mm' }}</dd></div>
+                                <div><dt>Bezahlt</dt><dd>{{ order.paidAt ? (order.paidAt | date:'dd.MM.yyyy HH:mm') : 'offen' }} @if (order.paymentProvider) { ({{ order.paymentProvider }}) }</dd></div>
+                                <div><dt>Preis gueltig bis</dt><dd>{{ order.quoteExpiresAt | date:'dd.MM.yyyy' }}</dd></div>
+                                @if (order.deleteAfter) {
+                                    <div><dt>Loeschung nach</dt><dd>{{ order.deleteAfter | date:'dd.MM.yyyy' }}</dd></div>
+                                }
+                            </dl>
+                            <dl class="details">
+                                <div><dt>Positionen</dt><dd>{{ order.items.length }}</dd></div>
+                                <div><dt>Druckzeit gesamt</dt><dd>{{ selectedPrintTime() }}</dd></div>
+                                <div><dt>Material gesamt</dt><dd>{{ selectedFilamentGrams() | number:'1.0-1' }} g</dd></div>
+                                <div><dt>Positionen</dt><dd>{{ order.totals.currency }} {{ order.totals.itemsTotal | number:'1.2-2' }}</dd></div>
+                                <div><dt>Versand</dt><dd>{{ order.totals.currency }} {{ order.totals.shipping | number:'1.2-2' }}</dd></div>
+                                <div class="total"><dt>Gesamt</dt><dd>{{ order.totals.currency }} {{ order.totals.total | number:'1.2-2' }}</dd></div>
+                            </dl>
+                        </div>
+
+                        <div class="table-wrap items-wrap">
+                            <table class="orders items">
+                                <thead>
+                                    <tr>
+                                        <th class="num">Pos.</th>
+                                        <th>Datei</th>
+                                        <th>Filament</th>
+                                        <th>Qualitaet</th>
+                                        <th class="num">Menge</th>
+                                        <th class="num">Platten</th>
+                                        <th class="num">Druckzeit</th>
+                                        <th class="num">Summe</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (item of order.items; track item.position) {
+                                        <tr>
+                                            <td class="num">{{ item.position }}</td>
+                                            <td class="file" [title]="item.fileName">
+                                                {{ item.fileName }}
+                                                <span class="muted">({{ item.fileSizeBytes / 1048576 | number:'1.1-1' }} MB)</span>
+                                                @if (item.manifold === false) {
+                                                    <span class="tag tag-danger">nicht wasserdicht</span>
+                                                } @else if (item.manifold === null) {
+                                                    <span class="tag tag-muted">Mesh nicht geprueft</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <!-- Legacy orders may carry a colour without hex; then only the label is shown. -->
+                                                @if (item.color.hex) {
+                                                    <span class="swatch-dot" [style.background]="item.color.hex" aria-hidden="true"></span>
+                                                }
+                                                {{ item.filament }} {{ item.color.label }}
+                                            </td>
+                                            <td>{{ item.quality }} ({{ item.layerHeightMm }} mm)</td>
+                                            <td class="num">{{ item.quantity }}</td>
+                                            <td class="num">{{ item.plateCount }}</td>
+                                            <td class="num">{{ printTime(item) }}</td>
+                                            <td class="num">{{ order.totals.currency }} {{ item.lineTotalChf | number:'1.2-2' }}</td>
+                                            <td>
+                                                <button type="button" class="ghost-btn small" (click)="download(order, item)"
+                                                    [attr.aria-label]="item.fileName + ' herunterladen'">
+                                                    Download
+                                                </button>
+                                                @if (isEnqueued(order, item)) {
+                                                    <span class="tag tag-muted">In Warteschlange</span>
+                                                } @else {
+                                                    <button type="button" class="ghost-btn small" (click)="enqueue(order, item)"
+                                                        [attr.aria-label]="item.fileName + ' kalibrieren'">
+                                                        Kalibrieren
+                                                    </button>
+                                                }
+                                            </td>
+                                        </tr>
+                                        @if (item.warnings.length > 0) {
+                                            <tr class="warnings-row">
+                                                <td></td>
+                                                <td colspan="8">
+                                                    <ul class="warnings" [attr.aria-label]="'Slicer-Hinweise zu ' + item.fileName">
+                                                        @for (warning of item.warnings; track $index) {
+                                                            <li>{{ warning }}</li>
+                                                        }
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="actions">
+                            @for (next of order.allowedTransitions; track next) {
+                                <button type="button" class="order-btn" [class.ghost-btn]="next === 'CANCELLED'"
+                                    [disabled]="busy()" (click)="transition(order, next)">
+                                    {{ transitionLabels[next] }}
+                                </button>
+                            }
+                        </div>
+                        @if (order.status === 'IN_REVIEW') {
+                            <p class="note">Vor der Freigabe jedes Modell in Bambu Studio oeffnen: Orientierung, Stuetzen, Haftung pruefen.</p>
                         }
-                    </div>
-                    @if (order.status === 'IN_REVIEW') {
-                        <p class="note">Vor der Freigabe jedes Modell in Bambu Studio oeffnen: Orientierung, Stuetzen, Haftung pruefen.</p>
+                    </section>
+                }
+            } @else {
+                <section class="toolbar">
+                    <button type="button" class="order-btn" [disabled]="busy()" (click)="runCalibrationNow()">Jetzt ausfuehren</button>
+                    <button type="button" class="ghost-btn" (click)="exportCalibrationCsv()">CSV exportieren</button>
+                    <button type="button" class="ghost-btn" (click)="loadCalibration()">Aktualisieren</button>
+                    @if (notice()) {
+                        <span class="notice" aria-live="polite">{{ notice() }}</span>
                     }
                 </section>
+
+                @if (calibrationError()) {
+                    <p class="error" role="alert">{{ calibrationError() }}</p>
+                }
+
+                @if (calibrationState() === 'loading' || calibrationState() === 'idle') {
+                    <p class="status">Lade Kalibrierung...</p>
+                } @else if (report(); as report) {
+                    <p class="summary">
+                        <strong>{{ modelCount() }} Modelle, {{ report.rows }} Messungen</strong>
+                        <span class="muted">Naechtlich um 03:00, bis zu 5 Modelle pro Nacht</span>
+                    </p>
+
+                    @if (modelCount() === 0) {
+                        <p class="status empty">Noch keine Messungen. Nach der naechsten Nacht erscheinen hier die ersten Werte.</p>
+                    } @else {
+                        <h2 class="section-title">Zeitfaktor je Filament</h2>
+                        <div class="table-wrap">
+                            <table class="orders factors">
+                                <thead>
+                                    <tr>
+                                        <th>Filament (konfiguriert)</th>
+                                        @for (quality of qualities; track quality) {
+                                            <th class="num">{{ quality }}</th>
+                                        }
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (filament of filaments(); track filament) {
+                                        <tr>
+                                            <th scope="row">
+                                                {{ filament }}
+                                                <span class="muted">(konfiguriert {{ report.configured.timeFactor[filament] | number:'1.2-2' }})</span>
+                                            </th>
+                                            @for (quality of qualities; track quality) {
+                                                <td class="num" [class.deviates]="factorDeviates(report.timeFactor, report.configured.timeFactor, filament, quality)">
+                                                    @if (median(report.timeFactor, filament, quality); as value) {
+                                                        {{ value | number:'1.2-2' }}
+                                                        <span class="muted">(n={{ sampleSize(report.timeFactor, filament, quality) }})</span>
+                                                    } @else {
+                                                        <span class="muted">-</span>
+                                                    }
+                                                </td>
+                                            }
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <h2 class="section-title">Laengenfaktor je Filament</h2>
+                        <div class="table-wrap">
+                            <table class="orders factors">
+                                <thead>
+                                    <tr>
+                                        <th>Filament (konfiguriert)</th>
+                                        @for (quality of qualities; track quality) {
+                                            <th class="num">{{ quality }}</th>
+                                        }
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (filament of filaments(); track filament) {
+                                        <tr>
+                                            <th scope="row">
+                                                {{ filament }}
+                                                <span class="muted">(konfiguriert {{ report.configured.lengthFactor[filament] | number:'1.2-2' }})</span>
+                                            </th>
+                                            @for (quality of qualities; track quality) {
+                                                <td class="num" [class.deviates]="factorDeviates(report.lengthFactor, report.configured.lengthFactor, filament, quality)">
+                                                    @if (median(report.lengthFactor, filament, quality); as value) {
+                                                        {{ value | number:'1.2-2' }}
+                                                        <span class="muted">(n={{ sampleSize(report.lengthFactor, filament, quality) }})</span>
+                                                    } @else {
+                                                        <span class="muted">-</span>
+                                                    }
+                                                </td>
+                                            }
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <h2 class="section-title">Mengen</h2>
+                        <div class="table-wrap">
+                            <table class="orders quantities">
+                                <thead>
+                                    <tr>
+                                        <th class="num">Stueck</th>
+                                        <th class="num">Verhaeltnis je Stueck</th>
+                                        <th class="num">Plattenaufschlag</th>
+                                        <th class="num">Rechenfehler</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (copies of quantities(); track copies) {
+                                        @let quantity = report.quantity[copies];
+                                        @let arithmetic = report.arithmeticError[copies];
+                                        <tr [class.deviates]="arithmeticDeviates(copies)">
+                                            <td class="num">{{ copies }} <span class="muted">(n={{ quantity?.n ?? arithmetic?.n ?? 0 }})</span></td>
+                                            <td class="num">
+                                                @if (quantity?.perCopyRatio?.median != null) {
+                                                    {{ quantity.perCopyRatio.median | number:'1.2-2' }}
+                                                    <span class="muted">({{ quantity.perCopyRatio.min | number:'1.2-2' }} bis {{ quantity.perCopyRatio.max | number:'1.2-2' }})</span>
+                                                } @else {
+                                                    <span class="muted">-</span>
+                                                }
+                                            </td>
+                                            <td class="num">
+                                                @if (quantity?.plateOverheadSeconds?.median != null) {
+                                                    {{ quantity.plateOverheadSeconds.median | number:'1.0-0' }} s
+                                                    <span class="muted">(konfiguriert {{ configuredPlateOverhead() }} s)</span>
+                                                } @else {
+                                                    <span class="muted">-</span>
+                                                }
+                                            </td>
+                                            <td class="num">
+                                                @if (arithmetic?.meanAbsPercent != null) {
+                                                    {{ arithmetic.meanAbsPercent | number:'1.1-1' }} %
+                                                    <span class="muted">(max {{ arithmetic.maxAbsPercent | number:'1.1-1' }} %)</span>
+                                                } @else {
+                                                    <span class="muted">-</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+
+                    <p class="note explain">
+                        Der Zeitfaktor ist das Verhaeltnis der vom Slicer berechneten Druckzeit zur Schaetzung des Preisrechners,
+                        der Laengenfaktor dasselbe fuer die Filamentlaenge; der Median je Qualitaet wird mit dem konfigurierten
+                        Wert verglichen und ab 5 % Abweichung markiert. Bei den Mengen zeigt das Verhaeltnis je Stueck, wie viel
+                        eine Kopie auf einer vollen Platte gegenueber einem Einzeldruck kostet, der Plattenaufschlag die feste
+                        Zeit je Platte und der Rechenfehler, wie weit die arithmetische Mengenschaetzung vom Slicer abweicht.
+                        Die konfigurierten Werte liegen in der Backend-Konfiguration (application.yml); eine Anpassung ist
+                        eine Backend-Aenderung.
+                    </p>
+
+                    @if (calibratedModels().length > 0) {
+                        <h2 class="section-title">Kalibrierte Modelle</h2>
+                        <div class="table-wrap">
+                            <table class="orders models">
+                                <thead>
+                                    <tr>
+                                        <th>Modell</th>
+                                        <th>Quelle</th>
+                                        <th class="num">Zellen</th>
+                                        <th class="num">Dreiecke</th>
+                                        <th>Abmessungen</th>
+                                        <th>Gemessen</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (model of calibratedModels(); track model.modelSha256 + model.measuredAt) {
+                                        <tr>
+                                            <td class="file" [title]="model.modelName">{{ model.modelName }}</td>
+                                            <td>
+                                                {{ model.source }}
+                                                @if (model.orderNumber) {
+                                                    <button type="button" class="link-btn" (click)="openOrder(model.orderNumber)">{{ model.orderNumber }}</button>
+                                                }
+                                            </td>
+                                            <td class="num">{{ model.cells }}</td>
+                                            <td class="num">{{ model.triangleCount | number:'1.0-0' }}</td>
+                                            <td>{{ model.bbox.widthMm | number:'1.0-1' }} x {{ model.bbox.depthMm | number:'1.0-1' }} x {{ model.bbox.heightMm | number:'1.0-1' }} mm</td>
+                                            <td>{{ model.measuredAt | date:'dd.MM.yyyy HH:mm' }}</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+
+                    <h2 class="section-title">Warteschlange</h2>
+                    @if (queue().length === 0) {
+                        <p class="status">Warteschlange leer.</p>
+                    } @else {
+                        <div class="table-wrap">
+                            <table class="orders queue">
+                                <thead>
+                                    <tr>
+                                        <th>Modell</th>
+                                        <th>Quelle</th>
+                                        <th>Eingereiht</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (entry of queue(); track entry.id) {
+                                        <tr>
+                                            <td class="file" [title]="entry.modelName">{{ entry.modelName }}</td>
+                                            <td>
+                                                {{ entry.source }}
+                                                @if (entry.orderNumber) {
+                                                    <button type="button" class="link-btn" (click)="openOrder(entry.orderNumber)">{{ entry.orderNumber }}</button>
+                                                }
+                                            </td>
+                                            <td>{{ entry.queuedAt | date:'dd.MM.yyyy HH:mm' }}</td>
+                                            <td>
+                                                <span class="badge" [class]="'badge queue-' + queueStatus(entry)">{{ queueStatusLabels[queueStatus(entry)] }}</span>
+                                                @if (entry.error) {
+                                                    <span class="queue-error">{{ entry.error }}</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                }
             }
         }
     }
