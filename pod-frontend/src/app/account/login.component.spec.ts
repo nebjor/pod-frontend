@@ -103,7 +103,7 @@ describe('LoginComponent', () => {
 
         expect(component.state()).toBe('invalid');
         expect(navigateByUrl).not.toHaveBeenCalled();
-        expect(text()).toContain('ungueltig oder abgelaufen');
+        expect(text()).toContain('ungueltig, abgelaufen oder schon benutzt');
         expect((fixture.nativeElement as HTMLElement).querySelector('input[type="email"]')).not.toBeNull();
     });
 
@@ -116,8 +116,10 @@ describe('LoginComponent', () => {
 
         expect(requestLoginLink).toHaveBeenCalledWith('anna@example.com');
         expect(component.state()).toBe('sent');
-        expect(text()).toContain('Wir haben dir einen Anmeldelink geschickt');
+        expect(text()).toContain('Dein Anmeldelink ist unterwegs');
         expect(text()).toContain('anna@example.com');
+        expect(text()).toContain('15 Minuten gueltig');
+        expect(text()).toContain('Spam-Ordner');
         expect(localStorage.getItem(LOGIN_RETURN_TO_STORAGE_KEY)).toBeNull();
     });
 

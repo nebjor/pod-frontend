@@ -213,10 +213,18 @@ describe('AccountComponent', () => {
     it('deletes the account only after the confirmation step', async () => {
         await setup();
 
+        // Deletion sits behind a plain text control, not next to the primary actions.
+        const trigger = element().querySelector<HTMLButtonElement>('.account-footer .text-btn');
+        expect(trigger?.textContent?.trim()).toBe('Konto loeschen');
+        expect(element().querySelector('.danger-zone')).toBeNull();
+
         component.askDelete();
         fixture.detectChanges();
         expect(deleteAccount).not.toHaveBeenCalled();
-        expect(element().textContent).toContain('Bist du sicher');
+        const confirmation = element().querySelector('.danger-zone')?.textContent ?? '';
+        expect(confirmation).toContain('Dein Konto und deine gespeicherte Adresse werden geloescht');
+        expect(confirmation).toContain('Deine Bestellungen bleiben als Geschaeftsunterlagen gespeichert');
+        expect(confirmation).toContain('unter "Meine Bestellung" weiterhin einsehen');
 
         component.cancelDelete();
         expect(component.confirmingDelete()).toBe(false);
@@ -227,7 +235,9 @@ describe('AccountComponent', () => {
 
         expect(deleteAccount).toHaveBeenCalledTimes(1);
         expect(component.pageState()).toBe('deleted');
-        expect(element().textContent).toContain('Dein Konto wurde geloescht');
+        expect(element().textContent).toContain('Dein Konto ist geloescht');
+        expect(element().querySelector('.error')).toBeNull();
+        expect(element().querySelector('a[href="/bestellung"]')).not.toBeNull();
         expect(navigateByUrl).not.toHaveBeenCalled();
     });
 });

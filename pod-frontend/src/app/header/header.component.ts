@@ -7,6 +7,7 @@ import { NavigationStart, Router, RouterLink } from '@angular/router';
 import { filter } from 'rxjs';
 import { AccountService } from '../account/account.service';
 import { CartService } from '../cart/cart.service';
+import { qualityLabel } from '../quote/quality-labels';
 
 /** Lines shown in the cart preview; the rest is summed up as "+ N weitere Positionen". */
 export const CART_PREVIEW_MAX_ITEMS = 4;
@@ -60,6 +61,11 @@ export class HeaderComponent {
 
     goHome() {
         this.router.navigate(['/']);
+    }
+
+    /** The header is on every page and does not fetch the catalogue; the fallback list serves it. */
+    qualityLabel(code: string): string {
+        return qualityLabel(code);
     }
 
     goToUpload() {

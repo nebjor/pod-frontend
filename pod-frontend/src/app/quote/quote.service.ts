@@ -71,13 +71,17 @@ export function isModelExpired(error: unknown): boolean {
     return problem?.code === 'model-expired';
 }
 
-/** Turns an HTTP failure into a message the upload page can show. */
+/**
+ * Turns an HTTP failure into a message the customer can act on. The backend words its problem
+ * details for the customer and they are shown as they are; a failure without one gets a short
+ * line without status codes.
+ */
 export function describeQuoteError(error: unknown): string {
     if (error instanceof HttpErrorResponse) {
         const problem = (error.error ?? null) as QuoteProblem | null;
 
         if (error.status === 0) {
-            return 'Backend nicht erreichbar. Laeuft der Slicer-Service?';
+            return 'Der Shop ist gerade nicht erreichbar. Bitte pruefe deine Verbindung und versuche es noch einmal.';
         }
         if (error.status === 413) {
             return 'Die Datei ist zu gross fuer eine Online-Berechnung (max. 50 MB).';
@@ -86,18 +90,16 @@ export function describeQuoteError(error: unknown): string {
             return `Limit erreicht. Probier es ${formatRetry(problem?.retryAfterSeconds)} noch einmal.${supportHint(problem?.supportEmail)}`;
         }
         if (error.status === 503) {
-            return `Der Slicer ist gerade ausgelastet. Probier es ${formatRetry(problem?.retryAfterSeconds)} noch einmal.`;
+            return `Die Preisberechnung ist gerade ausgelastet. Probier es ${formatRetry(problem?.retryAfterSeconds)} noch einmal.`;
         }
 
         const detail = problem?.detail;
         if (typeof detail === 'string' && detail.length > 0) {
             return detail;
         }
-
-        return `Angebot konnte nicht berechnet werden (HTTP ${error.status}).`;
     }
 
-    return 'Angebot konnte nicht berechnet werden.';
+    return 'Der Preis konnte gerade nicht berechnet werden. Bitte versuche es noch einmal.';
 }
 
 function formatRetry(retryAfterSeconds: unknown): string {

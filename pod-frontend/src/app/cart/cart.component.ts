@@ -6,6 +6,7 @@ import { Subject, catchError, debounceTime, groupBy, map, mergeMap, of, switchMa
 import { FALLBACK_ORDER_SETTINGS, OrderSettings } from '../order/order.models';
 import { OrderService } from '../order/order.service';
 import { formatPrintDuration } from '../quote/print-duration';
+import { qualityLabel } from '../quote/quality-labels';
 import { QualityOption } from '../quote/quote.models';
 import { QuoteService, describeQuoteError } from '../quote/quote.service';
 import { CART_MAX_ITEMS, CartItem, CartService } from './cart.service';
@@ -82,7 +83,7 @@ export class CartComponent {
     }
 
     qualityLabel(item: CartItem): string {
-        return this.qualities().find((option) => option.code === item.quality)?.label ?? item.quality;
+        return qualityLabel(item.quality, this.qualities());
     }
 
     printTimeLabel(item: CartItem): string {
@@ -140,7 +141,7 @@ export class CartComponent {
                     this.qualities.set(options.qualities);
                 },
                 error: () => {
-                    // Without the catalogue the quality codes are shown and the backend checks quantities.
+                    // Without the catalogue the fallback quality labels apply and the backend checks quantities.
                 }
             });
     }

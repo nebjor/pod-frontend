@@ -6,9 +6,11 @@ import { Router, RouterLink } from '@angular/router';
 import { AccountResponse } from '../account/account.models';
 import { AccountService } from '../account/account.service';
 import { CartItem, CartService } from '../cart/cart.service';
+import { BUSINESS } from '../legal/business';
 import { FALLBACK_ORDER_SETTINGS, OrderFailure, OrderRequest, OrderResponse, OrderSettings } from '../order/order.models';
 import { OrderService, describeOrderError, rememberLastOrder } from '../order/order.service';
 import { formatPrintDuration } from '../quote/print-duration';
+import { QualityCatalog } from '../quote/quality-catalog';
 
 type CheckoutState = 'idle' | 'submitting' | 'placed';
 
@@ -23,11 +25,14 @@ export class CheckoutComponent {
     private readonly cart = inject(CartService);
     private readonly orderService = inject(OrderService);
     private readonly account = inject(AccountService);
+    private readonly qualityCatalog = inject(QualityCatalog);
     private readonly router = inject(Router);
     private readonly destroyRef = inject(DestroyRef);
     /** Lines uploaded again during the current submit; a second expiry of the same line is an error. */
     private reuploaded = new Set<string>();
 
+    /** Where a customer writes to cancel before production starts (see the terms). */
+    readonly supportEmail = BUSINESS.email;
     readonly accountState = this.account.state;
     readonly customer = this.account.account;
     readonly items = this.cart.items;
@@ -55,8 +60,15 @@ export class CheckoutComponent {
     readonly currency = this.cart.currency;
     readonly shipping = computed(() => this.settings().shippingFlatChf);
     readonly total = computed(() => Math.round((this.itemsTotal() + this.shipping()) * 100) / 100);
-    /** Calendar day until which the placed order keeps its price (ISO date, timezone-neutral). */
-    readonly priceValidUntil = computed(() => this.order()?.quoteExpiresAt.slice(0, 10) ?? '');
+    /** Calendar day until which the placed order keeps its price, as dd.mm.yyyy (timezone-neutral). */
+    readonly priceValidUntil = computed(() => {
+        const iso = this.order()?.quoteExpiresAt;
+        if (!iso) {
+            return '';
+        }
+        const [year, month, day] = iso.slice(0, 10).split('-');
+        return `${day}.${month}.${year}`;
+    });
     /** Validation messages the backend attached to cart lines rather than address fields. */
     readonly itemErrors = computed(() =>
         Object.entries(this.fieldErrors())
@@ -66,6 +78,7 @@ export class CheckoutComponent {
 
     constructor() {
         afterNextRender(() => {
+            this.qualityCatalog.load();
             void this.account.load().then(() => {
                 const customer = this.customer();
                 if (customer) {
@@ -96,6 +109,10 @@ export class CheckoutComponent {
 
     printTimeLabel(item: CartItem): string {
         return formatPrintDuration(item.quote.totalPrintTimeSeconds);
+    }
+
+    qualityLabel(code: string): string {
+        return this.qualityCatalog.label(code);
     }
 
     submit() {
@@ -215,8 +232,8 @@ export class CheckoutComponent {
         this.state.set('idle');
         this.errorMessage.set(
             item
-                ? `Das Modell ${item.fileName} ist auf dem Server abgelaufen und konnte nicht erneut hochgeladen werden. Bitte entferne es aus dem Warenkorb und lade es neu hoch.`
-                : 'Ein Modell ist auf dem Server abgelaufen. Bitte lade es neu hoch.'
+                ? `Das Modell ${item.fileName} liegt nicht mehr auf unserem Server und konnte nicht automatisch neu hochgeladen werden. Bitte entferne es aus dem Warenkorb und lade es noch einmal hoch.`
+                : 'Eines deiner Modelle liegt nicht mehr auf unserem Server. Bitte lade es noch einmal hoch.'
         );
     }
 

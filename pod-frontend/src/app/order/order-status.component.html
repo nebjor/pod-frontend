@@ -4,33 +4,40 @@
         <h1>Meine Bestellung</h1>
     </header>
 
-    <section class="card">
-        <p class="intro">Gib Bestellnummer und E-Mail-Adresse aus deiner Bestaetigungsmail ein, um den Stand deiner Bestellung zu sehen.</p>
-        <form [formGroup]="form" class="customer-form lookup-form" (ngSubmit)="lookup()" novalidate>
-            <label>
-                Bestellnummer
-                <input formControlName="orderNumber" type="text" autocomplete="off" placeholder="POD-1000" />
-                @if (form.controls.orderNumber.touched && form.controls.orderNumber.invalid) {
-                    <span class="field-error">Bitte gib deine Bestellnummer ein.</span>
-                }
-            </label>
-            <label>
-                E-Mail
-                <input formControlName="email" type="email" autocomplete="email" />
-                @if (form.controls.email.touched && form.controls.email.invalid) {
-                    <span class="field-error">Bitte gib eine gueltige E-Mail-Adresse ein.</span>
-                }
-            </label>
-            <button type="submit" class="order-btn" [disabled]="state() === 'loading'">
-                @if (state() === 'loading') { Bestellung wird gesucht... } @else { Bestellung anzeigen }
-            </button>
-        </form>
-        @if (state() === 'not-found') {
-            <p class="error" role="alert">Keine Bestellung mit dieser Nummer und E-Mail gefunden.</p>
-        } @else if (state() === 'error') {
-            <p class="error" role="alert">{{ errorMessage() }}</p>
-        }
-    </section>
+    @if (formVisible()) {
+        <section class="card">
+            <p class="intro">
+                Gib Bestellnummer und E-Mail-Adresse ein, wie sie in deiner Bestaetigungsmail stehen, und du siehst den
+                Stand deiner Bestellung.
+            </p>
+            <form [formGroup]="form" class="customer-form lookup-form" (ngSubmit)="lookup()" novalidate>
+                <label>
+                    Bestellnummer
+                    <input formControlName="orderNumber" type="text" autocomplete="off" placeholder="z.B. POD-1000" />
+                    @if (form.controls.orderNumber.touched && form.controls.orderNumber.invalid) {
+                        <span class="field-error">Bitte gib deine Bestellnummer ein.</span>
+                    }
+                </label>
+                <label>
+                    E-Mail
+                    <input formControlName="email" type="email" autocomplete="email" />
+                    @if (form.controls.email.touched && form.controls.email.invalid) {
+                        <span class="field-error">Bitte gib eine gueltige E-Mail-Adresse ein.</span>
+                    }
+                </label>
+                <button type="submit" class="order-btn" [disabled]="state() === 'loading'">
+                    @if (state() === 'loading') { Bestellung wird gesucht... } @else { Bestellung anzeigen }
+                </button>
+            </form>
+            @if (state() === 'not-found') {
+                <p class="error" role="alert">
+                    Keine Bestellung mit dieser Nummer und E-Mail gefunden. Bitte pruefe beides anhand deiner Bestaetigungsmail.
+                </p>
+            } @else if (state() === 'error') {
+                <p class="error" role="alert">{{ errorMessage() }}</p>
+            }
+        </section>
+    }
 
     @if (order(); as o) {
         <section class="card order" aria-live="polite">
@@ -66,7 +73,7 @@
                                 <td class="file-name">{{ line.fileName }}</td>
                                 <td>
                                     <span class="swatch-dot" [style.background]="line.color.hex" aria-hidden="true"></span>
-                                    {{ line.filament }} {{ line.color.label }} · Qualitaet {{ line.quality }}
+                                    {{ line.filament }} {{ line.color.label }} · Qualitaet {{ qualityLabel(line.quality) }}
                                 </td>
                                 <td class="num">{{ line.quantity }}</td>
                                 <td class="num">{{ o.totals.currency }} {{ line.lineTotalChf | number:'1.2-2' }}</td>
@@ -97,6 +104,15 @@
                 <div><dt>Preis gueltig bis</dt><dd>{{ o.quoteExpiresAt | date:'dd.MM.yyyy' }}</dd></div>
                 <div><dt>Kunde</dt><dd>{{ o.customerName }}<br />{{ o.customerEmail }}</dd></div>
             </dl>
+
+            <p class="order-links">
+                @if (isOwnOrder()) {
+                    <a routerLink="/konto">Alle Bestellungen in Mein Konto</a>
+                }
+                @if (!formVisible()) {
+                    <button type="button" class="text-btn" (click)="showForm()">Andere Bestellung anzeigen</button>
+                }
+            </p>
         </section>
     }
 </section>

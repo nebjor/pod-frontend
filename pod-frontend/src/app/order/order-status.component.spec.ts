@@ -1,7 +1,12 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
+import { AccountResponse, AccountState } from '../account/account.models';
+import { AccountService } from '../account/account.service';
+import { QuoteOptions } from '../quote/quote.models';
+import { QuoteService } from '../quote/quote.service';
 import { OrderStatusComponent } from './order-status.component';
 import { OrderResponse } from './order.models';
 import { OrderService } from './order.service';
@@ -49,21 +54,60 @@ const paid: OrderResponse = {
 const unpaid: OrderResponse = { ...paid, status: 'NEW', paidAt: null, paymentUrl: '/pay/mock?session=mock_1' };
 const cancelled: OrderResponse = { ...paid, status: 'CANCELLED', paymentUrl: null };
 
+const anna: AccountResponse = {
+    email: 'Anna@Example.com',
+    name: 'Anna Muster',
+    street: 'Bahnhofstrasse 1',
+    postalCode: '8001',
+    city: 'Zuerich',
+    country: 'CH',
+    createdAt: '2026-10-01T09:00:00Z',
+    lastLoginAt: '2026-10-20T09:00:00Z'
+};
+
+/** The catalogue renames nothing here; the page must still show labels, not codes. */
+const options: QuoteOptions = {
+    filaments: [],
+    qualities: [
+        { code: 'medium', label: 'Standard', profileName: '0.20mm Standard @BBL A1', layerHeightMm: 0.2, baseLeadTimeDays: 3 },
+        { code: 'high', label: 'Fein', profileName: '0.12mm Fine @BBL A1', layerHeightMm: 0.12, baseLeadTimeDays: 4 }
+    ],
+    maxQuantity: 20
+};
+
 describe('OrderStatusComponent', () => {
     let fixture: ComponentFixture<OrderStatusComponent>;
     let component: OrderStatusComponent;
     let find: ReturnType<typeof vi.fn>;
+    let loadOptions: ReturnType<typeof vi.fn>;
+    let accountState: ReturnType<typeof signal<AccountState>>;
+    let account: ReturnType<typeof signal<AccountResponse | null>>;
 
     beforeEach(() => {
         find = vi.fn(() => of(paid));
+        loadOptions = vi.fn(() => of(options));
+        accountState = signal<AccountState>('anonymous');
+        account = signal<AccountResponse | null>(null);
     });
 
+    /** Builds the page afresh; a test may call it twice to look at a second order. */
     async function setup(queryParams: Record<string, string>) {
+        TestBed.resetTestingModule();
         await TestBed.configureTestingModule({
             imports: [OrderStatusComponent],
             providers: [
                 provideRouter([]),
                 { provide: OrderService, useValue: { find } },
+                { provide: QuoteService, useValue: { loadOptions } },
+                {
+                    provide: AccountService,
+                    useValue: {
+                        state: accountState,
+                        account,
+                        isSignedIn: computed(() => accountState() === 'signedIn'),
+                        load: () => Promise.resolve()
+                    }
+                },
                 { provide: ActivatedRoute, useValue: { queryParamMap: of({ get: (key: string) => queryParams[key] ?? null }) } }
             ]
         }).compileComponents();
@@ -78,6 +122,10 @@ describe('OrderStatusComponent', () => {
         return fixture.nativeElement as HTMLElement;
     }
 
+    function lookupForm() {
+        return element().querySelector('form.lookup-form');
+    }
+
     it('prefills the form from the mail link and looks the order up right away', async () => {
         await setup({ nr: 'POD-1000', email: 'anna@example.com' });
 
@@ -85,6 +133,58 @@ describe('OrderStatusComponent', () => {
         expect(find).toHaveBeenCalledTimes(1);
         expect(find).toHaveBeenCalledWith('POD-1000', 'anna@example.com');
         expect(component.state()).toBe('found');
+    });
+
+    it('shows the order from the mail link alone, with the form behind "Andere Bestellung anzeigen"', async () => {
+        await setup({ nr: 'POD-1000', email: 'anna@example.com' });
+
+        expect(lookupForm()).toBeNull();
+        expect(element().querySelector('.order')).not.toBeNull();
+        const other = element().querySelector<HTMLButtonElement>('.order-links .text-btn');
+        expect(other?.textContent?.trim()).toBe('Andere Bestellung anzeigen');
+        expect(other?.getAttribute('type')).toBe('button');
+
+        other?.click();
+        fixture.detectChanges();
+
+        expect(lookupForm()).not.toBeNull();
+        // The order stays on screen; the number is cleared for the next one, the e-mail is kept.
+        expect(element().querySelector('.order')).not.toBeNull();
+        expect(component.form.getRawValue()).toEqual({ orderNumber: '', email: 'anna@example.com' });
+        expect(element().querySelector('.order-links .text-btn')).toBeNull();
+
+        // The next successful lookup hides the form again.
+        component.form.controls.orderNumber.setValue('POD-1001');
+        component.lookup();
+        fixture.detectChanges();
+        expect(find).toHaveBeenLastCalledWith('POD-1001', 'anna@example.com');
+        expect(lookupForm()).toBeNull();
+    });
+
+    it('keeps the form when the lookup fails', async () => {
+        find.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
+        await setup({ nr: 'POD-9999', email: 'anna@example.com' });
+
+        expect(lookupForm()).not.toBeNull();
+        expect(element().querySelector('.order')).toBeNull();
+    });
+
+    it('links a signed-in customer to the account page for their own order only', async () => {
+        accountState.set('signedIn');
+        account.set(anna);
+        await setup({ nr: 'POD-1000', email: 'anna@example.com' });
+
+        const link = element().querySelector<HTMLAnchorElement>('.order-links a[href="/konto"]');
+        expect(link?.textContent).toContain('Mein Konto');
+
+        find.mockReturnValue(of({ ...paid, customerEmail: 'someone-else@example.com' }));
+        await setup({ nr: 'POD-1000', email: 'someone-else@example.com' });
+        expect(element().querySelector('.order-links a[href="/konto"]')).toBeNull();
+    });
+
+    it('shows no account link to a guest', async () => {
+        await setup({ nr: 'POD-1000', email: 'anna@example.com' });
+        expect(element().querySelector('.order-links a[href="/konto"]')).toBeNull();
     });
 
     it('renders the status timeline, the lines, the totals and the dates', async () => {
@@ -115,6 +215,24 @@ describe('OrderStatusComponent', () => {
         expect(element().querySelector('a.link-btn')).toBeNull();
     });
 
+    it('shows the quality as its catalogue label, never as the code', async () => {
+        await setup({ nr: 'POD-1000', email: 'anna@example.com' });
+
+        const rows = element().querySelectorAll('.items-table tbody tr');
+        expect(rows[0].textContent).toContain('Qualitaet Standard 0.20 mm');
+        expect(rows[1].textContent).toContain('Qualitaet Fein 0.12 mm');
+        expect(element().textContent).not.toContain('medium');
+    });
+
+    it('falls back to the built-in labels when the catalogue is not available', async () => {
+        loadOptions.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 503 })));
+        await setup({ nr: 'POD-1000', email: 'anna@example.com' });
+
+        const rows = element().querySelectorAll('.items-table tbody tr');
+        expect(rows[0].textContent).toContain('Qualitaet Standard 0.20 mm');
+        expect(element().textContent).not.toContain('medium');
+    });
+
     it('offers the payment link while a new order waits for its payment', async () => {
         find.mockReturnValue(of(unpaid));
         await setup({ nr: 'POD-1000', email: 'anna@example.com' });
@@ -143,12 +261,19 @@ describe('OrderStatusComponent', () => {
         expect(element().textContent).toContain('Keine Bestellung mit dieser Nummer und E-Mail gefunden');
     });
 
-    it('reports other failures', async () => {
+    it('reports other failures without status codes', async () => {
         find.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
         await setup({ nr: 'POD-1000', email: 'anna@example.com' });
 
         expect(component.state()).toBe('error');
         expect(element().textContent).toContain('nicht erreichbar');
+
+        find.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+        await setup({ nr: 'POD-1000', email: 'anna@example.com' });
+
+        expect(component.state()).toBe('error');
+        expect(component.errorMessage()).toContain('nicht geladen werden');
+        expect(component.errorMessage()).not.toContain('HTTP');
     });
 
     it('waits for the customer when the link carries nothing, and validates the form', async () => {
@@ -156,6 +281,7 @@ describe('OrderStatusComponent', () => {
 
         expect(find).not.toHaveBeenCalled();
         expect(component.state()).toBe('idle');
+        expect(lookupForm()).not.toBeNull();
 
         component.lookup();
         expect(find).not.toHaveBeenCalled();

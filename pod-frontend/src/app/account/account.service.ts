@@ -112,7 +112,10 @@ export function describeAccountError(error: unknown): AccountFailure {
         const problem = (error.error ?? null) as { code?: unknown; errors?: unknown; detail?: unknown } | null;
 
         if (error.status === 0) {
-            return { kind: 'error', message: 'Backend nicht erreichbar. Bitte versuche es spaeter noch einmal.' };
+            return {
+                kind: 'error',
+                message: 'Der Shop ist gerade nicht erreichbar. Bitte pruefe deine Verbindung und versuche es noch einmal.'
+            };
         }
         if (error.status === 400 && problem?.code === 'invalid-token') {
             return { kind: 'invalid-token' };
@@ -126,12 +129,12 @@ export function describeAccountError(error: unknown): AccountFailure {
         if (error.status === 429) {
             return { kind: 'error', message: 'Zu viele Versuche. Bitte warte einen Moment und probier es noch einmal.' };
         }
+        // The backend words its problem details for the customer; a bare status gets a generic line.
         if (typeof problem?.detail === 'string' && problem.detail.length > 0) {
             return { kind: 'error', message: problem.detail };
         }
-        return { kind: 'error', message: `Das hat nicht geklappt (HTTP ${error.status}).` };
     }
-    return { kind: 'error', message: 'Das hat nicht geklappt. Bitte versuche es noch einmal.' };
+    return { kind: 'error', message: 'Das hat gerade nicht geklappt. Bitte versuche es noch einmal.' };
 }
 
 /**

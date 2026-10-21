@@ -3,8 +3,11 @@ import { ChangeDetectionStrategy, Component, DestroyRef, afterNextRender, comput
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subscription, map, timer } from 'rxjs';
+import { AccountService } from '../account/account.service';
+import { orderStatusLabel } from '../order/order-status-labels';
 import { OrderResponse } from '../order/order.models';
 import { OrderService, recallLastOrder } from '../order/order.service';
+import { QualityCatalog } from '../quote/quality-catalog';
 
 /** How often and how long the page waits for the provider's confirmation to arrive. */
 export const CONFIRMATION_POLL_MS = 2000;
@@ -27,6 +30,8 @@ type SuccessState = 'loading' | 'waiting' | 'paid' | 'unpaid' | 'cancelled' | 'm
 export class OrderSuccessComponent {
     private readonly route = inject(ActivatedRoute);
     private readonly orderService = inject(OrderService);
+    private readonly account = inject(AccountService);
+    private readonly qualityCatalog = inject(QualityCatalog);
     private readonly destroyRef = inject(DestroyRef);
     private polling?: Subscription;
 
@@ -39,11 +44,38 @@ export class OrderSuccessComponent {
     readonly state = signal<SuccessState>('loading');
     readonly order = signal<OrderResponse | null>(null);
     readonly items = computed(() => this.order()?.items ?? []);
+    /** Guests get a hint that their e-mail is all they need for an account; signed-in customers do not. */
+    readonly accountState = this.account.state;
+    readonly statusLabel = computed(() => {
+        const order = this.order();
+        return order ? orderStatusLabel(order.status) : '';
+    });
+    /** Query for the status page, the same the order mail links to. */
+    readonly statusLinkParams = computed(() => {
+        const order = this.order();
+        return order ? { nr: order.orderNumber, email: order.customerEmail } : {};
+    });
+    /** Day until which an unpaid order keeps its price, as dd.mm.yyyy; empty without an order. */
+    readonly priceValidUntil = computed(() => {
+        const iso = this.order()?.quoteExpiresAt;
+        if (!iso) {
+            return '';
+        }
+        const [year, month, day] = iso.slice(0, 10).split('-');
+        return `${day}.${month}.${year}`;
+    });
 
     constructor() {
         // sessionStorage and polling exist in the browser only; the route is prerendered too.
-        afterNextRender(() => this.load());
+        afterNextRender(() => {
+            this.qualityCatalog.load();
+            this.load();
+        });
         this.destroyRef.onDestroy(() => this.polling?.unsubscribe());
+    }
+
+    qualityLabel(code: string): string {
+        return this.qualityCatalog.label(code);
     }
 
     /** Reads the order and, while it is still unpaid, keeps asking for a while. */

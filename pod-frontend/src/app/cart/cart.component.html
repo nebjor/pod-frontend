@@ -23,11 +23,11 @@
                             <p class="config">
                                 {{ item.filament }} ·
                                 <span class="swatch-dot" [style.background]="item.color.hex" aria-hidden="true"></span>{{ item.color.label }} ·
-                                Qualitaet {{ qualityLabel(item) }} ({{ item.quote.layerHeightMm | number:'1.2-2' }} mm)
+                                Qualitaet {{ qualityLabel(item) }}
                             </p>
                             <p class="meta">
-                                Druckzeit {{ printTimeLabel(item) }} · Lieferzeit {{ item.quote.leadTimeDays }} Tage ·
-                                Einrichtung {{ item.quote.currency }} {{ item.quote.setupFeeChf | number:'1.2-2' }}
+                                Druckzeit {{ printTimeLabel(item) }} · Lieferzeit ca. {{ item.quote.leadTimeDays }} Tage ·
+                                Einrichtung {{ item.quote.currency }} {{ item.quote.setupFeeChf | number:'1.2-2' }} (einmalig)
                             </p>
                         </div>
 
@@ -68,7 +68,10 @@
                 @if (!settings().vatEnabled) {
                     <p class="note">Keine MWST, da nicht MWST-pflichtig.</p>
                 }
-                <p class="note">Versand nur innerhalb der Schweiz. Der Preis bleibt {{ settings().quoteValidityDays }} Tage gueltig.</p>
+                <p class="note">
+                    Versand nur innerhalb der Schweiz. Beim Bestellen pruefen wir den Preis noch einmal; danach bleibt er
+                    {{ settings().quoteValidityDays }} Tage gueltig.
+                </p>
 
                 <a class="order-btn link-btn" routerLink="/checkout">Zur Kasse</a>
                 @if (isFull()) {
