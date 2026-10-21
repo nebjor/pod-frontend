@@ -521,4 +521,41 @@ describe('HeaderComponent', () => {
             expect((items()[2] as HTMLButtonElement).disabled).toBe(false);
         });
     });
+
+    describe('host', () => {
+        const realLocation = window.location;
+
+        // The component reads `window.location.hostname` once when it is created; vitest copies
+        // the jsdom globals onto `globalThis`, so the property can be swapped for a stub.
+        async function createOnHost(hostname: string) {
+            Object.defineProperty(window, 'location', { configurable: true, value: { ...realLocation, hostname } });
+            const onHost = TestBed.createComponent(HeaderComponent);
+            await onHost.whenStable();
+            return onHost.nativeElement as HTMLElement;
+        }
+
+        afterEach(() => {
+            Object.defineProperty(window, 'location', { configurable: true, value: realLocation });
+        });
+
+        it('shows only the brand on the admin host', async () => {
+            accountState.set('anonymous');
+            const header = await createOnHost('admin.3dburg.ch');
+
+            expect(header.querySelector('.logo')).not.toBeNull();
+            expect(header.querySelector('.actions')).toBeNull();
+            expect(header.querySelector('.account-link')).toBeNull();
+            expect(header.querySelector('.cart-link')).toBeNull();
+            expect(header.querySelector('.upload-btn')).toBeNull();
+        });
+
+        it('shows the shop widgets on the shop host', async () => {
+            accountState.set('anonymous');
+            const header = await createOnHost('3dburg.ch');
+
+            expect(header.querySelector('.account-link')?.textContent?.trim()).toBe('Anmelden');
+            expect(header.querySelector('.cart-link')).not.toBeNull();
+            expect(header.querySelector('.upload-btn')).not.toBeNull();
+        });
+    });
 });

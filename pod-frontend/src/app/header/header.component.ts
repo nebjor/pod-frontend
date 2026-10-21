@@ -1,11 +1,12 @@
-import { DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { DecimalPipe, isPlatformBrowser } from '@angular/common';
+import { ChangeDetectionStrategy, Component, DestroyRef, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { Router, RouterLink } from '@angular/router';
 import { AccountService } from '../account/account.service';
 import { CartService } from '../cart/cart.service';
+import { isAdminHost } from '../host-routes';
 import { qualityLabel } from '../quote/quality-labels';
 import { HoverMenuDirective } from './hover-menu.directive';
 
@@ -13,8 +14,8 @@ import { HoverMenuDirective } from './hover-menu.directive';
 export const CART_PREVIEW_MAX_ITEMS = 4;
 
 /**
- * Shared by the shop and the admin host. The account link stays blank until the session is
- * known, so a signed-in customer never sees "Anmelden".
+ * Shared by the shop and the admin host; on the admin host only the brand is shown. The account
+ * link stays blank until the session is known, so a signed-in customer never sees "Anmelden".
  *
  * The cart indicator and, once signed in, the account link each open a panel under them on
  * hover or keyboard focus ({@link HoverMenuDirective}). The cart panel previews the lines or,
@@ -36,6 +37,12 @@ export class HeaderComponent {
     private readonly destroyRef = inject(DestroyRef);
     private readonly loggingOutState = signal(false);
 
+    /**
+     * The admin host serves only the panel, so the shop's widgets stay out of its header. Known
+     * once, in the browser; a prerendered page renders as the shop (the admin host's own page
+     * is the shop's /admin page) and the client corrects it after hydration.
+     */
+    readonly onAdminHost = signal(isPlatformBrowser(inject(PLATFORM_ID)) && isAdminHost(window.location.hostname)).asReadonly();
     readonly accountState = this.account.state;
     readonly accountEmail = computed(() => this.account.account()?.email ?? '');
     readonly loggingOut = this.loggingOutState.asReadonly();
