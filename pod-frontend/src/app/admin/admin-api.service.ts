@@ -7,6 +7,7 @@ import { ADMIN_API_PREFIX } from './admin-auth.interceptor';
 
 /** The owner's view of an order, as the backend publishes it. */
 export type AdminOrder = components['schemas']['AdminOrderResponse'];
+export type AdminOrderItem = components['schemas']['AdminOrderItemResponse'];
 
 @Injectable({ providedIn: 'root' })
 export class AdminApiService {
@@ -25,9 +26,9 @@ export class AdminApiService {
         return this.http.post<AdminOrder>(`${ADMIN_API_PREFIX}/orders/${encodeURIComponent(orderNumber)}/status`, { status });
     }
 
-    /** The uploaded model as a blob; the caller turns it into a download. */
-    downloadModel(orderNumber: string): Observable<Blob> {
-        return this.http.get(`${ADMIN_API_PREFIX}/orders/${encodeURIComponent(orderNumber)}/model`, {
+    /** The model of one order line (1-based position) as a blob; the caller turns it into a download. */
+    downloadModel(orderNumber: string, position: number): Observable<Blob> {
+        return this.http.get(`${ADMIN_API_PREFIX}/orders/${encodeURIComponent(orderNumber)}/items/${position}/model`, {
             responseType: 'blob'
         });
     }

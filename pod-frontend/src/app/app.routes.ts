@@ -21,6 +21,10 @@ export const shopRoutes: Routes = [
         loadComponent: () => import('./upload/upload.component').then((m) => m.UploadComponent)
     },
     {
+        path: 'warenkorb',
+        loadComponent: () => import('./cart/cart.component').then((m) => m.CartComponent)
+    },
+    {
         path: 'checkout/success',
         title: 'Bestellung',
         data: { noindex: true },

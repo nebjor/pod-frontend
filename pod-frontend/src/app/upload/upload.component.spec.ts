@@ -1,10 +1,13 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
+import { CART_MAX_ITEMS, CartService } from '../cart/cart.service';
+import { formatPrintDuration } from '../quote/print-duration';
 import { QuoteOptions, QuoteResponse } from '../quote/quote.models';
 import { QuoteService, UploadEvent } from '../quote/quote.service';
 import { PREFETCH_DELAY_MS, PREVIEW_LIMIT_BYTES_3MF, QUOTE_DEBOUNCE_MS, UploadComponent, formatPrintDuration } from './upload.component';
+import { PREFETCH_DELAY_MS, QUOTE_DEBOUNCE_MS, UploadComponent } from './upload.component';
 
 const sampleQuote: QuoteResponse = {
     fileName: 'benchy.stl',
@@ -81,6 +84,7 @@ function settle() {
 describe('UploadComponent', () => {
     let fixture: ComponentFixture<UploadComponent>;
     let component: UploadComponent;
+    let cart: CartService;
     let requestQuote: ReturnType<typeof vi.fn>;
     let loadOptions: ReturnType<typeof vi.fn>;
     let uploadModel: ReturnType<typeof vi.fn>;
@@ -102,6 +106,7 @@ describe('UploadComponent', () => {
             providers: [provideRouter([]), { provide: QuoteService, useValue: { requestQuote, loadOptions, uploadModel } }]
         }).compileComponents();
 
+        cart = TestBed.inject(CartService);
         fixture = TestBed.createComponent(UploadComponent);
         component = fixture.componentInstance;
         fixture.detectChanges();
@@ -109,6 +114,7 @@ describe('UploadComponent', () => {
 
     afterEach(() => {
         vi.useRealTimers();
+        sessionStorage.clear();
     });
 
     /** Parameters of every quote request for one filament and quality, prefetches included. */
@@ -378,6 +384,94 @@ describe('UploadComponent', () => {
 
         expect(component.errorMessage()).toContain('STL oder 3MF');
         expect(requestQuote).not.toHaveBeenCalled();
+    });
+
+    it('puts the configured model into the cart as a line with its model id and quote', () => {
+        component.onDrop(dropEvent(benchy));
+        component.orderForm.controls.quantity.setValue(2);
+        settle();
+        expect(cart.isEmpty()).toBe(true);
+
+        component.onAddToCart();
+
+        expect(cart.items()).toHaveLength(1);
+        expect(cart.items()[0]).toMatchObject({
+            fileName: 'benchy.stl',
+            sizeBytes: benchy.size,
+            modelId: MODEL_ID,
+            filament: 'PLA',
+            color: { code: 'black' },
+            quality: 'medium',
+            quantity: 2,
+            quote: { totalPriceChf: 8 }
+        });
+        expect(cart.items()[0].file).toBe(benchy);
+        expect(component.addedItem()?.id).toBe(cart.items()[0].id);
+        // The model stays on screen for the next steps; another click would add a second line.
+        expect(component.selectedFile()).toBe(benchy);
+        fixture.detectChanges();
+        const host = fixture.nativeElement as HTMLElement;
+        expect(host.querySelector('.cart-added')?.textContent).toContain('liegt im Warenkorb');
+        expect(host.querySelector('.cart-added a[href="/warenkorb"]')).not.toBeNull();
+        expect(host.querySelector('.cart-added a[href="/checkout"]')).not.toBeNull();
+    });
+
+    it('adds a second line for a changed configuration and resets for the next model', () => {
+        component.onDrop(dropEvent(benchy));
+        settle();
+        component.onAddToCart();
+
+        component.orderForm.controls.quality.setValue('high');
+        expect(component.addedItem()).toBeNull();
+        settle();
+        component.onAddToCart();
+        expect(cart.items().map((item) => item.quality)).toEqual(['medium', 'high']);
+
+        component.onUploadAnother();
+        expect(component.selectedFile()).toBeNull();
+        expect(component.addedItem()).toBeNull();
+        expect(cart.items()).toHaveLength(2);
+    });
+
+    it('does not add without a ready quote', () => {
+        component.onDrop(dropEvent(benchy));
+        expect(component.quoteState()).toBe('loading');
+
+        component.onAddToCart();
+
+        expect(cart.isEmpty()).toBe(true);
+        expect(component.addedItem()).toBeNull();
+    });
+
+    it('adds the model and continues to the checkout on direct order', () => {
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+        component.onDrop(dropEvent(benchy));
+        settle();
+
+        component.onDirectCheckout();
+
+        expect(cart.items()).toHaveLength(1);
+        expect(navigate).toHaveBeenCalledWith(['/checkout']);
+    });
+
+    it('refuses to add once the cart holds the maximum number of models', () => {
+        component.onDrop(dropEvent(benchy));
+        settle();
+        for (let index = 0; index < CART_MAX_ITEMS; index++) {
+            component.orderForm.controls.quantity.setValue(index + 1);
+            settle();
+            component.onAddToCart();
+        }
+        expect(cart.items()).toHaveLength(CART_MAX_ITEMS);
+        expect(component.cartIsFull()).toBe(true);
+        expect(component.canAddToCart()).toBe(false);
+
+        component.orderForm.controls.quantity.setValue(1);
+        settle();
+        component.onAddToCart();
+        expect(cart.items()).toHaveLength(CART_MAX_ITEMS);
+        fixture.detectChanges();
+        expect((fixture.nativeElement as HTMLElement).textContent).toContain('Warenkorb ist voll');
     });
 
     it('formats print durations for people', () => {

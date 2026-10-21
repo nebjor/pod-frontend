@@ -13,16 +13,35 @@ const unpaid: OrderResponse = {
     paidAt: null,
     customerName: 'Anna Muster',
     customerEmail: 'anna@example.com',
-    fileName: 'benchy.stl',
-    filament: 'PLA',
-    colorCode: 'red',
-    colorLabel: 'Red',
-    quality: 'medium',
-    quantity: 2,
-    plateCount: 1,
-    totalPrintTimeSeconds: 3903,
-    totalFilamentGrams: 23.1,
-    totals: { setupFee: 5, unitPrice: 3, itemsTotal: 11, shipping: 9, vatRate: 0, vatAmount: 0, total: 20, currency: 'CHF' },
+    items: [
+        {
+            position: 1,
+            fileName: 'benchy.stl',
+            filament: 'PLA',
+            color: { code: 'red', label: 'Red', hex: '#d62828', pricePerKgChf: 45 },
+            quality: 'medium',
+            quantity: 2,
+            unitPriceChf: 3,
+            setupFeeChf: 5,
+            lineTotalChf: 11,
+            printTimeSeconds: 3903,
+            filamentGrams: 23.1
+        },
+        {
+            position: 2,
+            fileName: 'cube.stl',
+            filament: 'PETG',
+            color: { code: 'white', label: 'White', hex: '#f2f2f2', pricePerKgChf: 45 },
+            quality: 'high',
+            quantity: 1,
+            unitPriceChf: 1.85,
+            setupFeeChf: 5,
+            lineTotalChf: 6.85,
+            printTimeSeconds: 1952,
+            filamentGrams: 11.5
+        }
+    ],
+    totals: { itemsTotal: 17.85, shipping: 9, vatRate: 0, vatAmount: 0, total: 26.85, currency: 'CHF' },
     vatNote: 'No VAT charged: the seller is not VAT registered.',
     paymentUrl: '/pay/mock?session=mock_1'
 };
@@ -64,13 +83,21 @@ describe('OrderSuccessComponent', () => {
         vi.advanceTimersByTime(0);
     }
 
-    it('shows the paid order after the provider confirmed it', async () => {
+    it('shows the paid order with its lines after the provider confirmed it', async () => {
         await setup({ order: 'POD-1000' });
         loadAndFlush();
 
         expect(find).toHaveBeenCalledWith('POD-1000', 'anna@example.com');
         expect(component.state()).toBe('paid');
-        expect(component.order()?.totals.total).toBe(20);
+        expect(component.order()?.totals.total).toBe(26.85);
+
+        fixture.detectChanges();
+        const lines = (fixture.nativeElement as HTMLElement).querySelectorAll('.item-list li');
+        expect(lines).toHaveLength(2);
+        expect(lines[0].textContent).toContain('2 x benchy.stl');
+        expect(lines[0].textContent).toContain('CHF 11.00');
+        expect(lines[1].textContent).toContain('PETG White');
+        expect((fixture.nativeElement as HTMLElement).textContent).toContain('CHF 26.85');
     });
 
     it('keeps asking while the confirmation is pending', async () => {

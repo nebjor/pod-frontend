@@ -91,6 +91,52 @@
     vertical-align: -1px;
 }
 
+.item-list {
+    margin: 0 0 0.75rem;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.5rem;
+
+    li {
+        padding: 0.4rem 0;
+        border-bottom: 1px dashed rgba(53, 84, 107, 0.6);
+    }
+
+    .item-line {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        color: var(--text-100);
+        font-size: 0.9rem;
+    }
+
+    .item-name {
+        overflow-wrap: anywhere;
+    }
+
+    .item-price {
+        white-space: nowrap;
+    }
+
+    .item-config {
+        margin: 0.2rem 0 0;
+        color: var(--text-300);
+        font-size: 0.82rem;
+    }
+}
+
+.edit-link {
+    display: inline-block;
+    margin-bottom: 0.9rem;
+    font-size: 0.85rem;
+}
+
+.status {
+    margin: 0;
+    color: var(--text-100);
+}
+
 .note {
     margin: 0.75rem 0 0;
     color: var(--text-300);

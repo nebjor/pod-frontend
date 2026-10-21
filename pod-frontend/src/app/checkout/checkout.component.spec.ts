@@ -2,11 +2,12 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
-import { CartItem, CartService } from '../cart/cart.service';
-import { LAST_ORDER_STORAGE_KEY, OrderResponse } from '../order/order.models';
+import { CartService, NewCartItem } from '../cart/cart.service';
+import { FALLBACK_ORDER_SETTINGS, LAST_ORDER_STORAGE_KEY, OrderRequest, OrderResponse } from '../order/order.models';
 import { OrderService } from '../order/order.service';
 import { QuoteResponse } from '../quote/quote.models';
-import { CheckoutComponent, FALLBACK_ORDER_SETTINGS } from './checkout.component';
+import { QuoteService, UploadEvent } from '../quote/quote.service';
+import { CheckoutComponent } from './checkout.component';
 
 const quote: QuoteResponse = {
     fileName: 'benchy.stl',
@@ -33,6 +34,22 @@ const quote: QuoteResponse = {
     leadTimeDays: 3
 };
 
+const cubeQuote: QuoteResponse = {
+    ...quote,
+    fileName: 'cube.stl',
+    filament: 'PETG',
+    color: { code: 'white', label: 'White', hex: '#f2f2f2', pricePerKgChf: 45 },
+    quality: 'high',
+    quantity: 1,
+    totalPrintTimeSeconds: 1952,
+    unitPriceChf: 1.85,
+    totalPriceChf: 6.85
+};
+
+const MODEL_ID = 'a'.repeat(64);
+const CUBE_MODEL_ID = 'b'.repeat(64);
+const FRESH_MODEL_ID = 'c'.repeat(64);
+
 const placedOrder: OrderResponse = {
     orderNumber: 'POD-1000',
     status: 'NEW',
@@ -40,24 +57,47 @@ const placedOrder: OrderResponse = {
     quoteExpiresAt: '2026-11-02T09:00:00Z',
     customerName: 'Anna Muster',
     customerEmail: 'anna@example.com',
-    fileName: 'benchy.stl',
-    filament: 'PLA',
-    colorCode: 'red',
-    colorLabel: 'Red',
-    quality: 'medium',
-    quantity: 2,
-    plateCount: 1,
-    totalPrintTimeSeconds: 3903,
-    totalFilamentGrams: 23.1,
-    totals: { setupFee: 5, unitPrice: 3, itemsTotal: 11, shipping: 9, vatRate: 0, vatAmount: 0, total: 20, currency: 'CHF' },
+    items: [
+        {
+            position: 1,
+            fileName: 'benchy.stl',
+            filament: 'PLA',
+            color: quote.color,
+            quality: 'medium',
+            quantity: 2,
+            unitPriceChf: 3,
+            setupFeeChf: 5,
+            lineTotalChf: 11,
+            printTimeSeconds: 3903,
+            filamentGrams: 23.1
+        },
+        {
+            position: 2,
+            fileName: 'cube.stl',
+            filament: 'PETG',
+            color: cubeQuote.color,
+            quality: 'high',
+            quantity: 1,
+            unitPriceChf: 1.85,
+            setupFeeChf: 5,
+            lineTotalChf: 6.85,
+            printTimeSeconds: 1952,
+            filamentGrams: 11.5
+        }
+    ],
+    totals: { itemsTotal: 17.85, shipping: 9, vatRate: 0, vatAmount: 0, total: 26.85, currency: 'CHF' },
     vatNote: 'No VAT charged: the seller is not VAT registered.',
     paidAt: null,
-    paymentUrl: '/pay/mock?session=mock_1&order=POD-1000&amount=20.00&currency=CHF'
+    paymentUrl: '/pay/mock?session=mock_1&order=POD-1000&amount=26.85&currency=CHF'
 };
 
-function cartItem(): CartItem {
+function benchy(): NewCartItem {
+    const file = new File(['solid benchy endsolid benchy'], 'benchy.stl');
     return {
-        file: new File(['solid benchy endsolid benchy'], 'benchy.stl'),
+        file,
+        fileName: 'benchy.stl',
+        sizeBytes: file.size,
+        modelId: MODEL_ID,
         filament: 'PLA',
         color: quote.color,
         quality: 'medium',
@@ -66,31 +106,54 @@ function cartItem(): CartItem {
     };
 }
 
+function cube(): NewCartItem {
+    const file = new File(['solid cube endsolid cube'], 'cube.stl');
+    return {
+        file,
+        fileName: 'cube.stl',
+        sizeBytes: file.size,
+        modelId: CUBE_MODEL_ID,
+        filament: 'PETG',
+        color: cubeQuote.color,
+        quality: 'high',
+        quantity: 1,
+        quote: cubeQuote
+    };
+}
+
 describe('CheckoutComponent', () => {
     let fixture: ComponentFixture<CheckoutComponent>;
     let component: CheckoutComponent;
     let cart: CartService;
     let placeOrder: ReturnType<typeof vi.fn>;
+    let uploadModel: ReturnType<typeof vi.fn>;
     let navigateByUrl: ReturnType<typeof vi.spyOn>;
 
     beforeEach(async () => {
         placeOrder = vi.fn(() => of(placedOrder));
+        uploadModel = vi.fn(() => of<UploadEvent>({ kind: 'done', model: { modelId: FRESH_MODEL_ID, fileName: 'benchy.stl', sizeBytes: 28 } }));
 
         await TestBed.configureTestingModule({
             imports: [CheckoutComponent],
             providers: [
                 provideRouter([]),
-                { provide: OrderService, useValue: { placeOrder, loadSettings: () => of(FALLBACK_ORDER_SETTINGS) } }
+                { provide: OrderService, useValue: { placeOrder, loadSettings: () => of(FALLBACK_ORDER_SETTINGS) } },
+                { provide: QuoteService, useValue: { uploadModel, requestQuote: vi.fn() } }
             ]
         }).compileComponents();
 
         cart = TestBed.inject(CartService);
     });
 
-    function create() {
+    afterEach(() => sessionStorage.clear());
+
+    /** Renders and waits for the persisted cart to be read, as a customer's browser would. */
+    async function create() {
         navigateByUrl = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
         fixture = TestBed.createComponent(CheckoutComponent);
         component = fixture.componentInstance;
+        fixture.detectChanges();
+        await cart.whenReady();
         fixture.detectChanges();
     }
 
@@ -106,25 +169,37 @@ describe('CheckoutComponent', () => {
         });
     }
 
-    it('shows an empty state without a cart item', () => {
-        create();
+    function sentRequest(call = 0): OrderRequest {
+        return placeOrder.mock.calls[call][0] as OrderRequest;
+    }
 
-        expect(component.item()).toBeNull();
+    it('shows an empty state without cart lines', async () => {
+        await create();
+
+        expect(component.isEmpty()).toBe(true);
         expect((fixture.nativeElement as HTMLElement).textContent).toContain('kein Modell im Warenkorb');
     });
 
-    it('sums items and flat shipping before ordering', () => {
-        cart.set(cartItem());
-        create();
+    it('lists every line and sums them with the flat shipping before ordering', async () => {
+        cart.add(benchy());
+        cart.add(cube());
+        await create();
 
-        expect(component.itemsTotal()).toBe(11);
+        expect(component.itemsTotal()).toBe(17.85);
         expect(component.shipping()).toBe(9);
-        expect(component.total()).toBe(20);
+        expect(component.total()).toBe(26.85);
+        const lines = (fixture.nativeElement as HTMLElement).querySelectorAll('.item-list li');
+        expect(lines).toHaveLength(2);
+        expect(lines[0].textContent).toContain('2 x benchy.stl');
+        expect(lines[0].textContent).toContain('CHF 11.00');
+        expect(lines[1].textContent).toContain('1 x cube.stl');
+        expect(lines[1].textContent).toContain('PETG White');
+        expect((fixture.nativeElement as HTMLElement).querySelector('a[href="/warenkorb"]')).not.toBeNull();
     });
 
-    it('does not submit without the terms accepted', () => {
-        cart.set(cartItem());
-        create();
+    it('does not submit without the terms accepted', async () => {
+        cart.add(benchy());
+        await create();
         fillAddress();
         component.customerForm.controls.termsAccepted.setValue(false);
 
@@ -134,9 +209,9 @@ describe('CheckoutComponent', () => {
         expect(component.customerForm.controls.termsAccepted.touched).toBe(true);
     });
 
-    it('does not submit an incomplete address', () => {
-        cart.set(cartItem());
-        create();
+    it('does not submit an incomplete address', async () => {
+        cart.add(benchy());
+        await create();
 
         component.submit();
 
@@ -144,74 +219,147 @@ describe('CheckoutComponent', () => {
         expect(component.customerForm.touched).toBe(true);
     });
 
-    it('places the order with the quote parameters and continues to the payment page', () => {
-        const item = cartItem();
-        cart.set(item);
-        create();
+    it('places the order as JSON with every line by model id and continues to the payment page', async () => {
+        cart.add(benchy());
+        cart.add(cube());
+        await create();
         fillAddress();
 
         component.submit();
 
         expect(placeOrder).toHaveBeenCalledTimes(1);
-        expect(placeOrder.mock.calls[0][0]).toBe(item.file);
-        expect(placeOrder.mock.calls[0][1]).toMatchObject({
-            filament: 'PLA',
-            color: 'red',
-            quality: 'medium',
-            quantity: 2,
-            expectedTotalChf: 11,
-            customerName: 'Anna Muster',
-            email: 'anna@example.com',
-            country: 'CH'
+        expect(sentRequest()).toEqual({
+            customer: {
+                name: 'Anna Muster',
+                email: 'anna@example.com',
+                street: 'Bahnhofstrasse 1',
+                postalCode: '8001',
+                city: 'Zürich',
+                country: 'CH'
+            },
+            items: [
+                { modelId: MODEL_ID, fileName: 'benchy.stl', filament: 'PLA', color: 'red', quality: 'medium', quantity: 2 },
+                { modelId: CUBE_MODEL_ID, fileName: 'cube.stl', filament: 'PETG', color: 'white', quality: 'high', quantity: 1 }
+            ],
+            expectedTotalChf: 17.85
         });
         expect(component.state()).toBe('placed');
         expect(component.order()?.orderNumber).toBe('POD-1000');
-        expect(cart.item()).toBeNull();
-        expect(navigateByUrl).toHaveBeenCalledWith('/pay/mock?session=mock_1&order=POD-1000&amount=20.00&currency=CHF');
+        expect(cart.isEmpty()).toBe(true);
+        expect(navigateByUrl).toHaveBeenCalledWith('/pay/mock?session=mock_1&order=POD-1000&amount=26.85&currency=CHF');
         expect(JSON.parse(sessionStorage.getItem(LAST_ORDER_STORAGE_KEY) ?? '{}')).toEqual({
             orderNumber: 'POD-1000',
             email: 'anna@example.com'
         });
+
+        fixture.detectChanges();
+        const placed = (fixture.nativeElement as HTMLElement).querySelector('.placed');
+        expect(placed?.querySelectorAll('.item-list li')).toHaveLength(2);
+        expect(placed?.textContent).toContain('CHF 26.85');
     });
 
-    it('shows backend field errors next to the form', () => {
-        cart.set(cartItem());
-        create();
+    it('shows backend field errors next to the form, nested or flat', async () => {
+        cart.add(benchy());
+        await create();
         fillAddress();
         placeOrder.mockReturnValueOnce(
-            throwError(() => new HttpErrorResponse({ status: 400, error: { errors: { postalCode: 'must not be blank' } } }))
+            throwError(() => new HttpErrorResponse({
+                status: 400,
+                error: { errors: { 'customer.postalCode': 'must not be blank', 'customer.name': 'too long', 'items[0].quantity': 'must be at most 20' } }
+            }))
         );
 
         component.submit();
 
         expect(component.state()).toBe('idle');
         expect(component.fieldError('postalCode')).toBe('must not be blank');
+        expect(component.fieldError('customerName')).toBe('too long');
+        expect(component.itemErrors()).toEqual(['items[0].quantity: must be at most 20']);
         expect(component.errorMessage()).toContain('markierten Felder');
     });
 
-    it('asks the customer to accept a recomputed price and then orders with it', () => {
-        cart.set(cartItem());
-        create();
+    it('asks the customer to accept recomputed prices and then orders with them', async () => {
+        cart.add(benchy());
+        cart.add(cube());
+        await create();
         fillAddress();
-        const newQuote = { ...quote, totalPriceChf: 12.5 };
         placeOrder.mockReturnValueOnce(
-            throwError(() => new HttpErrorResponse({ status: 409, error: { currentQuote: newQuote } }))
+            throwError(() => new HttpErrorResponse({
+                status: 409,
+                error: {
+                    code: 'price-changed',
+                    currentQuotes: [{ ...quote, totalPriceChf: 12.5 }, cubeQuote],
+                    totals: { itemsTotal: 19.35, shipping: 9, vatRate: 0, vatAmount: 0, total: 28.35, currency: 'CHF' }
+                }
+            }))
         );
 
         component.submit();
-        expect(component.priceChangedTo()).toBe(12.5);
-        expect(component.itemsTotal()).toBe(12.5);
+        expect(component.priceChangedTo()).toBe(28.35);
+        expect(component.itemsTotal()).toBe(19.35);
+        expect(cart.items()[0].quote.totalPriceChf).toBe(12.5);
         expect(component.state()).toBe('idle');
 
         component.acceptNewPrice();
         expect(placeOrder).toHaveBeenCalledTimes(2);
-        expect(placeOrder.mock.calls[1][1].expectedTotalChf).toBe(12.5);
+        expect(sentRequest(1).expectedTotalChf).toBe(19.35);
         expect(component.state()).toBe('placed');
     });
 
-    it('explains rate limits like the upload page does', () => {
-        cart.set(cartItem());
-        create();
+    it('uploads an expired model again and retries the order once', async () => {
+        cart.add(benchy());
+        cart.add(cube());
+        await create();
+        fillAddress();
+        placeOrder.mockReturnValueOnce(
+            throwError(() => new HttpErrorResponse({ status: 404, error: { code: 'model-expired', itemIndex: 1 } }))
+        );
+
+        component.submit();
+
+        expect(uploadModel).toHaveBeenCalledTimes(1);
+        expect((uploadModel.mock.calls[0][0] as File).name).toBe('cube.stl');
+        expect(placeOrder).toHaveBeenCalledTimes(2);
+        expect(sentRequest(1).items.map((item) => item.modelId)).toEqual([MODEL_ID, FRESH_MODEL_ID]);
+        expect(component.state()).toBe('placed');
+    });
+
+    it('names the model when it expires again after the re-upload', async () => {
+        cart.add(benchy());
+        await create();
+        fillAddress();
+        placeOrder.mockReturnValue(
+            throwError(() => new HttpErrorResponse({ status: 404, error: { code: 'model-expired', itemIndex: 0 } }))
+        );
+
+        component.submit();
+
+        expect(uploadModel).toHaveBeenCalledTimes(1);
+        expect(placeOrder).toHaveBeenCalledTimes(2);
+        expect(component.state()).toBe('idle');
+        expect(component.errorMessage()).toContain('benchy.stl');
+        expect(cart.items()).toHaveLength(1);
+    });
+
+    it('reports when the re-upload itself fails', async () => {
+        cart.add(benchy());
+        await create();
+        fillAddress();
+        placeOrder.mockReturnValueOnce(
+            throwError(() => new HttpErrorResponse({ status: 404, error: { code: 'model-expired', itemIndex: 0 } }))
+        );
+        uploadModel.mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 503 })));
+
+        component.submit();
+
+        expect(placeOrder).toHaveBeenCalledTimes(1);
+        expect(component.state()).toBe('idle');
+        expect(component.errorMessage()).toContain('benchy.stl');
+    });
+
+    it('explains rate limits like the upload page does', async () => {
+        cart.add(benchy());
+        await create();
         fillAddress();
         placeOrder.mockReturnValueOnce(
             throwError(() => new HttpErrorResponse({ status: 429, error: { retryAfterSeconds: 30 } }))

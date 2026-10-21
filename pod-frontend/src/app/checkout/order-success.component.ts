@@ -5,7 +5,6 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subscription, map, timer } from 'rxjs';
 import { OrderResponse } from '../order/order.models';
 import { OrderService, recallLastOrder } from '../order/order.service';
-import { formatPrintDuration } from '../upload/upload.component';
 
 /** How often and how long the page waits for the provider's confirmation to arrive. */
 export const CONFIRMATION_POLL_MS = 2000;
@@ -39,7 +38,7 @@ export class OrderSuccessComponent {
     readonly orderNumber = computed(() => this.query().order);
     readonly state = signal<SuccessState>('loading');
     readonly order = signal<OrderResponse | null>(null);
-    readonly printTimeLabel = computed(() => formatPrintDuration(this.order()?.totalPrintTimeSeconds ?? 0));
+    readonly items = computed(() => this.order()?.items ?? []);
 
     constructor() {
         // sessionStorage and polling exist in the browser only; the route is prerendered too.

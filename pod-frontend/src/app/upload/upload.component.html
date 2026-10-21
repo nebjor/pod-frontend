@@ -218,19 +218,43 @@
                         <strong>{{ orderForm.controls.quantity.value }}</strong>
                     </p>
 
-                    <div class="checkout-actions">
-                        <button type="button" class="order-btn ghost-btn" [disabled]="!canSubmitOrder()"
-                            (click)="onAddToCartAndUploadAnother()">
-                            In den Warenkorb + weiteres Modell hochladen
-                        </button>
-                        <button type="button" class="order-btn" [disabled]="!canSubmitOrder()"
-                            (click)="onDirectCheckout()">
-                            Direkt bestellen
-                        </button>
-                    </div>
+                    @if (addedItem(); as added) {
+                        <div class="cart-added" role="status">
+                            <p class="cart-note">
+                                <strong>{{ added.fileName }}</strong> liegt im Warenkorb:
+                                {{ cartItemCount() }} Modell(e), {{ cartCount() }} Stueck,
+                                {{ cartCurrency() }} {{ cartTotal() | number:'1.2-2' }}.
+                            </p>
+                            <div class="checkout-actions">
+                                <button type="button" class="order-btn ghost-btn" (click)="onUploadAnother()">
+                                    Weiteres Modell
+                                </button>
+                                <a class="order-btn ghost-btn link-btn" routerLink="/warenkorb">Zum Warenkorb</a>
+                                <a class="order-btn link-btn" routerLink="/checkout">Zur Kasse</a>
+                            </div>
+                        </div>
+                    } @else {
+                        <div class="checkout-actions">
+                            <button type="button" class="order-btn ghost-btn" [disabled]="!canAddToCart()"
+                                (click)="onAddToCart()">
+                                In den Warenkorb
+                            </button>
+                            <button type="button" class="order-btn" [disabled]="!canAddToCart()"
+                                (click)="onDirectCheckout()">
+                                Direkt bestellen
+                            </button>
+                        </div>
+                    }
 
-                    @if (cartNotice()) {
-                        <p class="cart-note">{{ cartNotice() }}</p>
+                    @if (cartIsFull()) {
+                        <p class="cart-note">
+                            Der Warenkorb ist voll: maximal {{ maxCartItems }} Modelle pro Bestellung.
+                            <a routerLink="/warenkorb">Zum Warenkorb</a>
+                        </p>
+                    } @else if (!addedItem() && cartItemCount() > 0) {
+                        <p class="cart-note">
+                            {{ cartItemCount() }} Modell(e) im Warenkorb. <a routerLink="/warenkorb">Zum Warenkorb</a>
+                        </p>
                     }
                 </section>
             </section>

@@ -59,8 +59,8 @@ describe('AdminApiService with the auth interceptor', () => {
         change.flush({ orderNumber: 'POD-1000', status: 'PRINTING' });
 
         let blob: Blob | undefined;
-        api.downloadModel('POD-1000').subscribe((b) => (blob = b));
-        const download = http.expectOne('/api/admin/orders/POD-1000/model');
+        api.downloadModel('POD-1000', 2).subscribe((b) => (blob = b));
+        const download = http.expectOne('/api/admin/orders/POD-1000/items/2/model');
         expect(download.request.responseType).toBe('blob');
         download.flush(new Blob(['solid x']));
         expect(blob?.size).toBe(7);
