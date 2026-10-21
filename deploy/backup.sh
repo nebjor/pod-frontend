@@ -15,7 +15,7 @@ KEEP_DAYS=${KEEP_DAYS:-14}
 stamp=$(date +%Y%m%d-%H%M%S)
 mkdir -p "$BACKUP_DIR"
 
-docker compose -f docker-compose.prod.yml exec -T postgres \
+docker compose exec -T postgres \
     pg_dump -U "${DB_USERNAME:-sliceruser}" "${DB_NAME:-slicercore}" \
     | gzip > "$BACKUP_DIR/db-$stamp.sql.gz"
 
