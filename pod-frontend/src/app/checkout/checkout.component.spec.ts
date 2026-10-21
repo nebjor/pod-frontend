@@ -34,7 +34,9 @@ const quote: QuoteResponse = {
     unitPriceChf: 3,
     totalPriceChf: 11,
     currency: 'CHF',
-    leadTimeDays: 3
+    leadTimeDays: 3,
+    warnings: [],
+    manifold: true
 };
 
 const cubeQuote: QuoteResponse = {

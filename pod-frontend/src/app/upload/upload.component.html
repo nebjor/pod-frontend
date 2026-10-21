@@ -196,6 +196,27 @@
                             Berechnet vom Slicer-Backend ({{ q.machineProfile }}, {{ q.layerHeightMm }} mm Schichthoehe).
                             Alle {{ q.quantity }} Stueck werden gemeinsam auf {{ q.plateCount }} Platte(n) angeordnet und als Batch gedruckt.
                         </p>
+                        @if (q.manifold === false) {
+                            <p class="manifold-note" role="note">
+                                Das Modell ist nicht wasserdicht (nicht manifold). Wir pruefen es vor dem Druck; es kann zu
+                                Rueckfragen kommen.
+                            </p>
+                        }
+                        @if (q.warnings.length > 0) {
+                            <div class="slicer-warnings">
+                                <button type="button" class="warnings-toggle" (click)="toggleWarnings()"
+                                    [attr.aria-expanded]="warningsOpen()">
+                                    Hinweise vom Slicer ({{ q.warnings.length }})
+                                </button>
+                                @if (warningsOpen()) {
+                                    <ul class="warnings-list">
+                                        @for (warning of q.warnings; track $index) {
+                                            <li>{{ warning }}</li>
+                                        }
+                                    </ul>
+                                }
+                            </div>
+                        }
                         </div>
                     }
                 </div>

@@ -1,38 +1,18 @@
 /**
- * Customer account API models (`/api/account`).
+ * Customer account API models (`/api/account`). Request and response shapes are aliases of
+ * the generated contract in `src/app/api/openapi.d.ts`; the error shapes below are
+ * hand-written: they are problem details, which the OpenAPI document does not describe.
  */
+import type { components } from '../api/openapi';
 
-// ---------------------------------------------------------------------------------------------
-// Hand-written account contract. The backend is built in parallel and the generated
-// `src/app/api/openapi.d.ts` does not carry these schemas yet; once it does, the interfaces in
-// this block are to be replaced by aliases of the generated ones (see order.models.ts).
-// ---------------------------------------------------------------------------------------------
+type Schemas = components['schemas'];
 
 /** The account as `GET /api/account`, `POST /api/account/sessions` and `PUT /api/account` return it. */
-export interface AccountResponse {
-    email: string;
-    name: string | null;
-    street: string | null;
-    postalCode: string | null;
-    city: string | null;
-    /** ISO 3166-1 alpha-2, e.g. CH */
-    country: string | null;
-    /** Format: date-time */
-    createdAt: string;
-    /** Format: date-time */
-    lastLoginAt: string;
-}
-
+export type AccountResponse = Schemas['AccountResponse'];
 /** Body of `PUT /api/account`. */
-export interface AccountAddressRequest {
-    name: string;
-    street: string;
-    postalCode: string;
-    city: string;
-    country: string;
-}
-
-// ---------------------------------------------------------------------------------------------
+export type AccountAddressRequest = Schemas['AccountUpdateRequest'];
+export type LoginLinkRequest = Schemas['LoginLinkRequest'];
+export type SessionRequest = Schemas['SessionRequest'];
 
 /**
  * Whether the browser holds a customer session. `unknown` until the first answer of

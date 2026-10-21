@@ -76,8 +76,14 @@
                         </thead>
                         <tbody>
                             @for (order of orders(); track order.orderNumber) {
-                                <tr [class.selected]="selectedNumber() === order.orderNumber" (click)="select(order.orderNumber)">
-                                    <td>{{ order.orderNumber }}</td>
+                                <tr [class.selected]="selectedNumber() === order.orderNumber"
+                                    [class.needs-inspection]="order.needsInspection" (click)="select(order.orderNumber)">
+                                    <td>
+                                        {{ order.orderNumber }}
+                                        @if (order.needsInspection) {
+                                            <span class="badge inspect" title="Slicer-Hinweise oder nicht wasserdicht: Modell vor dem Druck oeffnen">Pruefen</span>
+                                        }
+                                    </td>
                                     <td>{{ order.createdAt | date:'dd.MM.yyyy HH:mm' }}</td>
                                     <td>{{ order.customerName }}</td>
                                     <td class="num">{{ order.items.length }}</td>
@@ -99,6 +105,9 @@
                         <dl class="details">
                             <div><dt>Kunde</dt><dd>{{ order.customerName }}</dd></div>
                             <div><dt>E-Mail</dt><dd>{{ order.customerEmail }}</dd></div>
+                            @if (order.accountEmail) {
+                                <div><dt>Konto</dt><dd>{{ order.accountEmail }}</dd></div>
+                            }
                             <div><dt>Adresse</dt><dd>{{ order.street }}, {{ order.postalCode }} {{ order.city }} ({{ order.country }})</dd></div>
                             <div><dt>Bestellt</dt><dd>{{ order.createdAt | date:'dd.MM.yyyy HH:mm' }}</dd></div>
                             <div><dt>Bezahlt</dt><dd>{{ order.paidAt ? (order.paidAt | date:'dd.MM.yyyy HH:mm') : 'offen' }} @if (order.paymentProvider) { ({{ order.paymentProvider }}) }</dd></div>
@@ -139,6 +148,11 @@
                                         <td class="file" [title]="item.fileName">
                                             {{ item.fileName }}
                                             <span class="muted">({{ item.fileSizeBytes / 1048576 | number:'1.1-1' }} MB)</span>
+                                            @if (item.manifold === false) {
+                                                <span class="tag tag-danger">nicht wasserdicht</span>
+                                            } @else if (item.manifold === null) {
+                                                <span class="tag tag-muted">Mesh nicht geprueft</span>
+                                            }
                                         </td>
                                         <td>
                                             <!-- Legacy orders may carry a colour without hex; then only the label is shown. -->
@@ -159,6 +173,18 @@
                                             </button>
                                         </td>
                                     </tr>
+                                    @if (item.warnings.length > 0) {
+                                        <tr class="warnings-row">
+                                            <td></td>
+                                            <td colspan="8">
+                                                <ul class="warnings" [attr.aria-label]="'Slicer-Hinweise zu ' + item.fileName">
+                                                    @for (warning of item.warnings; track $index) {
+                                                        <li>{{ warning }}</li>
+                                                    }
+                                                </ul>
+                                            </td>
+                                        </tr>
+                                    }
                                 }
                             </tbody>
                         </table>

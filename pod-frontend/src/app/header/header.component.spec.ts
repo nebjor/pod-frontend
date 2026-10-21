@@ -29,7 +29,9 @@ const quote: QuoteResponse = {
     unitPriceChf: 3,
     totalPriceChf: 11,
     currency: 'CHF',
-    leadTimeDays: 3
+    leadTimeDays: 3,
+    warnings: [],
+    manifold: true
 };
 
 function item(name: string, quantity: number, totalPriceChf: number): NewCartItem {
