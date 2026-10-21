@@ -40,8 +40,10 @@ echo "frontend  $(git -C "$FRONTEND_REPO" log --oneline -1)"
 
 step "build and start"
 docker compose up -d --build --remove-orphans "${services[@]}"
-# The Caddyfile is a bind mount: an edited file does not restart the container, so reload it.
-docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile 2>/dev/null     && echo "caddy reloaded" || docker compose restart caddy
+# The Caddyfile is bind-mounted as a single file: when git replaces it the container keeps the
+# old inode, so neither a reload nor a restart sees the change. Recreating the container does
+# (about a second; the certificates live on a volume and are kept).
+docker compose up -d --force-recreate caddy
 
 step "waiting for the backend"
 for _ in $(seq 1 36); do
