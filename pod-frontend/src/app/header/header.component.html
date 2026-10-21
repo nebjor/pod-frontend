@@ -34,7 +34,7 @@
                                     <span class="swatch-dot" [style.background]="item.color.hex" aria-hidden="true"></span>
                                     <span class="preview-text">
                                         <span class="preview-name">{{ item.fileName }}</span>
-                                        <span class="preview-config">{{ item.quantity }} Stueck · {{ item.filament }} {{ item.color.label }}, {{ item.quality }}</span>
+                                        <span class="preview-config">{{ item.quantity }} Stueck · {{ item.filament }} {{ item.color.label }}, {{ qualityLabel(item.quality) }}</span>
                                     </span>
                                     <span class="preview-price">{{ item.quote.currency }} {{ item.quote.totalPriceChf | number:'1.2-2' }}</span>
                                 </li>

@@ -179,7 +179,8 @@ describe('HeaderComponent', () => {
             const rows = open?.querySelectorAll('.preview-item') ?? [];
             expect(rows.length).toBe(2);
             expect(rows[0].querySelector('.preview-name')?.textContent).toBe('part-1.stl');
-            expect(rows[0].querySelector('.preview-config')?.textContent?.trim()).toBe('1 Stueck · PLA Black, medium');
+            // The header has no catalogue; the quality still reads as a label, never as the code.
+            expect(rows[0].querySelector('.preview-config')?.textContent?.trim()).toBe('1 Stueck · PLA Black, Standard 0.20 mm');
             expect(rows[0].querySelector('.preview-price')?.textContent).toContain('CHF 10.00');
             expect((rows[0].querySelector('.swatch-dot') as HTMLElement).style.background).toContain('rgb(31, 31, 31)');
             expect(open?.querySelector('.preview-more')).toBeNull();
