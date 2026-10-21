@@ -8,9 +8,21 @@
         <section class="card placed" aria-live="polite">
             <h2>Danke, deine Bestellung ist eingegangen.</h2>
             <p class="order-number">Bestellnummer <strong>{{ o.orderNumber }}</strong></p>
+            <ul class="item-list">
+                @for (line of o.items; track line.position) {
+                    <li>
+                        <div class="item-line">
+                            <span class="item-name">{{ line.quantity }} x {{ line.fileName }}</span>
+                            <span class="item-price">{{ o.totals.currency }} {{ line.lineTotalChf | number:'1.2-2' }}</span>
+                        </div>
+                        <p class="item-config">
+                            <span class="swatch-dot" [style.background]="line.color.hex" aria-hidden="true"></span>
+                            {{ line.filament }} {{ line.color.label }} · {{ line.quality }}
+                        </p>
+                    </li>
+                }
+            </ul>
             <dl class="details">
-                <div><dt>Modell</dt><dd>{{ o.fileName }}</dd></div>
-                <div><dt>Konfiguration</dt><dd>{{ o.quantity }} x {{ o.filament }} {{ o.colorLabel }}, {{ o.quality }}</dd></div>
                 <div><dt>Positionen</dt><dd>{{ o.totals.currency }} {{ o.totals.itemsTotal | number:'1.2-2' }}</dd></div>
                 <div><dt>Versand</dt><dd>{{ o.totals.currency }} {{ o.totals.shipping | number:'1.2-2' }}</dd></div>
                 <div class="total"><dt>Gesamt</dt><dd>{{ o.totals.currency }} {{ o.totals.total | number:'1.2-2' }}</dd></div>
@@ -24,31 +36,43 @@
             </p>
             <a class="order-btn link-btn" routerLink="/upload">Weiteres Modell hochladen</a>
         </section>
-    } @else if (!item()) {
+    } @else if (!ready()) {
+        <section class="card" aria-live="polite">
+            <p class="status">Warenkorb wird geladen...</p>
+        </section>
+    } @else if (isEmpty()) {
         <section class="card empty">
             <p>Es liegt kein Modell im Warenkorb.</p>
             <a class="order-btn link-btn" routerLink="/upload">Modell hochladen und Preis erhalten</a>
         </section>
-    } @else if (item(); as cartItem) {
+    } @else {
         <section class="checkout-layout">
             <section class="card summary">
-                <h2>1. Dein Modell</h2>
+                <h2>1. Deine Modelle</h2>
+                <ul class="item-list" aria-label="Positionen">
+                    @for (item of items(); track item.id) {
+                        <li>
+                            <div class="item-line">
+                                <span class="item-name">{{ item.quantity }} x {{ item.fileName }}</span>
+                                <span class="item-price">{{ item.quote.currency }} {{ item.quote.totalPriceChf | number:'1.2-2' }}</span>
+                            </div>
+                            <p class="item-config">
+                                <span class="swatch-dot" [style.background]="item.color.hex" aria-hidden="true"></span>
+                                {{ item.filament }} {{ item.color.label }} · Qualitaet {{ item.quality }} ·
+                                Druckzeit {{ printTimeLabel(item) }}
+                            </p>
+                        </li>
+                    }
+                </ul>
+                <a class="edit-link" routerLink="/warenkorb">Warenkorb bearbeiten</a>
+                @for (message of itemErrors(); track message) {
+                    <p class="error" role="alert">{{ message }}</p>
+                }
+
                 <dl class="details">
-                    <div><dt>Datei</dt><dd>{{ cartItem.file.name }}</dd></div>
-                    <div><dt>Filament</dt><dd>{{ cartItem.filament }}</dd></div>
-                    <div>
-                        <dt>Farbe</dt>
-                        <dd>
-                            <span class="swatch-dot" [style.background]="cartItem.color.hex" aria-hidden="true"></span>
-                            {{ cartItem.color.label }}
-                        </dd>
-                    </div>
-                    <div><dt>Qualitaet</dt><dd>{{ cartItem.quality }}</dd></div>
-                    <div><dt>Menge</dt><dd>{{ cartItem.quantity }}</dd></div>
-                    <div><dt>Druckzeit gesamt</dt><dd>{{ printTimeLabel() }}</dd></div>
-                    <div><dt>Positionen</dt><dd>{{ settings().currency }} {{ itemsTotal() | number:'1.2-2' }}</dd></div>
-                    <div><dt>Versand (Pauschale)</dt><dd>{{ settings().currency }} {{ shipping() | number:'1.2-2' }}</dd></div>
-                    <div class="total"><dt>Gesamt</dt><dd>{{ settings().currency }} {{ total() | number:'1.2-2' }}</dd></div>
+                    <div><dt>Positionen ({{ items().length }})</dt><dd>{{ currency() }} {{ itemsTotal() | number:'1.2-2' }}</dd></div>
+                    <div><dt>Versand (Pauschale)</dt><dd>{{ currency() }} {{ shipping() | number:'1.2-2' }}</dd></div>
+                    <div class="total"><dt>Gesamt</dt><dd>{{ currency() }} {{ total() | number:'1.2-2' }}</dd></div>
                 </dl>
                 @if (!settings().vatEnabled) {
                     <p class="note">Keine MWST, da nicht MWST-pflichtig.</p>
@@ -104,15 +128,15 @@
                         </span>
                     </label>
                     <p class="note wide">
-                        Dein Teil wird individuell nach deinem Modell gefertigt. Eine Rückgabe ist deshalb
+                        Deine Teile werden individuell nach deinen Modellen gefertigt. Eine Rückgabe ist deshalb
                         ausgeschlossen; bis zum Produktionsstart kannst du per E-Mail stornieren.
                     </p>
 
                     @if (priceChangedTo() !== null) {
                         <div class="price-changed" role="alert">
                             <p>
-                                Der Preis wurde neu berechnet: <strong>{{ settings().currency }} {{ itemsTotal() | number:'1.2-2' }}</strong>
-                                fuer die Positionen, gesamt {{ settings().currency }} {{ total() | number:'1.2-2' }}.
+                                Der Preis wurde neu berechnet: <strong>{{ currency() }} {{ itemsTotal() | number:'1.2-2' }}</strong>
+                                fuer die Positionen, gesamt {{ currency() }} {{ priceChangedTo() | number:'1.2-2' }}.
                             </p>
                             <button type="button" class="order-btn" (click)="acceptNewPrice()">Neuen Preis annehmen und bestellen</button>
                         </div>

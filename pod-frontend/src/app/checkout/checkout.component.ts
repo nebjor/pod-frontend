@@ -3,22 +3,12 @@ import { ChangeDetectionStrategy, Component, DestroyRef, afterNextRender, comput
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { CartService } from '../cart/cart.service';
-import { OrderResponse, OrderSettings } from '../order/order.models';
+import { CartItem, CartService } from '../cart/cart.service';
+import { FALLBACK_ORDER_SETTINGS, OrderFailure, OrderRequest, OrderResponse, OrderSettings } from '../order/order.models';
 import { OrderService, describeOrderError, rememberLastOrder } from '../order/order.service';
-import { formatPrintDuration } from '../upload/upload.component';
+import { formatPrintDuration } from '../quote/print-duration';
 
 type CheckoutState = 'idle' | 'submitting' | 'placed';
-
-/** Used until `/api/orders/settings` has answered, and if it never does. */
-export const FALLBACK_ORDER_SETTINGS: OrderSettings = {
-    currency: 'CHF',
-    shippingFlatChf: 9,
-    vatEnabled: false,
-    vatRate: 0.081,
-    quoteValidityDays: 14,
-    shipToCountries: ['CH']
-};
 
 @Component({
     selector: 'app-checkout',
@@ -32,14 +22,18 @@ export class CheckoutComponent {
     private readonly orderService = inject(OrderService);
     private readonly router = inject(Router);
     private readonly destroyRef = inject(DestroyRef);
+    /** Lines uploaded again during the current submit; a second expiry of the same line is an error. */
+    private reuploaded = new Set<string>();
 
-    readonly item = this.cart.item;
+    readonly items = this.cart.items;
+    readonly ready = this.cart.ready;
+    readonly isEmpty = this.cart.isEmpty;
     readonly settings = signal<OrderSettings>(FALLBACK_ORDER_SETTINGS);
     readonly state = signal<CheckoutState>('idle');
     readonly order = signal<OrderResponse | null>(null);
     readonly errorMessage = signal('');
     readonly fieldErrors = signal<Record<string, string>>({});
-    /** Set when the backend recomputed a different price; the customer confirms before retrying. */
+    /** Set when the backend recomputed a different total; the customer confirms before retrying. */
     readonly priceChangedTo = signal<number | null>(null);
 
     readonly customerForm = new FormGroup({
@@ -52,12 +46,18 @@ export class CheckoutComponent {
         termsAccepted: new FormControl(false, { nonNullable: true, validators: [Validators.requiredTrue] })
     });
 
-    readonly itemsTotal = computed(() => this.item()?.quote.totalPriceChf ?? 0);
+    readonly itemsTotal = this.cart.itemsTotal;
+    readonly currency = this.cart.currency;
     readonly shipping = computed(() => this.settings().shippingFlatChf);
-    readonly total = computed(() => Math.round((this.itemsTotal() + this.shipping()) * 20) / 20);
-    readonly printTimeLabel = computed(() => formatPrintDuration(this.item()?.quote.totalPrintTimeSeconds ?? 0));
+    readonly total = computed(() => Math.round((this.itemsTotal() + this.shipping()) * 100) / 100);
     /** Calendar day until which the placed order keeps its price (ISO date, timezone-neutral). */
     readonly priceValidUntil = computed(() => this.order()?.quoteExpiresAt.slice(0, 10) ?? '');
+    /** Validation messages the backend attached to cart lines rather than address fields. */
+    readonly itemErrors = computed(() =>
+        Object.entries(this.fieldErrors())
+            .filter(([field]) => field.startsWith('items'))
+            .map(([field, message]) => `${field}: ${message}`)
+    );
 
     constructor() {
         afterNextRender(() => {
@@ -73,13 +73,22 @@ export class CheckoutComponent {
         });
     }
 
+    /**
+     * The backend may key address errors by the request's nested field (`customer.name`) or by
+     * the flat name the form uses; both are shown next to the input.
+     */
     fieldError(field: string): string {
-        return this.fieldErrors()[field] ?? '';
+        const errors = this.fieldErrors();
+        const keys = field === 'customerName' ? ['customer.name', 'customerName', 'name'] : [`customer.${field}`, field];
+        return keys.map((key) => errors[key]).find((message) => !!message) ?? '';
+    }
+
+    printTimeLabel(item: CartItem): string {
+        return formatPrintDuration(item.quote.totalPrintTimeSeconds);
     }
 
     submit() {
-        const item = this.item();
-        if (!item || this.state() === 'submitting') {
+        if (this.isEmpty() || this.state() === 'submitting') {
             return;
         }
         if (this.customerForm.invalid) {
@@ -91,51 +100,95 @@ export class CheckoutComponent {
         this.errorMessage.set('');
         this.fieldErrors.set({});
         this.priceChangedTo.set(null);
-
-        const { termsAccepted: _accepted, ...customer } = this.customerForm.getRawValue();
-        this.orderService
-            .placeOrder(item.file, {
-                ...customer,
-                filament: item.filament,
-                color: item.color.code,
-                quality: item.quality,
-                quantity: item.quantity,
-                expectedTotalChf: item.quote.totalPriceChf
-            })
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe({
-                next: (order) => {
-                    this.order.set(order);
-                    this.state.set('placed');
-                    this.cart.clear();
-                    rememberLastOrder({ orderNumber: order.orderNumber, email: order.customerEmail });
-                    if (order.paymentUrl) {
-                        this.goToPayment(order.paymentUrl);
-                    }
-                },
-                error: (error: unknown) => {
-                    this.state.set('idle');
-                    const failure = describeOrderError(error);
-                    switch (failure.kind) {
-                        case 'price-changed':
-                            this.cart.updateQuote(failure.currentQuote);
-                            this.priceChangedTo.set(failure.currentQuote.totalPriceChf);
-                            break;
-                        case 'field-errors':
-                            this.fieldErrors.set(failure.errors);
-                            this.errorMessage.set('Bitte pruefe die markierten Felder.');
-                            break;
-                        default:
-                            this.errorMessage.set(failure.message);
-                    }
-                }
-            });
+        this.reuploaded = new Set();
+        this.send();
     }
 
-    /** The customer accepted the recomputed price; the cart already holds the new quote. */
+    /** The customer accepted the recomputed price; the cart already holds the new quotes. */
     acceptNewPrice() {
         this.priceChangedTo.set(null);
         this.submit();
+    }
+
+    private send() {
+        const items = this.items();
+        const { termsAccepted: _accepted, customerName, ...address } = this.customerForm.getRawValue();
+        const request: OrderRequest = {
+            customer: { name: customerName, ...address },
+            items: items.map((item) => ({
+                modelId: item.modelId,
+                fileName: item.fileName,
+                filament: item.filament,
+                color: item.color.code,
+                quality: item.quality,
+                quantity: item.quantity
+            })),
+            expectedTotalChf: this.itemsTotal()
+        };
+
+        this.orderService
+            .placeOrder(request)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: (order) => this.placed(order),
+                error: (error: unknown) => this.failed(describeOrderError(error), items)
+            });
+    }
+
+    private placed(order: OrderResponse) {
+        this.order.set(order);
+        this.state.set('placed');
+        this.cart.clear();
+        rememberLastOrder({ orderNumber: order.orderNumber, email: order.customerEmail });
+        if (order.paymentUrl) {
+            this.goToPayment(order.paymentUrl);
+        }
+    }
+
+    private failed(failure: OrderFailure, sent: ReadonlyArray<CartItem>) {
+        switch (failure.kind) {
+            case 'model-expired': {
+                const item = failure.itemIndex === null ? undefined : sent[failure.itemIndex];
+                if (item && this.cart.find(item.id) && !this.reuploaded.has(item.id)) {
+                    // The backend dropped this model: upload it once more and send the order again.
+                    this.reuploaded.add(item.id);
+                    this.cart
+                        .reuploadModel(item.id)
+                        .pipe(takeUntilDestroyed(this.destroyRef))
+                        .subscribe({ next: () => this.send(), error: () => this.failExpired(item) });
+                    return;
+                }
+                this.failExpired(item);
+                break;
+            }
+            case 'price-changed':
+                sent.forEach((item, index) => {
+                    const quote = failure.currentQuotes[index];
+                    if (quote) {
+                        this.cart.replaceQuote(item.id, quote);
+                    }
+                });
+                this.priceChangedTo.set(failure.totals.total);
+                this.state.set('idle');
+                break;
+            case 'field-errors':
+                this.fieldErrors.set(failure.errors);
+                this.errorMessage.set('Bitte pruefe die markierten Felder.');
+                this.state.set('idle');
+                break;
+            default:
+                this.errorMessage.set(failure.message);
+                this.state.set('idle');
+        }
+    }
+
+    private failExpired(item: CartItem | undefined) {
+        this.state.set('idle');
+        this.errorMessage.set(
+            item
+                ? `Das Modell ${item.fileName} ist auf dem Server abgelaufen und konnte nicht erneut hochgeladen werden. Bitte entferne es aus dem Warenkorb und lade es neu hoch.`
+                : 'Ein Modell ist auf dem Server abgelaufen. Bitte lade es neu hoch.'
+        );
     }
 
     /**

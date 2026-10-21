@@ -75,18 +75,32 @@ filament by `GET /api/quotes/options`. The upload page shows them as swatches, t
 preview and sends the chosen `color`; the backend rejects colours not stocked for the filament.
 Colour never changes the slice or the price, so switching it is always a cache hit.
 
+## Cart
+`/warenkorb` lists the models the customer configured. "In den Warenkorb" on the upload page
+adds the model as a line (file, model id, filament, colour, quality, quantity and the quote
+the backend gave); the header shows pieces and total and links to the cart. On the cart page
+a changed quantity asks the backend for a new quote for that line; an order holds at most 10
+lines and the catalogue's `maxQuantity` per line.
+
+The cart survives a reload of the tab: line metadata and quotes live in `sessionStorage`
+(`pod.cart`), the model files in IndexedDB (`pod-cart`), so an expired model can be uploaded
+again without asking the customer. Both are read after the first render in the browser; the
+server renders an empty cart. A line whose file is missing from IndexedDB is dropped.
+
 ## Orders API
-The checkout page turns the quote into an order. The backend recomputes the price from the
-uploaded model (the customer's number is only checked), stores the model under a UUID in the
+The checkout page turns the cart into an order. The backend recomputes every price from the
+uploaded models (the customer's number is only checked), stores the models under UUIDs in the
 `order_files` volume and keeps the full price breakdown on the order.
 
 | Endpoint | Purpose |
 |---|---|
-| `POST /api/orders` (multipart: `file`, print parameters, `expectedTotalChf`, customer fields) | Place an order, `201` with the order |
+| `POST /api/orders` (JSON: `customer`, `items[]` with `modelId` from `POST /api/models`, `expectedTotalChf`) | Place an order, `201` with the order |
 | `GET /api/orders/settings` | Shipping flat rate, VAT switch, quote validity, shipping countries |
 | `GET /api/orders/{number}?email=` | Look up an order with the customer's e-mail |
 
-`400` carries an `errors` map per field, `409` the recomputed quote when the price changed.
+`400` carries an `errors` map per field, `404` with `code: model-expired` and `itemIndex` names
+a model the backend no longer keeps (the checkout uploads it again and retries once), `409`
+carries the recomputed quotes (`currentQuotes`) and `totals` when the price changed.
 
 ### Payment
 Placing an order starts a payment session; the response carries `paymentUrl` and the checkout
@@ -99,7 +113,8 @@ Commercial settings live in the backend `application.yml` under `orders.*` (ship
 VAT off, 14 days price validity, 90 days retention, shipping to CH).
 
 ```powershell
-curl.exe -F "file=@public/3DBenchy.stl" -F "filament=PLA" -F "color=red" -F "quality=medium" -F "quantity=2" -F "expectedTotalChf=11.00" -F "customerName=Anna Muster" -F "email=anna@example.com" -F "street=Bahnhofstrasse 1" -F "postalCode=8001" -F "city=Zuerich" -F "country=CH" http://localhost:8080/api/orders
+curl.exe -F "file=@public/3DBenchy.stl" http://localhost:8080/api/models   # take modelId from the answer
+curl.exe -H "Content-Type: application/json" -d '{"customer":{"name":"Anna Muster","email":"anna@example.com","street":"Bahnhofstrasse 1","postalCode":"8001","city":"Zuerich","country":"CH"},"items":[{"modelId":"<modelId>","fileName":"3DBenchy.stl","filament":"PLA","color":"red","quality":"medium","quantity":2}],"expectedTotalChf":11.00}' http://localhost:8080/api/orders
 ```
 
 ### Protection against runaway slicing

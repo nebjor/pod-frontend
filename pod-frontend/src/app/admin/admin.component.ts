@@ -4,7 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { OrderStatus } from '../order/order.models';
 import { describeQuoteError } from '../quote/quote.service';
-import { formatPrintDuration } from '../upload/upload.component';
+import { formatPrintDuration } from '../quote/print-duration';
 import { AdminApiService, AdminOrder } from './admin-api.service';
 import { AdminAuthService } from './admin-auth.service';
 
