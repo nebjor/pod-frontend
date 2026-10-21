@@ -66,7 +66,7 @@ describe('AdminApiService with the auth interceptor', () => {
         expect(blob?.size).toBe(7);
     });
 
-    it('reads the calibration report and queue with the owner credentials', () => {
+    it('reads the calibration report with the owner credentials', () => {
         auth.login('admin', 'secret');
 
         api.getCalibrationReport().subscribe();
@@ -74,12 +74,6 @@ describe('AdminApiService with the auth interceptor', () => {
         expect(report.request.method).toBe('GET');
         expect(report.request.headers.get('Authorization')).toBe('Basic ' + btoa('admin:secret'));
         report.flush({ models: 0, rows: 0 });
-
-        api.getCalibrationQueue().subscribe();
-        const queue = http.expectOne('/api/admin/calibration/queue');
-        expect(queue.request.method).toBe('GET');
-        expect(queue.request.headers.get('Authorization')).toBe('Basic ' + btoa('admin:secret'));
-        queue.flush([]);
     });
 
     it('lists the stored slice rows with a limit and an optional source', () => {
@@ -98,22 +92,6 @@ describe('AdminApiService with the auth interceptor', () => {
         expect(quotes.request.params.get('limit')).toBe('50');
         expect(quotes.request.params.get('source')).toBe('quote');
         quotes.flush([]);
-    });
-
-    it('enqueues an order line and starts a pass now', () => {
-        auth.login('admin', 'secret');
-
-        api.enqueueCalibration('POD-1000', 2).subscribe();
-        const enqueue = http.expectOne('/api/admin/calibration/queue/order/POD-1000/2');
-        expect(enqueue.request.method).toBe('POST');
-        expect(enqueue.request.headers.get('Authorization')).toBe('Basic ' + btoa('admin:secret'));
-        enqueue.flush(null, { status: 202, statusText: 'Accepted' });
-
-        api.runCalibrationNow().subscribe();
-        const run = http.expectOne('/api/admin/calibration/run-now');
-        expect(run.request.method).toBe('POST');
-        expect(run.request.headers.get('Authorization')).toBe('Basic ' + btoa('admin:secret'));
-        run.flush(null, { status: 202, statusText: 'Accepted' });
     });
 
     it('downloads the calibration rows as a CSV blob', () => {

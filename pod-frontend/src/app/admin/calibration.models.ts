@@ -114,21 +114,6 @@ export interface SliceCalibrationRow {
     orderNumber: string | null;
 }
 
-/** One entry of the calibration work queue (last 50, newest first). */
-export interface CalibrationQueueEntry {
-    id: number | string;
-    modelName: string;
-    source: string;
-    orderNumber: string | null;
-    queuedAt: string;
-    /** Null while the entry still waits for the next pass. */
-    startedAt: string | null;
-    /** Null while the entry runs or waits. */
-    finishedAt: string | null;
-    /** Set when the pass failed for this entry. */
-    error: string | null;
-}
-
 /* ------------------------------ end of hand-written types ----------------------------------- */
 
 export const SLICE_SOURCE_LABELS: Record<SliceSource, string> = {

@@ -11,8 +11,6 @@ type Schemas = components['schemas'];
 export type AccountResponse = Schemas['AccountResponse'];
 /** Body of `PUT /api/account`. */
 export type AccountAddressRequest = Schemas['AccountUpdateRequest'];
-export type LoginLinkRequest = Schemas['LoginLinkRequest'];
-export type SessionRequest = Schemas['SessionRequest'];
 
 /**
  * Whether the browser holds a customer session. `unknown` until the first answer of

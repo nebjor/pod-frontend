@@ -38,7 +38,9 @@ Available sample files:
 - `/workspace/public/3DBenchy.3mf`
 - `/workspace/public/3DBenchy.glb`
 
-Note: the current backend slicing service is wired for STL and 3MF input paths. GLB is mounted for inspection, but not part of the current Java slicing path.
+Only the GLB is part of the shop (the landing page renders it); the STL and 3MF are kept for
+the curl examples below and the backend's real-slicer test, and `angular.json` leaves them out
+of the build so they do not ship in the production image.
 
 ## API contract and generated models
 
@@ -60,7 +62,6 @@ backend (`proxy.conf.js`, target from `BACKEND_URL`), so no CORS configuration i
 | Endpoint | Purpose |
 |---|---|
 | `POST /api/quotes` (multipart: `file`, `filament`, `color`, `quality`, `quantity`) | Quote an uploaded STL/3MF |
-| `GET /api/quotes/sample?fileName=3DBenchy.stl&filament=PLA&quality=medium&quantity=1` | Quote a bundled sample model |
 | `GET /api/quotes/options` | Filaments, qualities and limits the backend accepts |
 
 Supported values: filament `PLA` or `PETG`, quality `coarse` (0.24 mm), `medium` (0.20 mm), `high` (0.12 mm),

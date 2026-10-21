@@ -67,6 +67,118 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/calibration/queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["queue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/calibration/queue/{modelId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["queueStoredModel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/calibration/queue/order/{orderNumber}/{position}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["queueOrderItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/calibration/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["report"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/calibration/rows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["rows"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/calibration/rows.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["rowsCsv"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/calibration/run-now": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["runNow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/orders": {
         parameters: {
             query?: never;
@@ -275,22 +387,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/quotes/sample": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["quoteSample"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -374,6 +470,16 @@ export interface components {
             street: string;
             totals: components["schemas"]["OrderTotals"];
         };
+        ArithmeticError: {
+            /** Format: double */
+            maxAbsPercent: number | null;
+            /** Format: double */
+            meanAbsPercent: number | null;
+            /** Format: double */
+            meanPercent: number | null;
+            /** Format: int32 */
+            n: number;
+        };
         BoundingBox: {
             /** Format: double */
             depthMm: number;
@@ -382,12 +488,96 @@ export interface components {
             /** Format: double */
             widthMm: number;
         };
+        CalibratedModel: {
+            bbox: components["schemas"]["BoundingBox"];
+            /** Format: int32 */
+            cells: number;
+            /** Format: date-time */
+            measuredAt: string;
+            modelName: string;
+            modelSha256: string;
+            orderNumber: string | null;
+            /** @enum {string} */
+            source: "quote" | "order" | "manual";
+            /** Format: int32 */
+            triangleCount: number;
+        };
+        CalibrationQueueResponse: {
+            /** Format: int32 */
+            cellsWritten: number;
+            /** @description Why the model yielded no row; null unless the status is failed */
+            error: string | null;
+            /** Format: date-time */
+            finishedAt: string | null;
+            /** Format: uuid */
+            id: string;
+            modelName: string;
+            modelSha256: string;
+            orderNumber: string | null;
+            /** Format: date-time */
+            queuedAt: string;
+            /** @enum {string} */
+            source: "quote" | "order" | "manual";
+            /** Format: date-time */
+            startedAt: string | null;
+            /** @enum {string} */
+            status: "queued" | "running" | "done" | "failed";
+        };
+        CalibrationReport: {
+            arithmeticError: {
+                [key: string]: components["schemas"]["ArithmeticError"];
+            };
+            calibratedModels: components["schemas"]["CalibratedModel"][];
+            configured: components["schemas"]["Configured"];
+            lengthFactor: {
+                [key: string]: {
+                    [key: string]: components["schemas"]["CalibrationStats"];
+                };
+            };
+            /** Format: int32 */
+            models: number;
+            quantity: {
+                [key: string]: components["schemas"]["QuantityStats"];
+            };
+            /** Format: int64 */
+            rows: number;
+            sources: {
+                [key: string]: number;
+            };
+            timeFactor: {
+                [key: string]: {
+                    [key: string]: components["schemas"]["CalibrationStats"];
+                };
+            };
+        };
+        CalibrationStats: {
+            /** Format: double */
+            max: number | null;
+            /** Format: double */
+            mean: number | null;
+            /** Format: double */
+            median: number | null;
+            /** Format: double */
+            min: number | null;
+            /** Format: int32 */
+            n: number;
+        };
         ColorOption: {
             code: string;
             hex: string;
             label: string;
             /** Format: double */
             pricePerKgChf: number;
+        };
+        Configured: {
+            lengthFactor: {
+                [key: string]: number;
+            };
+            /** Format: double */
+            plateOverheadSeconds: number;
+            timeFactor: {
+                [key: string]: number;
+            };
         };
         CustomerDetails: {
             city: string;
@@ -491,6 +681,12 @@ export interface components {
             layerHeightMm: number;
             profileName: string;
         };
+        QuantityStats: {
+            /** Format: int32 */
+            n: number;
+            perCopyRatio: components["schemas"]["CalibrationStats"];
+            plateOverheadSeconds: components["schemas"]["CalibrationStats"];
+        };
         QuoteOptions: {
             filaments: components["schemas"]["FilamentOption"][];
             /** Format: int32 */
@@ -542,6 +738,41 @@ export interface components {
         };
         SessionRequest: {
             token: string;
+        };
+        SliceCalibrationRow: {
+            bbox: components["schemas"]["BoundingBox"];
+            /** Format: int32 */
+            copies: number;
+            /** Format: int64 */
+            durationMs: number;
+            filament: string;
+            /** Format: double */
+            filamentGrams: number;
+            /** Format: double */
+            filamentLengthMm: number;
+            /** Format: uuid */
+            id: string;
+            /** @description The manifold check of a single copy; null for batches and when the check failed */
+            manifold: boolean | null;
+            /** Format: date-time */
+            measuredAt: string;
+            modelName: string;
+            modelSha256: string;
+            /** Format: int64 */
+            modelSizeBytes: number;
+            orderNumber: string | null;
+            /** Format: int32 */
+            plates: number;
+            /** Format: int32 */
+            printSeconds: number;
+            quality: string;
+            slicerVersion: string | null;
+            /** @enum {string} */
+            source: "quote" | "order" | "manual";
+            /** Format: int32 */
+            triangleCount: number;
+            /** Format: int32 */
+            warningsCount: number;
         };
         StatusChange: {
             /** @enum {string} */
@@ -705,6 +936,158 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    queue: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CalibrationQueueResponse"][];
+                };
+            };
+        };
+    };
+    queueStoredModel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                modelId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CalibrationQueueResponse"];
+                };
+            };
+        };
+    };
+    queueOrderItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderNumber: string;
+                position: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CalibrationQueueResponse"];
+                };
+            };
+        };
+    };
+    report: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CalibrationReport"];
+                };
+            };
+        };
+    };
+    rows: {
+        parameters: {
+            query?: {
+                limit?: number;
+                source?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SliceCalibrationRow"][];
+                };
+            };
+        };
+    };
+    rowsCsv: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+        };
+    };
+    runNow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": {
+                        [key: string]: unknown;
+                    };
+                };
             };
         };
     };
@@ -1016,32 +1399,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["QuoteOptions"];
-                };
-            };
-        };
-    };
-    quoteSample: {
-        parameters: {
-            query: {
-                color?: string;
-                filament?: string;
-                fileName: string;
-                quality?: string;
-                quantity?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["QuoteResponse"];
                 };
             };
         };

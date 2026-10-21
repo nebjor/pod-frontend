@@ -10,11 +10,8 @@ type Schemas = components['schemas'];
 
 export type OrderStatus = Schemas['OrderResponse']['status'];
 export type OrderSettings = Schemas['OrderSettingsResponse'];
-export type OrderCustomer = Schemas['CustomerDetails'];
-/** One cart line as the backend expects it; the model is referenced by the id `POST /api/models` returned. */
-export type OrderItemRequest = Schemas['OrderItemRequest'];
+/** The order as the backend expects it; each item references the id `POST /api/models` returned. */
 export type OrderRequest = Schemas['OrderRequest'];
-export type OrderItemResponse = Schemas['OrderItemResponse'];
 export type OrderTotals = Schemas['OrderTotals'];
 /** The order as `POST /api/orders` and `GET /api/orders/{orderNumber}?email=` return it. */
 export type OrderResponse = Schemas['OrderResponse'];

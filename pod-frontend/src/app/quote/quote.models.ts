@@ -12,7 +12,6 @@ import type { components } from '../api/openapi';
 type Schemas = components['schemas'];
 
 export type ColorOption = Schemas['ColorOption'];
-export type BoundingBoxMm = Schemas['BoundingBox'];
 export type QuoteResponse = Schemas['QuoteResponse'];
 export type FilamentOption = Schemas['FilamentOption'];
 export type QualityOption = Schemas['QualityOption'];
