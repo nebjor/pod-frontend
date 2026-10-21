@@ -53,6 +53,8 @@ services:
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-slicercore}
       ORDER_FILES_DIR: /data/order-files
+      # Manually queued calibration models live next to the order files, so they survive a redeploy.
+      CALIBRATION_DIR: /data/order-files/calibration
       PUBLIC_BASE_URL: https://${SITE_ADDRESS:-3dburg.ch}
       # Caddy overwrites X-Forwarded-For, so the rate limiter may trust it.
       RATE_LIMIT_TRUST_FORWARDED_HEADERS: "true"
