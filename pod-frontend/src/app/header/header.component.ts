@@ -3,11 +3,13 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { Router, RouterLink } from '@angular/router';
+import { AccountService } from '../account/account.service';
 import { CartService } from '../cart/cart.service';
 
 /**
  * Shared by the shop and the admin host. The cart indicator reads the cart, which is empty
- * on the admin host (nothing there can fill it), so it does not show up there.
+ * on the admin host (nothing there can fill it), so it does not show up there. The account
+ * link stays blank until the session is known, so a signed-in customer never sees "Anmelden".
  */
 @Component({
     selector: 'app-header',
@@ -19,7 +21,9 @@ import { CartService } from '../cart/cart.service';
 export class HeaderComponent {
     private readonly router = inject(Router);
     private readonly cart = inject(CartService);
+    private readonly account = inject(AccountService);
 
+    readonly accountState = this.account.state;
     readonly cartIsEmpty = this.cart.isEmpty;
     readonly cartCount = this.cart.count;
     readonly cartTotal = this.cart.itemsTotal;

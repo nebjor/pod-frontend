@@ -4,6 +4,11 @@
     </button>
 
     <div class="actions">
+        @if (accountState() === 'signedIn') {
+            <a class="account-link" routerLink="/konto">Mein Konto</a>
+        } @else if (accountState() === 'anonymous') {
+            <a class="account-link" routerLink="/konto/anmelden">Anmelden</a>
+        }
         @if (!cartIsEmpty()) {
             <a class="cart-link" routerLink="/warenkorb"
                 [attr.aria-label]="'Warenkorb: ' + cartCount() + ' Stueck, ' + cartCurrency() + ' ' + (cartTotal() | number:'1.2-2')">

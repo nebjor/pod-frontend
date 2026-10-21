@@ -33,6 +33,23 @@ export const shopRoutes: Routes = [
         loadComponent: () => import('./payment/mock-payment.component').then((m) => m.MockPaymentComponent)
     },
     {
+        path: 'bestellung',
+        title: 'Meine Bestellung | 3DBurg',
+        loadComponent: () => import('./order/order-status.component').then((m) => m.OrderStatusComponent)
+    },
+    {
+        path: 'konto/anmelden',
+        title: 'Anmelden | 3DBurg',
+        data: { noindex: true },
+        loadComponent: () => import('./account/login.component').then((m) => m.LoginComponent)
+    },
+    {
+        path: 'konto',
+        title: 'Mein Konto | 3DBurg',
+        data: { noindex: true },
+        loadComponent: () => import('./account/account.component').then((m) => m.AccountComponent)
+    },
+    {
         // Kept in the shop table so the page is prerendered; on the shop host Caddy redirects
         // it to the admin host, where it is served as the root (see server.ts).
         path: 'admin',

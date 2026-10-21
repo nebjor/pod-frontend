@@ -1,0 +1,46 @@
+<section class="customer-page narrow">
+    <header class="page-header">
+        <p class="kicker">KONTO</p>
+        <h1>Anmelden</h1>
+    </header>
+
+    <section class="card" aria-live="polite">
+        @switch (state()) {
+            @case ('redeeming') {
+                <p class="status"><span class="spinner" aria-hidden="true"></span> Du wirst angemeldet...</p>
+            }
+            @case ('sent') {
+                <h2>Wir haben dir einen Anmeldelink geschickt.</h2>
+                <p class="note">
+                    Schau in dein Postfach fuer <strong>{{ sentTo() }}</strong> und oeffne den Link. Er ist nur kurze
+                    Zeit gueltig. Nichts erhalten? Pruefe den Spam-Ordner oder fordere einen neuen Link an.
+                </p>
+                <button type="button" class="order-btn ghost-btn" (click)="reset()">Neuen Link anfordern</button>
+            }
+            @default {
+                @if (state() === 'invalid') {
+                    <p class="error invalid-token" role="alert">{{ errorMessage() }}</p>
+                }
+                <p class="intro">
+                    Kein Passwort noetig: Wir schicken dir einen Link per E-Mail, mit dem du dich anmeldest. Danach
+                    siehst du deine Bestellungen und deine gespeicherte Adresse.
+                </p>
+                <form [formGroup]="form" class="customer-form" (ngSubmit)="submit()" novalidate>
+                    <label class="wide">
+                        E-Mail
+                        <input formControlName="email" type="email" autocomplete="email" />
+                        @if (form.controls.email.touched && form.controls.email.invalid) {
+                            <span class="field-error">Bitte gib eine gueltige E-Mail-Adresse ein.</span>
+                        }
+                    </label>
+                    <button type="submit" class="order-btn" [disabled]="state() === 'sending'">
+                        @if (state() === 'sending') { Link wird verschickt... } @else { Anmeldelink schicken }
+                    </button>
+                    @if (errorMessage() && state() === 'form') {
+                        <p class="error" role="alert">{{ errorMessage() }}</p>
+                    }
+                </form>
+            }
+        }
+    </section>
+</section>

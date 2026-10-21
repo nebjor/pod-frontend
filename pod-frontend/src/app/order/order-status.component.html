@@ -1,0 +1,102 @@
+<section class="customer-page">
+    <header class="page-header">
+        <p class="kicker">BESTELLUNG</p>
+        <h1>Meine Bestellung</h1>
+    </header>
+
+    <section class="card">
+        <p class="intro">Gib Bestellnummer und E-Mail-Adresse aus deiner Bestaetigungsmail ein, um den Stand deiner Bestellung zu sehen.</p>
+        <form [formGroup]="form" class="customer-form lookup-form" (ngSubmit)="lookup()" novalidate>
+            <label>
+                Bestellnummer
+                <input formControlName="orderNumber" type="text" autocomplete="off" placeholder="POD-1000" />
+                @if (form.controls.orderNumber.touched && form.controls.orderNumber.invalid) {
+                    <span class="field-error">Bitte gib deine Bestellnummer ein.</span>
+                }
+            </label>
+            <label>
+                E-Mail
+                <input formControlName="email" type="email" autocomplete="email" />
+                @if (form.controls.email.touched && form.controls.email.invalid) {
+                    <span class="field-error">Bitte gib eine gueltige E-Mail-Adresse ein.</span>
+                }
+            </label>
+            <button type="submit" class="order-btn" [disabled]="state() === 'loading'">
+                @if (state() === 'loading') { Bestellung wird gesucht... } @else { Bestellung anzeigen }
+            </button>
+        </form>
+        @if (state() === 'not-found') {
+            <p class="error" role="alert">Keine Bestellung mit dieser Nummer und E-Mail gefunden.</p>
+        } @else if (state() === 'error') {
+            <p class="error" role="alert">{{ errorMessage() }}</p>
+        }
+    </section>
+
+    @if (order(); as o) {
+        <section class="card order" aria-live="polite">
+            <div class="order-head">
+                <h2>{{ o.orderNumber }}</h2>
+                <span class="status-badge" [class.cancelled]="o.status === 'CANCELLED'">{{ statusLabel() }}</span>
+            </div>
+            <app-order-status-timeline [status]="o.status" />
+
+            @if (paymentUrl(); as url) {
+                <div class="pay-now">
+                    <p class="note">Die Bestellung ist noch nicht bezahlt. Der Preis ist bis {{ o.quoteExpiresAt | date:'dd.MM.yyyy' }} gueltig.</p>
+                    <a class="order-btn link-btn" [href]="url">Jetzt bezahlen</a>
+                </div>
+            }
+
+            <h3>Positionen</h3>
+            <div class="table-wrap">
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Pos.</th>
+                            <th scope="col">Modell</th>
+                            <th scope="col">Konfiguration</th>
+                            <th scope="col" class="num">Menge</th>
+                            <th scope="col" class="num">Betrag</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (line of o.items; track line.position) {
+                            <tr>
+                                <td>{{ line.position }}</td>
+                                <td class="file-name">{{ line.fileName }}</td>
+                                <td>
+                                    <span class="swatch-dot" [style.background]="line.color.hex" aria-hidden="true"></span>
+                                    {{ line.filament }} {{ line.color.label }} · Qualitaet {{ line.quality }}
+                                </td>
+                                <td class="num">{{ line.quantity }}</td>
+                                <td class="num">{{ o.totals.currency }} {{ line.lineTotalChf | number:'1.2-2' }}</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <dl class="details">
+                <div><dt>Positionen ({{ o.items.length }})</dt><dd>{{ o.totals.currency }} {{ o.totals.itemsTotal | number:'1.2-2' }}</dd></div>
+                <div><dt>Versand</dt><dd>{{ o.totals.currency }} {{ o.totals.shipping | number:'1.2-2' }}</dd></div>
+                @if (o.totals.vatAmount > 0) {
+                    <div><dt>MWST ({{ o.totals.vatRate * 100 | number:'1.1-1' }} %)</dt><dd>{{ o.totals.currency }} {{ o.totals.vatAmount | number:'1.2-2' }}</dd></div>
+                }
+                <div class="total"><dt>Gesamt</dt><dd>{{ o.totals.currency }} {{ o.totals.total | number:'1.2-2' }}</dd></div>
+            </dl>
+            @if (o.vatNote) {
+                <p class="note">Keine MWST, da nicht MWST-pflichtig.</p>
+            }
+
+            <h3>Daten</h3>
+            <dl class="details">
+                <div><dt>Bestellt am</dt><dd>{{ o.createdAt | date:'dd.MM.yyyy HH:mm' }}</dd></div>
+                @if (o.paidAt) {
+                    <div><dt>Bezahlt am</dt><dd>{{ o.paidAt | date:'dd.MM.yyyy HH:mm' }}</dd></div>
+                }
+                <div><dt>Preis gueltig bis</dt><dd>{{ o.quoteExpiresAt | date:'dd.MM.yyyy' }}</dd></div>
+                <div><dt>Kunde</dt><dd>{{ o.customerName }}<br />{{ o.customerEmail }}</dd></div>
+            </dl>
+        </section>
+    }
+</section>

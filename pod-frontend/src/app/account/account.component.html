@@ -1,0 +1,133 @@
+<section class="customer-page">
+    <header class="page-header">
+        <p class="kicker">KONTO</p>
+        <h1>Mein Konto</h1>
+    </header>
+
+    @switch (pageState()) {
+        @case ('loading') {
+            <section class="card" aria-live="polite">
+                <p class="status"><span class="spinner" aria-hidden="true"></span> Konto wird geladen...</p>
+            </section>
+        }
+        @case ('deleted') {
+            <section class="card" aria-live="polite">
+                <h2>Dein Konto wurde geloescht.</h2>
+                <p class="note">
+                    Deine Bestellungen bleiben bestehen; du kannst sie weiterhin unter "Meine Bestellung" mit
+                    Bestellnummer und E-Mail aufrufen.
+                </p>
+                <a class="order-btn link-btn" routerLink="/">Zur Startseite</a>
+            </section>
+        }
+        @default {
+            <p class="signed-in">
+                Angemeldet als <strong>{{ customer()?.email }}</strong>
+                <button type="button" class="text-btn logout-btn" (click)="logout()" [disabled]="loggingOut()">Abmelden</button>
+            </p>
+
+            <section class="account-layout">
+                <section class="card orders">
+                    <h2>Bestellungen</h2>
+                    @switch (ordersState()) {
+                        @case ('loading') {
+                            <p class="status"><span class="spinner" aria-hidden="true"></span> Bestellungen werden geladen...</p>
+                        }
+                        @case ('error') {
+                            <p class="error" role="alert">Die Bestellungen konnten nicht geladen werden.</p>
+                            <button type="button" class="order-btn ghost-btn" (click)="loadOrders()">Noch einmal versuchen</button>
+                        }
+                        @default {
+                            @if (orders().length === 0) {
+                                <p class="note">Noch keine Bestellungen.</p>
+                                <a class="order-btn link-btn" routerLink="/upload">Modell hochladen und Preis erhalten</a>
+                            } @else {
+                                <ul class="order-list" aria-label="Deine Bestellungen">
+                                    @for (order of orders(); track order.orderNumber) {
+                                        <li>
+                                            <a class="order-row" routerLink="/bestellung"
+                                                [queryParams]="{ nr: order.orderNumber, email: order.customerEmail }">
+                                                <span class="order-number">{{ order.orderNumber }}</span>
+                                                <span class="order-date">{{ order.createdAt | date:'dd.MM.yyyy' }}</span>
+                                                <span class="status-badge" [class.cancelled]="order.status === 'CANCELLED'">{{ statusLabel(order) }}</span>
+                                                <span class="order-total">{{ order.totals.currency }} {{ order.totals.total | number:'1.2-2' }}</span>
+                                            </a>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        }
+                    }
+                </section>
+
+                <section class="card">
+                    <h2>Lieferadresse</h2>
+                    <p class="note address-note">Wird beim naechsten Checkout vorausgefuellt.</p>
+                    <form [formGroup]="addressForm" class="customer-form" (ngSubmit)="save()" novalidate>
+                        <label class="wide">
+                            Name
+                            <input formControlName="name" type="text" autocomplete="name" />
+                            @if (fieldError('name')) { <span class="field-error">{{ fieldError('name') }}</span> }
+                        </label>
+                        <label class="wide">
+                            Strasse und Nummer
+                            <input formControlName="street" type="text" autocomplete="street-address" />
+                            @if (fieldError('street')) { <span class="field-error">{{ fieldError('street') }}</span> }
+                        </label>
+                        <label>
+                            PLZ
+                            <input formControlName="postalCode" type="text" autocomplete="postal-code" inputmode="numeric" />
+                            @if (fieldError('postalCode')) { <span class="field-error">{{ fieldError('postalCode') }}</span> }
+                        </label>
+                        <label>
+                            Ort
+                            <input formControlName="city" type="text" autocomplete="address-level2" />
+                            @if (fieldError('city')) { <span class="field-error">{{ fieldError('city') }}</span> }
+                        </label>
+                        <label>
+                            Land
+                            <select formControlName="country">
+                                @for (country of settings().shipToCountries; track country) {
+                                    <option [value]="country">{{ country === 'CH' ? 'Schweiz' : country }}</option>
+                                }
+                            </select>
+                            @if (fieldError('country')) { <span class="field-error">{{ fieldError('country') }}</span> }
+                        </label>
+
+                        <button type="submit" class="order-btn" [disabled]="saving()">
+                            @if (saving()) { Wird gespeichert... } @else { Adresse speichern }
+                        </button>
+                        @if (saved()) {
+                            <p class="success" role="status">Adresse gespeichert.</p>
+                        }
+                        @if (errorMessage()) {
+                            <p class="error" role="alert">{{ errorMessage() }}</p>
+                        }
+                    </form>
+                </section>
+
+                <section class="card danger-zone">
+                    <h2>Konto loeschen</h2>
+                    @if (!confirmingDelete()) {
+                        <p class="note">
+                            Loescht dein Konto und die gespeicherte Adresse. Deine Bestellungen bleiben bestehen und
+                            sind weiterhin ueber "Meine Bestellung" abrufbar.
+                        </p>
+                        <button type="button" class="order-btn ghost-btn" (click)="askDelete()">Konto loeschen</button>
+                    } @else {
+                        <p class="note confirm-text" role="alert">Bist du sicher? Das Konto laesst sich danach nicht wiederherstellen.</p>
+                        <div class="confirm-actions">
+                            <button type="button" class="order-btn danger-btn" (click)="confirmDelete()" [disabled]="deleting()">
+                                @if (deleting()) { Wird geloescht... } @else { Ja, Konto loeschen }
+                            </button>
+                            <button type="button" class="order-btn ghost-btn" (click)="cancelDelete()" [disabled]="deleting()">Abbrechen</button>
+                        </div>
+                        @if (deleteError()) {
+                            <p class="error" role="alert">{{ deleteError() }}</p>
+                        }
+                    }
+                </section>
+            </section>
+        }
+    }
+</section>

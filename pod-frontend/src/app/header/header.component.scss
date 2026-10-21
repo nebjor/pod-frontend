@@ -36,6 +36,26 @@
     gap: 0.75rem;
 }
 
+.account-link {
+    color: var(--text-200);
+    text-decoration: none;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    padding: 0.35rem 0.2rem;
+    border-bottom: 1px solid transparent;
+    transition: color 120ms ease, border-color 120ms ease;
+
+    &:hover,
+    &:focus-visible {
+        color: var(--text-100);
+        border-bottom-color: var(--accent-300);
+    }
+
+    @media (max-width: 480px) {
+        font-size: 0.8rem;
+    }
+}
+
 .cart-link {
     display: inline-flex;
     align-items: center;
