@@ -191,7 +191,11 @@ export class AccountComponent {
                 error: (error: unknown) => {
                     this.deleting.set(false);
                     const failure = describeAccountError(error);
-                    this.deleteError.set(failure.kind === 'error' ? failure.message : 'Das Konto konnte nicht geloescht werden.');
+                    this.deleteError.set(
+                        failure.kind === 'error'
+                            ? failure.message
+                            : 'Das Konto konnte gerade nicht geloescht werden. Bitte versuche es noch einmal.'
+                    );
                 }
             });
     }

@@ -11,25 +11,53 @@
             }
             @case ('waiting') {
                 <p class="status"><span class="spinner" aria-hidden="true"></span> Zahlung wird bestaetigt...</p>
+                <p class="note">Das dauert meist nur ein paar Sekunden.</p>
             }
             @case ('paid') {
                 <h2>Danke, deine Zahlung ist eingegangen.</h2>
+                <ol class="next-steps">
+                    <li>Eine Bestaetigung mit allen Details geht an <strong>{{ order()?.customerEmail }}</strong>.</li>
+                    <li>Wir pruefen deine Modelle und starten dann den Druck.</li>
+                    <li>
+                        Den Stand siehst du jederzeit unter
+                        <a routerLink="/bestellung" [queryParams]="statusLinkParams()">Meine Bestellung</a>.
+                    </li>
+                </ol>
+                @if (accountState() === 'anonymous') {
+                    <p class="note">
+                        Mit deiner E-Mail kannst du dich jederzeit
+                        <a routerLink="/konto/anmelden">anmelden</a> und alle Bestellungen sehen. Ein Passwort brauchst du nicht.
+                    </p>
+                }
             }
             @case ('unpaid') {
-                <h2>Die Zahlung wurde noch nicht bestaetigt.</h2>
+                <h2>Die Zahlung ist noch nicht bestaetigt.</h2>
+                <p class="note">
+                    Die Bestaetigung des Zahlungsanbieters ist noch nicht da. Das kann ein paar Minuten dauern; sobald sie
+                    eintrifft, bekommst du eine E-Mail an <strong>{{ order()?.customerEmail }}</strong>.
+                </p>
                 @if (order()?.paymentUrl; as url) {
-                    <p class="note">Du kannst die Zahlung jederzeit abschliessen: <a [href]="url">zur Zahlung</a>.</p>
+                    <p class="note">Falls du noch nicht bezahlt hast: <a [href]="url">zur Zahlung</a>.</p>
                 }
             }
             @case ('cancelled') {
                 <h2>Die Zahlung wurde abgebrochen.</h2>
+                <p class="note">
+                    Deine Bestellung ist gespeichert, abgebucht wurde nichts.
+                    @if (priceValidUntil(); as until) {
+                        Der Preis bleibt bis {{ until }} gueltig; bis dahin kannst du bezahlen, danach loeschen wir die Bestellung.
+                    }
+                </p>
                 @if (order()?.paymentUrl; as url) {
-                    <p class="note">Die Bestellung bleibt 14 Tage reserviert. <a [href]="url">Jetzt bezahlen</a>.</p>
+                    <a class="order-btn link-btn" [href]="url">Jetzt bezahlen</a>
                 }
             }
             @case ('missing') {
                 <h2>Bestellung nicht gefunden.</h2>
-                <p class="note">Bitte pruefe die Bestellnummer in deiner Bestaetigungsmail.</p>
+                <p class="note">
+                    Mit Bestellnummer und E-Mail-Adresse findest du sie unter
+                    <a routerLink="/bestellung">Meine Bestellung</a>.
+                </p>
             }
         }
 
@@ -43,7 +71,7 @@
                         </div>
                         <p class="item-config">
                             <span class="swatch-dot" [style.background]="line.color.hex" aria-hidden="true"></span>
-                            {{ line.filament }} {{ line.color.label }} · {{ line.quality }}
+                            {{ line.filament }} {{ line.color.label }} · {{ qualityLabel(line.quality) }}
                         </p>
                     </li>
                 }
@@ -52,12 +80,11 @@
                 <div><dt>Positionen ({{ items().length }})</dt><dd>{{ o.totals.currency }} {{ o.totals.itemsTotal | number:'1.2-2' }}</dd></div>
                 <div><dt>Versand</dt><dd>{{ o.totals.currency }} {{ o.totals.shipping | number:'1.2-2' }}</dd></div>
                 <div class="total"><dt>Gesamt</dt><dd>{{ o.totals.currency }} {{ o.totals.total | number:'1.2-2' }}</dd></div>
-                <div><dt>Status</dt><dd>{{ o.status }}</dd></div>
+                <div class="status-row"><dt>Status</dt><dd>{{ statusLabel() }}</dd></div>
             </dl>
             @if (o.vatNote) {
                 <p class="note">Keine MWST, da nicht MWST-pflichtig.</p>
             }
-            <p class="note">Eine Bestaetigung geht an <strong>{{ o.customerEmail }}</strong>.</p>
         }
 
         <a class="order-btn link-btn" routerLink="/upload">Weiteres Modell hochladen</a>

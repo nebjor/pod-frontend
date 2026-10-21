@@ -12,10 +12,11 @@
         }
         @case ('deleted') {
             <section class="card" aria-live="polite">
-                <h2>Dein Konto wurde geloescht.</h2>
+                <h2>Dein Konto ist geloescht.</h2>
                 <p class="note">
-                    Deine Bestellungen bleiben bestehen; du kannst sie weiterhin unter "Meine Bestellung" mit
-                    Bestellnummer und E-Mail aufrufen.
+                    Deine Bestellungen bleiben als Geschaeftsunterlagen gespeichert; mit Bestellnummer und E-Mail kannst du
+                    sie unter <a routerLink="/bestellung">Meine Bestellung</a> weiterhin einsehen. Wenn du dich wieder
+                    anmeldest, entsteht ein neues Konto.
                 </p>
                 <a class="order-btn link-btn" routerLink="/">Zur Startseite</a>
             </section>
@@ -34,7 +35,7 @@
                             <p class="status"><span class="spinner" aria-hidden="true"></span> Bestellungen werden geladen...</p>
                         }
                         @case ('error') {
-                            <p class="error" role="alert">Die Bestellungen konnten nicht geladen werden.</p>
+                            <p class="error" role="alert">Die Bestellungen konnten gerade nicht geladen werden.</p>
                             <button type="button" class="order-btn ghost-btn" (click)="loadOrders()">Noch einmal versuchen</button>
                         }
                         @default {
@@ -46,7 +47,8 @@
                                     @for (order of orders(); track order.orderNumber) {
                                         <li>
                                             <a class="order-row" routerLink="/bestellung"
-                                                [queryParams]="{ nr: order.orderNumber, email: order.customerEmail }">
+                                                [queryParams]="{ nr: order.orderNumber, email: order.customerEmail }"
+                                                [attr.aria-label]="'Bestellung ' + order.orderNumber + ', ' + statusLabel(order) + ', ' + order.totals.currency + ' ' + (order.totals.total | number:'1.2-2')">
                                                 <span class="order-number">{{ order.orderNumber }}</span>
                                                 <span class="order-date">{{ order.createdAt | date:'dd.MM.yyyy' }}</span>
                                                 <span class="status-badge" [class.cancelled]="order.status === 'CANCELLED'">{{ statusLabel(order) }}</span>
@@ -55,6 +57,7 @@
                                         </li>
                                     }
                                 </ul>
+                                <p class="note">Klick auf eine Bestellung fuer Positionen, Status und Zahlung.</p>
                             }
                         }
                     }
@@ -62,7 +65,7 @@
 
                 <section class="card">
                     <h2>Lieferadresse</h2>
-                    <p class="note address-note">Wird beim naechsten Checkout vorausgefuellt.</p>
+                    <p class="note address-note">Wird im Checkout vorausgefuellt.</p>
                     <form [formGroup]="addressForm" class="customer-form" (ngSubmit)="save()" novalidate>
                         <label class="wide">
                             Name
@@ -105,29 +108,32 @@
                         }
                     </form>
                 </section>
+            </section>
 
-                <section class="card danger-zone">
+            @if (!confirmingDelete()) {
+                <p class="account-footer">
+                    Konto nicht mehr noetig?
+                    <button type="button" class="text-btn" (click)="askDelete()">Konto loeschen</button>
+                </p>
+            } @else {
+                <section class="card danger-zone" aria-live="polite">
                     <h2>Konto loeschen</h2>
-                    @if (!confirmingDelete()) {
-                        <p class="note">
-                            Loescht dein Konto und die gespeicherte Adresse. Deine Bestellungen bleiben bestehen und
-                            sind weiterhin ueber "Meine Bestellung" abrufbar.
-                        </p>
-                        <button type="button" class="order-btn ghost-btn" (click)="askDelete()">Konto loeschen</button>
-                    } @else {
-                        <p class="note confirm-text" role="alert">Bist du sicher? Das Konto laesst sich danach nicht wiederherstellen.</p>
-                        <div class="confirm-actions">
-                            <button type="button" class="order-btn danger-btn" (click)="confirmDelete()" [disabled]="deleting()">
-                                @if (deleting()) { Wird geloescht... } @else { Ja, Konto loeschen }
-                            </button>
-                            <button type="button" class="order-btn ghost-btn" (click)="cancelDelete()" [disabled]="deleting()">Abbrechen</button>
-                        </div>
-                        @if (deleteError()) {
-                            <p class="error" role="alert">{{ deleteError() }}</p>
-                        }
+                    <p class="note confirm-text">
+                        Dein Konto und deine gespeicherte Adresse werden geloescht. Deine Bestellungen bleiben als
+                        Geschaeftsunterlagen gespeichert; mit Bestellnummer und E-Mail kannst du sie unter "Meine Bestellung"
+                        weiterhin einsehen.
+                    </p>
+                    <div class="confirm-actions">
+                        <button type="button" class="order-btn danger-btn" (click)="confirmDelete()" [disabled]="deleting()">
+                            @if (deleting()) { Wird geloescht... } @else { Ja, Konto loeschen }
+                        </button>
+                        <button type="button" class="order-btn ghost-btn" (click)="cancelDelete()" [disabled]="deleting()">Abbrechen</button>
+                    </div>
+                    @if (deleteError()) {
+                        <p class="error" role="alert">{{ deleteError() }}</p>
                     }
                 </section>
-            </section>
+            }
         }
     }
 </section>
