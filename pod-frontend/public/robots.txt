@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /checkout
+Disallow: /pay/
+Disallow: /admin
+Disallow: /api/
+
+Sitemap: https://3dburg.ch/sitemap.xml
