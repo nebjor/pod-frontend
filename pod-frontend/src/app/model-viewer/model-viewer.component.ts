@@ -222,9 +222,20 @@ export class ModelViewerComponent implements AfterViewInit, OnChanges, OnDestroy
     }
 
     this.applyUpAxisCorrection(object);
-    this.activeModel = object;
-    this.scene.add(object);
-    this.centerCameraOnObject(object);
+
+    // Models rarely sit at the origin: a 3MF exported from a slicer keeps its place on the
+    // plate, often 100 mm or more away. The auto-rotation turns around the world axis, so an
+    // off-origin model would orbit in and out of view. A pivot at the model's own centre
+    // keeps the rotation, and the camera target, where the model is.
+    const pivot = new THREE.Group();
+    const center = new THREE.Box3().setFromObject(object).getCenter(new THREE.Vector3());
+    object.position.sub(center);
+    pivot.add(object);
+    pivot.updateMatrixWorld(true);
+
+    this.activeModel = pivot;
+    this.scene.add(pivot);
+    this.centerCameraOnObject(pivot);
   }
 
   private applyUpAxisCorrection(object: THREE.Object3D) {

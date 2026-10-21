@@ -15,7 +15,8 @@ internet ──443──> caddy ──> frontend:4000 (Angular SSR)
 
 1. **Server**: Ubuntu 24.04, a user with sudo, SSH keys only (`PasswordAuthentication no`).
    Install Docker from the official repository and add the user to the `docker` group:
-   https://docs.docker.com/engine/install/ubuntu/
+   https://docs.docker.com/engine/install/ubuntu/ (what is in place is listed under
+   "Server access and hardening" below).
 2. **Firewall**: `ufw allow OpenSSH && ufw allow 80 && ufw allow 443 && ufw enable`.
 3. **DNS** at Infomaniak: `A` records for `3dburg.ch`, `www` and `admin` to the server's IPv4
    (and `AAAA` for IPv6 if the server has one). Caddy cannot get a certificate before this
@@ -65,6 +66,24 @@ first with the **test** keys and a test card, then once more with the live keys.
    in `.env` belongs to another endpoint.
 5. Repeat steps 1 to 4 with the live keys and the live webhook endpoint. From then on the
    `/pay/mock` page and the mock confirmation endpoint no longer exist.
+
+## Server access and hardening
+
+Done on 2026-10-21, here so the next person knows the shape of the box.
+
+- Log in as `joris` with an SSH key (`ssh 3dburg` from the owner's PC, alias in `~/.ssh/config`).
+  The user has passwordless sudo and is in the `docker` group; `/opt/3dburg` belongs to it, and
+  its `~/.ssh` holds the read-only GitHub deploy key for the backend repository.
+- Root login and password login are off: `/etc/ssh/sshd_config.d/00-hardening.conf`. The
+  file sorts first on purpose, sshd keeps the first value it reads.
+- `fail2ban` bans addresses after repeated SSH failures (default `sshd` jail). If you lock
+  yourself out from a new network, use the Hetzner console: `fail2ban-client set sshd unbanip <ip>`.
+- `unattended-upgrades` installs security updates nightly. Kernels are not among them: when the
+  login banner says "System restart required" or lists a `linux-image` update, run
+  `sudo apt full-upgrade -y && sudo reboot` (about a minute of downtime, containers come back
+  by themselves).
+- `ufw` allows 22, 80 and 443 only. The nightly backup runs from root's crontab.
+- Handy alias for the compose file: `alias dc="docker compose -f /opt/3dburg/pod-frontend/deploy/docker-compose.prod.yml"`.
 
 ## Update
 

@@ -31,13 +31,19 @@
                         </div>
                     }
 
-                    <!-- The preview keeps the brand material: dark filaments turn into silhouettes
-                         in the viewer, while the swatches already show the chosen colour. -->
-                    <app-model-viewer [modelUrl]="modelUrl()" [modelFormat]="modelFormat()" [modelColor]="selectedColor()?.hex"
-                        sourceUpAxis="z" [autoRotate]="true"
-                        [autoRotateSpeed]="1.1" (loadStateChange)="onModelLoadStateChange($event)"
-                        (loadProgress)="onModelLoadProgress($event)">
-                    </app-model-viewer>
+                    @if (previewDisabled()) {
+                        <div class="viewer-placeholder">
+                            <p class="placeholder-title">Keine Vorschau fuer diese Datei</p>
+                            <p>3MF-Dateien ueber 8 MB werden im Browser nicht dargestellt, weil das Entpacken die
+                                Seite blockieren wuerde. Das Angebot wird trotzdem berechnet.</p>
+                        </div>
+                    } @else {
+                        <app-model-viewer [modelUrl]="modelUrl()" [modelFormat]="modelFormat()" [modelColor]="selectedColor()?.hex"
+                            sourceUpAxis="z" [autoRotate]="true"
+                            [autoRotateSpeed]="1.1" (loadStateChange)="onModelLoadStateChange($event)"
+                            (loadProgress)="onModelLoadProgress($event)">
+                        </app-model-viewer>
+                    }
                 </div>
 
                 <div class="file-meta">

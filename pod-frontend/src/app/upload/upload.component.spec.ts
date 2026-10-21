@@ -6,7 +6,7 @@ import { CART_MAX_ITEMS, CartService } from '../cart/cart.service';
 import { formatPrintDuration } from '../quote/print-duration';
 import { QuoteOptions, QuoteResponse } from '../quote/quote.models';
 import { QuoteService, UploadEvent } from '../quote/quote.service';
-import { PREFETCH_DELAY_MS, QUOTE_DEBOUNCE_MS, UploadComponent } from './upload.component';
+import { PREFETCH_DELAY_MS, PREVIEW_LIMIT_BYTES_3MF, QUOTE_DEBOUNCE_MS, UploadComponent } from './upload.component';
 
 const sampleQuote: QuoteResponse = {
     fileName: 'benchy.stl',
@@ -395,6 +395,23 @@ describe('UploadComponent', () => {
         settle();
         expect(requestQuote).toHaveBeenCalledTimes(2);
         expect(component.quoteState()).toBe('ready');
+    });
+
+    it('skips the browser preview for a 3MF above the size limit but still quotes it', () => {
+        const heavy = new File([new Uint8Array(PREVIEW_LIMIT_BYTES_3MF + 1)], 'spider.3mf');
+
+        component.onDrop(dropEvent(heavy));
+        settle();
+
+        expect(component.previewDisabled()).toBe(true);
+        expect(component.isModelLoading()).toBe(false);
+        expect(fixture.nativeElement.querySelector('.viewer-placeholder')).not.toBeNull();
+        expect(fixture.nativeElement.querySelector('app-model-viewer')).toBeNull();
+        expect(requestQuote).toHaveBeenCalledTimes(1);
+
+        component.onDrop(dropEvent(benchy));
+        settle();
+        expect(component.previewDisabled()).toBe(false);
     });
 
     it('rejects files that are not STL or 3MF without contacting the backend', () => {
