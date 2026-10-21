@@ -68,8 +68,8 @@
                                 <th>Nummer</th>
                                 <th>Datum</th>
                                 <th>Kunde</th>
-                                <th>Modell</th>
-                                <th>Konfiguration</th>
+                                <th class="num">Pos.</th>
+                                <th>Modelle</th>
                                 <th class="num">Gesamt</th>
                                 <th>Status</th>
                             </tr>
@@ -80,8 +80,8 @@
                                     <td>{{ order.orderNumber }}</td>
                                     <td>{{ order.createdAt | date:'dd.MM.yyyy HH:mm' }}</td>
                                     <td>{{ order.customerName }}</td>
-                                    <td class="file">{{ order.fileName }}</td>
-                                    <td>{{ order.quantity }} x {{ order.filament }} {{ order.colorLabel }}, {{ order.quality }}</td>
+                                    <td class="num">{{ order.items.length }}</td>
+                                    <td class="file" [title]="itemSummary(order)">{{ itemSummary(order) }}</td>
                                     <td class="num">{{ order.totals.currency }} {{ order.totals.total | number:'1.2-2' }}</td>
                                     <td><span class="badge" [class]="'badge status-' + order.status.toLowerCase()">{{ statusLabels[order.status] }}</span></td>
                                 </tr>
@@ -108,20 +108,63 @@
                             }
                         </dl>
                         <dl class="details">
-                            <div><dt>Modell</dt><dd>{{ order.fileName }} ({{ order.fileSizeBytes / 1048576 | number:'1.1-1' }} MB)</dd></div>
-                            <div><dt>Filament</dt><dd>{{ order.filament }} {{ order.colorLabel }}</dd></div>
-                            <div><dt>Qualitaet</dt><dd>{{ order.quality }} ({{ order.layerHeightMm }} mm)</dd></div>
-                            <div><dt>Menge</dt><dd>{{ order.quantity }} auf {{ order.plateCount }} Platte(n)</dd></div>
+                            <div><dt>Positionen</dt><dd>{{ order.items.length }}</dd></div>
                             <div><dt>Druckzeit gesamt</dt><dd>{{ selectedPrintTime() }}</dd></div>
-                            <div><dt>Material gesamt</dt><dd>{{ order.totalFilamentGrams | number:'1.0-1' }} g</dd></div>
+                            <div><dt>Material gesamt</dt><dd>{{ selectedFilamentGrams() | number:'1.0-1' }} g</dd></div>
                             <div><dt>Positionen</dt><dd>{{ order.totals.currency }} {{ order.totals.itemsTotal | number:'1.2-2' }}</dd></div>
                             <div><dt>Versand</dt><dd>{{ order.totals.currency }} {{ order.totals.shipping | number:'1.2-2' }}</dd></div>
                             <div class="total"><dt>Gesamt</dt><dd>{{ order.totals.currency }} {{ order.totals.total | number:'1.2-2' }}</dd></div>
                         </dl>
                     </div>
 
+                    <div class="table-wrap items-wrap">
+                        <table class="orders items">
+                            <thead>
+                                <tr>
+                                    <th class="num">Pos.</th>
+                                    <th>Datei</th>
+                                    <th>Filament</th>
+                                    <th>Qualitaet</th>
+                                    <th class="num">Menge</th>
+                                    <th class="num">Platten</th>
+                                    <th class="num">Druckzeit</th>
+                                    <th class="num">Summe</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (item of order.items; track item.position) {
+                                    <tr>
+                                        <td class="num">{{ item.position }}</td>
+                                        <td class="file" [title]="item.fileName">
+                                            {{ item.fileName }}
+                                            <span class="muted">({{ item.fileSizeBytes / 1048576 | number:'1.1-1' }} MB)</span>
+                                        </td>
+                                        <td>
+                                            <!-- Legacy orders may carry a colour without hex; then only the label is shown. -->
+                                            @if (item.color.hex) {
+                                                <span class="swatch-dot" [style.background]="item.color.hex" aria-hidden="true"></span>
+                                            }
+                                            {{ item.filament }} {{ item.color.label }}
+                                        </td>
+                                        <td>{{ item.quality }} ({{ item.layerHeightMm }} mm)</td>
+                                        <td class="num">{{ item.quantity }}</td>
+                                        <td class="num">{{ item.plateCount }}</td>
+                                        <td class="num">{{ printTime(item) }}</td>
+                                        <td class="num">{{ order.totals.currency }} {{ item.lineTotalChf | number:'1.2-2' }}</td>
+                                        <td>
+                                            <button type="button" class="ghost-btn small" (click)="download(order, item)"
+                                                [attr.aria-label]="item.fileName + ' herunterladen'">
+                                                Download
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
                     <div class="actions">
-                        <button type="button" class="order-btn" (click)="download(order)">Modell herunterladen</button>
                         @for (next of order.allowedTransitions; track next) {
                             <button type="button" class="order-btn" [class.ghost-btn]="next === 'CANCELLED'"
                                 [disabled]="busy()" (click)="transition(order, next)">
@@ -130,7 +173,7 @@
                         }
                     </div>
                     @if (order.status === 'IN_REVIEW') {
-                        <p class="note">Vor der Freigabe das Modell in Bambu Studio oeffnen: Orientierung, Stuetzen, Haftung pruefen.</p>
+                        <p class="note">Vor der Freigabe jedes Modell in Bambu Studio oeffnen: Orientierung, Stuetzen, Haftung pruefen.</p>
                     }
                 </section>
             }

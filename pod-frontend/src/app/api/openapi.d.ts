@@ -51,7 +51,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/admin/orders/{orderNumber}/model": {
+    "/api/admin/orders/{orderNumber}/items/{position}/model": {
         parameters: {
             query?: never;
             header?: never;
@@ -231,11 +231,35 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AdminOrderItemResponse: {
+            color: components["schemas"]["ColorOption"];
+            filament: string;
+            filamentGrams: number;
+            fileName: string;
+            fileSha256: string;
+            /** Format: int64 */
+            fileSizeBytes: number;
+            layerHeightMm: number;
+            lineTotalChf: number;
+            machineProfile: string;
+            /** Format: int32 */
+            plateCount: number;
+            /**
+             * Format: int32
+             * @description 1-based position on the order
+             */
+            position: number;
+            /** Format: int32 */
+            printTimeSeconds: number;
+            quality: string;
+            /** Format: int32 */
+            quantity: number;
+            setupFeeChf: number;
+            unitPriceChf: number;
+        };
         AdminOrderResponse: {
             allowedTransitions: ("NEW" | "PAID" | "IN_REVIEW" | "APPROVED" | "PRINTING" | "SHIPPED" | "CANCELLED")[];
             city: string;
-            colorCode: string;
-            colorLabel: string;
             country: string;
             /** Format: date-time */
             createdAt: string;
@@ -245,22 +269,12 @@ export interface components {
             deleteAfter: string | null;
             /** Format: date-time */
             erasedAt: string | null;
-            filament: string;
-            fileName: string;
-            /** Format: int64 */
-            fileSizeBytes: number;
-            layerHeightMm: number;
-            machineProfile: string;
+            items: components["schemas"]["AdminOrderItemResponse"][];
             orderNumber: string;
             /** Format: date-time */
             paidAt: string | null;
             paymentProvider: string | null;
-            /** Format: int32 */
-            plateCount: number;
             postalCode: string;
-            quality: string;
-            /** Format: int32 */
-            quantity: number;
             /** Format: date-time */
             quoteExpiresAt: string;
             /** Format: date-time */
@@ -268,9 +282,6 @@ export interface components {
             /** @enum {string} */
             status: "NEW" | "PAID" | "IN_REVIEW" | "APPROVED" | "PRINTING" | "SHIPPED" | "CANCELLED";
             street: string;
-            totalFilamentGrams: number;
-            /** Format: int32 */
-            totalPrintTimeSeconds: number;
             totals: components["schemas"]["OrderTotals"];
         };
         BoundingBox: {
@@ -288,52 +299,75 @@ export interface components {
             /** Format: double */
             pricePerKgChf: number;
         };
+        CustomerDetails: {
+            city: string;
+            country: string;
+            /** Format: email */
+            email: string;
+            name: string;
+            postalCode: string;
+            street: string;
+        };
         FilamentOption: {
             code: string;
             colors: components["schemas"]["ColorOption"][];
             label: string;
             profileName: string;
         };
-        OrderRequest: {
-            city: string;
-            color?: string;
-            country: string;
-            customerName: string;
-            /** Format: email */
-            email: string;
-            expectedTotalChf?: number;
+        OrderItemRequest: {
+            color?: string | null;
             filament: string;
-            postalCode: string;
+            fileName?: string | null;
+            modelId: string;
             quality: string;
             /** Format: int32 */
             quantity?: number;
-            street: string;
+        };
+        OrderItemResponse: {
+            color: components["schemas"]["ColorOption"];
+            filament: string;
+            /** @description Material of the whole line, all copies of this item */
+            filamentGrams: number;
+            fileName: string;
+            /** @description setupFeeChf + unitPriceChf x quantity */
+            lineTotalChf: number;
+            /**
+             * Format: int32
+             * @description 1-based position on the order
+             */
+            position: number;
+            /**
+             * Format: int32
+             * @description Print time of the whole line, all copies of this item
+             */
+            printTimeSeconds: number;
+            quality: string;
+            /** Format: int32 */
+            quantity: number;
+            /** @description Charged once per item */
+            setupFeeChf: number;
+            unitPriceChf: number;
+        };
+        OrderRequest: {
+            customer: components["schemas"]["CustomerDetails"];
+            /** @description The items total the customer saw: the sum of the item quotes' totalPriceChf, shipping excluded. Optional; when present and different from the recomputed items total the order is refused with 409 price-changed. */
+            expectedTotalChf?: number | null;
+            items: components["schemas"]["OrderItemRequest"][];
         };
         OrderResponse: {
-            colorCode: string;
-            colorLabel: string;
             /** Format: date-time */
             createdAt: string;
             customerEmail: string;
             customerName: string;
-            filament: string;
-            fileName: string;
+            items: components["schemas"]["OrderItemResponse"][];
             orderNumber: string;
             /** Format: date-time */
             paidAt: string | null;
             paymentUrl: string | null;
-            /** Format: int32 */
-            plateCount: number;
-            quality: string;
-            /** Format: int32 */
-            quantity: number;
             /** Format: date-time */
             quoteExpiresAt: string;
             /** @enum {string} */
             status: "NEW" | "PAID" | "IN_REVIEW" | "APPROVED" | "PRINTING" | "SHIPPED" | "CANCELLED";
-            totalFilamentGrams: number;
-            /** Format: int32 */
-            totalPrintTimeSeconds: number;
             totals: components["schemas"]["OrderTotals"];
             vatNote: string | null;
         };
@@ -349,10 +383,8 @@ export interface components {
         OrderTotals: {
             currency: string;
             itemsTotal: number;
-            setupFee: number;
             shipping: number;
             total: number;
-            unitPrice: number;
             vatAmount: number;
             vatRate: number;
         };
@@ -502,6 +534,7 @@ export interface operations {
             header?: never;
             path: {
                 orderNumber: string;
+                position: number;
             };
             cookie?: never;
         };
@@ -602,13 +635,9 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
-                "multipart/form-data": {
-                    /** Format: binary */
-                    file: string;
-                    request?: components["schemas"]["OrderRequest"];
-                };
+                "application/json": components["schemas"]["OrderRequest"];
             };
         };
         responses: {

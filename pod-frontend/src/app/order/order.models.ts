@@ -1,14 +1,23 @@
 /**
- * Orders API models (`/api/orders`). Settings and the status enum are aliases of the generated
- * contract in `src/app/api/openapi.d.ts`; request parameters and error shapes are hand-written.
+ * Orders API models (`/api/orders`). Request and response shapes are aliases of the generated
+ * contract in `src/app/api/openapi.d.ts`; the error shapes below are hand-written: they are
+ * problem details, which the OpenAPI document does not describe.
  */
 import type { components } from '../api/openapi';
-import { ColorOption, QuoteResponse } from '../quote/quote.models';
+import { QuoteResponse } from '../quote/quote.models';
 
 type Schemas = components['schemas'];
 
 export type OrderStatus = Schemas['OrderResponse']['status'];
 export type OrderSettings = Schemas['OrderSettingsResponse'];
+export type OrderCustomer = Schemas['CustomerDetails'];
+/** One cart line as the backend expects it; the model is referenced by the id `POST /api/models` returned. */
+export type OrderItemRequest = Schemas['OrderItemRequest'];
+export type OrderRequest = Schemas['OrderRequest'];
+export type OrderItemResponse = Schemas['OrderItemResponse'];
+export type OrderTotals = Schemas['OrderTotals'];
+/** The order as `POST /api/orders` and `GET /api/orders/{orderNumber}?email=` return it. */
+export type OrderResponse = Schemas['OrderResponse'];
 
 /** Used until `/api/orders/settings` has answered, and if it never does. */
 export const FALLBACK_ORDER_SETTINGS: OrderSettings = {
@@ -19,84 +28,6 @@ export const FALLBACK_ORDER_SETTINGS: OrderSettings = {
     quoteValidityDays: 14,
     shipToCountries: ['CH']
 };
-
-// ---------------------------------------------------------------------------------------------
-// Multi-item order contract. These interfaces mirror the backend contract for the cart release
-// (JSON `POST /api/orders` with an `items` list, `items` and order-level `totals` on the
-// response). The generated `openapi.d.ts` does not carry them yet; once the backend publishes
-// the contract they are to be replaced by aliases of the generated schemas, like the types above.
-// ---------------------------------------------------------------------------------------------
-
-export interface OrderCustomer {
-    name: string;
-    email: string;
-    street: string;
-    postalCode: string;
-    city: string;
-    /** ISO 3166-1 alpha-2, e.g. CH */
-    country: string;
-}
-
-/** One cart line as the backend expects it; the model is referenced by the id `POST /api/models` returned. */
-export interface OrderItemRequest {
-    modelId: string;
-    fileName: string;
-    filament: string;
-    color: string;
-    quality: string;
-    quantity: number;
-}
-
-export interface OrderRequest {
-    customer: OrderCustomer;
-    items: OrderItemRequest[];
-    /** The items total the customer saw; the backend answers 409 if it no longer holds. */
-    expectedTotalChf: number;
-}
-
-export interface OrderItemResponse {
-    /** 1-based position in the order. */
-    position: number;
-    fileName: string;
-    filament: string;
-    color: ColorOption;
-    quality: string;
-    quantity: number;
-    unitPriceChf: number;
-    setupFeeChf: number;
-    lineTotalChf: number;
-    printTimeSeconds: number;
-    filamentGrams: number;
-}
-
-export interface OrderTotals {
-    itemsTotal: number;
-    shipping: number;
-    vatRate: number;
-    vatAmount: number;
-    total: number;
-    currency: string;
-}
-
-/** The order as `POST /api/orders` and `GET /api/orders/{orderNumber}?email=` return it. */
-export interface OrderResponse {
-    orderNumber: string;
-    status: OrderStatus;
-    /** Format: date-time */
-    createdAt: string;
-    /** Format: date-time */
-    quoteExpiresAt: string;
-    /** Format: date-time */
-    paidAt: string | null;
-    paymentUrl: string | null;
-    customerName: string;
-    customerEmail: string;
-    items: OrderItemResponse[];
-    totals: OrderTotals;
-    vatNote: string | null;
-}
-
-// ---------------------------------------------------------------------------------------------
 
 /** Remembered in sessionStorage between checkout, payment page and success page. */
 export interface LastOrderReference {
@@ -123,7 +54,7 @@ export interface ModelExpired {
     itemIndex: number | null;
 }
 
-/** 400 from the backend: per-field validation messages. */
+/** 400 from the backend: validation messages keyed by field (`customer.email`, `items[0].quantity`, `items`). */
 export interface FieldErrors {
     kind: 'field-errors';
     errors: Record<string, string>;
