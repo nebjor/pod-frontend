@@ -40,6 +40,8 @@ echo "frontend  $(git -C "$FRONTEND_REPO" log --oneline -1)"
 
 step "build and start"
 docker compose up -d --build --remove-orphans "${services[@]}"
+# The Caddyfile is a bind mount: an edited file does not restart the container, so reload it.
+docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile 2>/dev/null     && echo "caddy reloaded" || docker compose restart caddy
 
 step "waiting for the backend"
 for _ in $(seq 1 36); do
