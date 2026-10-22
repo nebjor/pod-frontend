@@ -25,6 +25,12 @@ export class ModelViewerComponent implements AfterViewInit, OnChanges, OnDestroy
   @Input() modelColor?: string;
   @Input() autoRotate = false;
   @Input() autoRotateSpeed = 1;
+  /**
+   * False for a decorative preview (landing page): no rotate, zoom or touch capture, so the
+   * page scrolls over it. True lets the customer turn and zoom the model; panning is never
+   * offered, because a dragged-away model looks broken and has no use for a quote.
+   */
+  @Input() interactive = true;
   @Input() sourceUpAxis: 'x' | 'y' | 'z' = 'z';
   @Output() loadStateChange = new EventEmitter<ModelLoadState>();
   @Output() loadProgress = new EventEmitter<number>();
@@ -132,9 +138,17 @@ export class ModelViewerComponent implements AfterViewInit, OnChanges, OnDestroy
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
     this.controls.maxPolarAngle = Math.PI;
+    this.controls.enablePan = false;
     this.controls.enableZoom = true;
     this.controls.minDistance = 0.5;
     this.controls.maxDistance = 100;
+    if (!this.interactive) {
+      // dispose() removes the pointer and wheel listeners; update() keeps working for damping.
+      // OrbitControls sets touch-action: none on the canvas, which would block page scrolling
+      // on phones over a preview that cannot be moved anyway.
+      this.controls.dispose();
+      this.renderer.domElement.style.touchAction = '';
+    }
 
     this.animate();
     window.addEventListener('resize', this.onResize);
@@ -258,8 +272,11 @@ export class ModelViewerComponent implements AfterViewInit, OnChanges, OnDestroy
 
     const maxDim = Math.max(size.x, size.y, size.z);
 
-    // Keep zoom limits proportional to model size so interaction feels natural for tiny and large models.
-    this.controls.minDistance = Math.max(0.05, maxDim * 0.45);
+    // Zoom limits proportional to the model. The camera orbits the centre, so the closest
+    // distance has to stay outside the bounding sphere plus the near plane: inside it the
+    // model is clipped and turns inside out while turning.
+    const boundingRadius = size.length() / 2;
+    this.controls.minDistance = Math.max(this.camera.near * 2, boundingRadius * 1.25);
     this.controls.maxDistance = Math.max(this.controls.minDistance * 2, maxDim * 4);
 
     this.camera.position.set(center.x + maxDim * 1.5, center.y + maxDim * 1.5, center.z + maxDim * 1.5);
