@@ -91,7 +91,8 @@
                     <p class="account-hint">
                         Schon Kunde?
                         <a routerLink="/konto/anmelden" [queryParams]="{ returnTo: '/checkout' }">Anmelden</a>
-                        und die Adresse wird ausgefuellt.
+                        &middot; Neu hier?
+                        <a routerLink="/konto/anmelden" [queryParams]="{ mode: 'register', returnTo: '/checkout' }">Registrieren</a>
                     </p>
                 }
                 <form [formGroup]="customerForm" class="customer-form" (ngSubmit)="submit()" novalidate>

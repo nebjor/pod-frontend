@@ -146,7 +146,8 @@ describe('OrderSuccessComponent', () => {
         const status = element().querySelector<HTMLAnchorElement>('.next-steps a');
         expect(status?.getAttribute('href')).toBe('/bestellung?nr=POD-1000&email=anna@example.com');
         expect(element().textContent).toContain('Mit deiner E-Mail kannst du dich jederzeit');
-        expect(element().querySelector('a[href="/konto/anmelden"]')).not.toBeNull();
+        const register = element().querySelector<HTMLAnchorElement>('a[href="/konto/anmelden?mode=register"]');
+        expect(register?.textContent?.trim()).toBe('registrieren');
     });
 
     it('spares a signed-in customer the account hint', async () => {
@@ -155,7 +156,7 @@ describe('OrderSuccessComponent', () => {
         loadAndFlush();
         fixture.detectChanges();
 
-        expect(element().querySelector('a[href="/konto/anmelden"]')).toBeNull();
+        expect(element().querySelector('a[href="/konto/anmelden?mode=register"]')).toBeNull();
         expect(element().querySelector('.next-steps a')).not.toBeNull();
     });
 

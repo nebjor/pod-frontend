@@ -26,7 +26,8 @@
                 @if (accountState() === 'anonymous') {
                     <p class="note">
                         Mit deiner E-Mail kannst du dich jederzeit
-                        <a routerLink="/konto/anmelden">anmelden</a> und alle Bestellungen sehen. Ein Passwort brauchst du nicht.
+                        <a routerLink="/konto/anmelden" [queryParams]="{ mode: 'register' }">registrieren</a> und alle
+                        Bestellungen an einem Ort sehen.
                     </p>
                 }
             }
