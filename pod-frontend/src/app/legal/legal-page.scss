@@ -52,3 +52,35 @@
         font-size: 0.95rem;
     }
 }
+
+// About page: a partner logo beside its paragraph, on a white tile because the logo is only
+// published in its own colours and would vanish on the dark background.
+.origin {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+    align-items: start;
+
+    @media (min-width: 720px) {
+        grid-template-columns: 11rem 1fr;
+        gap: 2rem;
+    }
+
+    p {
+        margin: 0;
+    }
+}
+
+.partner-logo {
+    margin: 0;
+    padding: 1.1rem;
+    border-radius: 1rem;
+    background: #fff;
+    width: 11rem;
+
+    img {
+        display: block;
+        width: 100%;
+        height: auto;
+    }
+}

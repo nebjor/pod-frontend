@@ -119,16 +119,20 @@
 
         .primary-btn {
             pointer-events: auto;
+            cursor: pointer;
             background-color: var(--accent-500);
             color: #062417;
             padding: 1.5rem 2rem;
             border-radius: 12px;
             font-size: 1rem;
             box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6), 0 0 0 6px rgba(5, 15, 25, 0.55);
-            transition: transform 160ms ease;
+            transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
 
-            &:hover {
+            &:hover,
+            &:focus-visible {
+                background-color: var(--accent-450);
                 transform: translateY(-2px);
+                box-shadow: 0 26px 48px -10px rgba(0, 0, 0, 0.7), 0 0 0 6px rgba(5, 15, 25, 0.55), 0 0 0 7px var(--accent-300);
             }
         }
     }
@@ -208,17 +212,4 @@
     background: linear-gradient(180deg, var(--accent-300), var(--accent-500));
     color: #0a2317;
     font-weight: 800;
-}
-
-.steps-cta {
-    margin-top: 1.8rem;
-
-    .primary-btn {
-        background-color: var(--accent-500);
-        color: #062417;
-        padding: 1rem 2rem;
-        border-radius: 12px;
-        font-size: 1rem;
-        font-weight: 700;
-    }
 }
