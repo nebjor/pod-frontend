@@ -109,6 +109,18 @@
                     <section class="card detail">
                         <h2>{{ order.orderNumber }} · {{ statusLabels[order.status] }}</h2>
 
+                        <div class="actions">
+                            @for (next of order.allowedTransitions; track next) {
+                                <button type="button" class="order-btn" [class.ghost-btn]="next === 'CANCELLED'"
+                                    [disabled]="busy()" (click)="transition(order, next)">
+                                    {{ transitionLabels[next] }}
+                                </button>
+                            }
+                        </div>
+                        @if (order.status === 'IN_REVIEW') {
+                            <p class="note">Vor der Freigabe jedes Modell in Bambu Studio oeffnen: Orientierung, Stuetzen, Haftung pruefen.</p>
+                        }
+
                         <div class="detail-grid">
                             <dl class="details">
                                 <div><dt>Kunde</dt><dd>{{ order.customerName }}</dd></div>
@@ -198,17 +210,6 @@
                             </table>
                         </div>
 
-                        <div class="actions">
-                            @for (next of order.allowedTransitions; track next) {
-                                <button type="button" class="order-btn" [class.ghost-btn]="next === 'CANCELLED'"
-                                    [disabled]="busy()" (click)="transition(order, next)">
-                                    {{ transitionLabels[next] }}
-                                </button>
-                            }
-                        </div>
-                        @if (order.status === 'IN_REVIEW') {
-                            <p class="note">Vor der Freigabe jedes Modell in Bambu Studio oeffnen: Orientierung, Stuetzen, Haftung pruefen.</p>
-                        }
                     </section>
                 }
             } @else {
