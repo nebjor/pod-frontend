@@ -398,11 +398,12 @@ describe('HeaderComponent', () => {
             expect(open?.querySelector('.account-email')?.textContent?.trim()).toBe('kunde@example.com');
 
             const entries = items();
-            expect(entries.map((entry) => entry.textContent?.trim())).toEqual(['Bestellungen', 'Adresse', 'Abmelden']);
+            expect(entries.map((entry) => entry.textContent?.trim())).toEqual(['Bestellungen', 'Lieferadresse', 'Konto', 'Abmelden']);
             expect(entries[0].getAttribute('href')).toBe('/konto');
-            expect(entries[1].getAttribute('href')).toBe('/konto');
-            expect(entries[2].tagName).toBe('BUTTON');
-            expect(entries[2].getAttribute('type')).toBe('button');
+            expect(entries[1].getAttribute('href')).toBe('/konto/adresse');
+            expect(entries[2].getAttribute('href')).toBe('/konto/passwort');
+            expect(entries[3].tagName).toBe('BUTTON');
+            expect(entries[3].getAttribute('type')).toBe('button');
         });
 
         it('opens when the link receives keyboard focus', async () => {
@@ -426,7 +427,7 @@ describe('HeaderComponent', () => {
             expect(document.activeElement).toBe(items()[0]);
 
             items()[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
-            expect(document.activeElement).toBe(items()[2]);
+            expect(document.activeElement).toBe(items()[3]);
         });
 
         it('closes after the grace period once the mouse has left', async () => {
@@ -487,7 +488,7 @@ describe('HeaderComponent', () => {
             await signIn();
             hover();
 
-            items()[2].click();
+            items()[3].click();
 
             expect(logout).toHaveBeenCalledTimes(1);
             expect(navigateByUrl).toHaveBeenCalledWith('/');
@@ -500,10 +501,10 @@ describe('HeaderComponent', () => {
             await signIn();
             hover();
 
-            items()[2].click();
+            items()[3].click();
             fixture.detectChanges();
-            expect((items()[2] as HTMLButtonElement).disabled).toBe(true);
-            items()[2].click();
+            expect((items()[3] as HTMLButtonElement).disabled).toBe(true);
+            items()[3].click();
 
             expect(logout).toHaveBeenCalledTimes(1);
         });
@@ -514,11 +515,11 @@ describe('HeaderComponent', () => {
             await signIn();
             hover();
 
-            items()[2].click();
+            items()[3].click();
             fixture.detectChanges();
 
             expect(navigateByUrl).not.toHaveBeenCalled();
-            expect((items()[2] as HTMLButtonElement).disabled).toBe(false);
+            expect((items()[3] as HTMLButtonElement).disabled).toBe(false);
         });
     });
 

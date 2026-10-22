@@ -1,37 +1,3 @@
-.signed-in {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0.5rem 1rem;
-    margin: -0.5rem 0 1.25rem;
-    color: var(--text-300);
-    font-size: 0.9rem;
-
-    strong {
-        color: var(--text-100);
-    }
-}
-
-.account-layout {
-    display: grid;
-    gap: 1.25rem;
-
-    @media (min-width: 900px) {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-        align-items: start;
-    }
-
-    .card + .card {
-        margin-top: 0;
-    }
-
-    .orders {
-        @media (min-width: 900px) {
-            grid-row: span 2;
-        }
-    }
-}
-
 .order-list {
     margin: 0;
     padding: 0;
@@ -76,43 +42,4 @@
         text-align: right;
         white-space: nowrap;
     }
-}
-
-.address-note {
-    margin: -0.4rem 0 0.9rem;
-}
-
-.login-status {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem 0.75rem;
-    margin: 0 0 0.75rem;
-}
-
-.danger-zone {
-    border-color: rgba(217, 152, 152, 0.4);
-
-    .confirm-text {
-        color: var(--text-100);
-    }
-}
-
-.confirm-actions {
-    display: grid;
-    gap: 0.5rem;
-
-    @media (min-width: 560px) {
-        grid-template-columns: 1fr 1fr;
-    }
-}
-
-.account-footer {
-    margin: 1.5rem 0 0;
-    color: var(--text-300);
-    font-size: 0.85rem;
-}
-
-.danger-zone {
-    margin-top: 1.25rem;
 }

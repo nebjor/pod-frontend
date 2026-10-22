@@ -28,6 +28,7 @@ describe('PasswordComponent', () => {
     let cartEmpty: ReturnType<typeof signal<boolean>>;
     let setPassword: ReturnType<typeof vi.fn>;
     let removePassword: ReturnType<typeof vi.fn>;
+    let deleteAccount: ReturnType<typeof vi.fn>;
     let navigate: ReturnType<typeof vi.spyOn>;
     let navigateByUrl: ReturnType<typeof vi.spyOn>;
 
@@ -39,6 +40,7 @@ describe('PasswordComponent', () => {
             account.update((current) => (current ? { ...current, hasPassword: true } : current));
             return of(undefined);
         });
+        deleteAccount = vi.fn(() => of(undefined));
         removePassword = vi.fn(() => {
             account.update((current) => (current ? { ...current, hasPassword: false } : current));
             return of(undefined);
@@ -58,7 +60,9 @@ describe('PasswordComponent', () => {
                         isSignedIn: computed(() => state() === 'signedIn'),
                         load: vi.fn(() => Promise.resolve()),
                         setPassword,
-                        removePassword
+                        removePassword,
+                        deleteAccount,
+                        deleted: signal(false)
                     }
                 },
                 { provide: CartService, useValue: { isEmpty: cartEmpty } }
@@ -81,22 +85,13 @@ describe('PasswordComponent', () => {
         return element().textContent ?? '';
     }
 
-    it('sends an anonymous visitor to the login page and brings them back afterwards', async () => {
-        state.set('anonymous');
-        account.set(null);
-        await setup();
-
-        expect(navigate).toHaveBeenCalledWith(['/konto/anmelden'], { queryParams: { returnTo: '/konto/passwort' } });
-        expect(component.pageState()).toBe('loading');
-    });
-
     afterEach(() => localStorage.clear());
 
     it('reads as "Passwort festlegen" for a fresh registration and asks for the password twice', async () => {
         await setup();
 
-        expect(element().querySelector('h1')?.textContent?.trim()).toBe('Passwort festlegen');
-        expect(text()).toContain('Mit dem Passwort meldest du dich künftig an');
+        expect(element().querySelector('h1')?.textContent?.trim()).toBe('Konto');
+        expect(element().querySelector('h2')?.textContent?.trim()).toBe('Passwort festlegen');
         expect(text()).toContain('Mindestens 10 Zeichen');
         const inputs = element().querySelectorAll<HTMLInputElement>('input[type="password"]');
         expect(inputs).toHaveLength(2);
@@ -104,7 +99,6 @@ describe('PasswordComponent', () => {
         expect(inputs[1].getAttribute('autocomplete')).toBe('new-password');
         expect(element().querySelector<HTMLButtonElement>('button[type="submit"]')?.textContent?.trim()).toBe('Passwort speichern');
         expect(text()).not.toContain('Passwort entfernen');
-        expect(element().querySelector('.page-footer a[href="/konto"]')).not.toBeNull();
     });
 
     it('refuses a password shorter than ten characters', async () => {
@@ -212,13 +206,13 @@ describe('PasswordComponent', () => {
         it('reads as the change page and offers to remove the password', async () => {
             await setup();
 
-            expect(element().querySelector('h1')?.textContent?.trim()).toBe('Passwort ändern');
+            expect(element().querySelector('h2')?.textContent?.trim()).toBe('Passwort ändern');
             const trigger = element().querySelector<HTMLButtonElement>('.page-footer .text-btn');
             expect(trigger?.textContent?.trim()).toBe('Passwort entfernen');
             expect(element().querySelector('.danger-zone')).toBeNull();
         });
 
-        it('saves the new password, stays on the page and links back to the account', async () => {
+        it('saves the new password, stays on the page', async () => {
             await setup();
             component.form.setValue({ password: 'correct horse battery', confirm: 'correct horse battery' });
 
@@ -229,9 +223,8 @@ describe('PasswordComponent', () => {
             expect(navigateByUrl).not.toHaveBeenCalled();
             expect(component.saved()).toBe(true);
             expect(text()).toContain('Passwort gespeichert.');
-            expect(element().querySelector('.success a[href="/konto"]')).not.toBeNull();
             expect(component.form.getRawValue()).toEqual({ password: '', confirm: '' });
-            expect(element().querySelector('h1')?.textContent?.trim()).toBe('Passwort ändern');
+            expect(element().querySelector('h2')?.textContent?.trim()).toBe('Passwort ändern');
         });
 
         it('goes back to the checkout after a forgotten password was replaced from there', async () => {
@@ -264,9 +257,8 @@ describe('PasswordComponent', () => {
             expect(removePassword).toHaveBeenCalledTimes(1);
             expect(component.removed()).toBe(true);
             expect(text()).toContain('Passwort entfernt');
-            expect(text()).toContain('ab jetzt per E-Mail-Link');
             expect(element().querySelector('.danger-zone')).toBeNull();
-            expect(element().querySelector('h1')?.textContent?.trim()).toBe('Passwort festlegen');
+            expect(element().querySelector('h2')?.textContent?.trim()).toBe('Passwort festlegen');
             expect(text()).not.toContain('Passwort entfernen');
         });
 
@@ -280,6 +272,44 @@ describe('PasswordComponent', () => {
 
             expect(component.removeError()).toBe('Kurz nicht verfügbar');
             expect(component.hasPassword()).toBe(true);
+            expect(element().querySelector('.danger-zone .error')?.textContent).toContain('Kurz nicht verfügbar');
+        });
+    });
+
+    describe('deleting the account', () => {
+        it('deletes only after the confirmation step', async () => {
+            await setup();
+
+            const trigger = element().querySelector<HTMLButtonElement>('.page-footer .text-btn');
+            expect(trigger?.textContent?.trim()).toBe('Konto löschen');
+            expect(element().querySelector('.danger-zone')).toBeNull();
+
+            component.askDelete();
+            fixture.detectChanges();
+            expect(deleteAccount).not.toHaveBeenCalled();
+            const confirmation = element().querySelector('.danger-zone')?.textContent ?? '';
+            expect(confirmation).toContain('Dein Konto und deine gespeicherte Adresse werden gelöscht');
+            expect(confirmation).toContain('unter "Meine Bestellung" weiterhin einsehen');
+
+            component.cancelDelete();
+            expect(component.confirmingDelete()).toBe(false);
+
+            component.askDelete();
+            component.confirmDelete();
+
+            expect(deleteAccount).toHaveBeenCalledTimes(1);
+        });
+
+        it('reports when deleting did not work', async () => {
+            deleteAccount.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 503, error: { detail: 'Kurz nicht verfügbar' } })));
+            await setup();
+
+            component.askDelete();
+            component.confirmDelete();
+            fixture.detectChanges();
+
+            expect(component.deleteError()).toBe('Kurz nicht verfügbar');
+            expect(component.deleting()).toBe(false);
             expect(element().querySelector('.danger-zone .error')?.textContent).toContain('Kurz nicht verfügbar');
         });
     });
