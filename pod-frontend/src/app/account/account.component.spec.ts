@@ -131,7 +131,7 @@ describe('AccountComponent', () => {
         expect(text).toContain('2 Stück');
         expect(text).toContain('CHF 17.50');
         expect(element().querySelector('a[href="/checkout"]')?.textContent?.trim()).toBe('Jetzt bestellen');
-        expect(element().querySelector('a[href="/warenkorb"]')?.textContent?.trim()).toBe('Zum Warenkorb');
+        expect(element().querySelector('a[href="/warenkorb"]')).toBeNull();
         expect(element().querySelector('a[href="/upload"]')).toBeNull();
         cartCount.set(0);
     });
