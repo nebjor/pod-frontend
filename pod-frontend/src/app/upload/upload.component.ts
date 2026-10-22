@@ -3,23 +3,26 @@ import {
     ChangeDetectionStrategy,
     Component,
     DestroyRef,
+    ElementRef,
     afterNextRender,
+    afterRenderEffect,
     computed,
     effect,
     inject,
     signal,
-    untracked
+    untracked,
+    viewChild
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
-import { EMPTY, Subject, catchError, concatMap, debounce, from, map, merge, of, switchMap, tap, timer } from 'rxjs';
+import { RouterLink } from '@angular/router';
+import { EMPTY, Subject, catchError, map, merge, of, switchMap, timer } from 'rxjs';
 import { CART_MAX_ITEMS, CartItem, CartService } from '../cart/cart.service';
 import { ModelViewerComponent } from '../model-viewer/model-viewer.component';
-import { formatPrintDuration } from '../quote/print-duration';
-import { formatQualityOption, qualityLabel } from '../quote/quality-labels';
+import { formatQualityOption } from '../quote/quality-labels';
 import { ColorOption, FilamentOption, QualityOption, QuoteOptions, QuoteResponse } from '../quote/quote.models';
 import { QuoteService, UploadEvent, describeQuoteError, isModelExpired } from '../quote/quote.service';
+import { QuoteOverlayComponent } from './quote-overlay/quote-overlay.component';
 
 type UploadFormat = 'stl' | '3mf';
 type QuoteState = 'idle' | 'loading' | 'ready' | 'error';
@@ -27,9 +30,9 @@ type UploadState = 'idle' | 'uploading' | 'done' | 'error';
 type CatalogState = 'loading' | 'ready' | 'error';
 type ModelLoadState = 'idle' | 'loading' | 'loaded' | 'error';
 /**
- * What the price box reports. 'uploading' shows the real transfer progress; 'slicing' and
- * 'repricing' wait for the backend with nothing to measure, the latter with a previous quote
- * still on screen.
+ * What the loading screen reports. 'uploading' shows the real transfer progress; 'slicing'
+ * and 'repricing' wait for the backend with nothing to measure, the latter for a model the
+ * backend has already sliced once.
  */
 export type QuotePhase = 'idle' | 'uploading' | 'slicing' | 'repricing' | 'ready' | 'error';
 
@@ -41,10 +44,6 @@ interface QuoteJob {
     pricePerKgChf: number;
     quality: string;
     quantity: number;
-    /** Skip the debounce: the job follows an upload or a retry, not a form change. */
-    immediate: boolean;
-    /** Slice even if the cache holds this combination; the retry button needs that. */
-    force: boolean;
 }
 
 interface QuoteOutcome {
@@ -56,19 +55,6 @@ interface QuoteOutcome {
 }
 
 type UploadOutcome = { file: File; event: UploadEvent } | { file: File; event: { kind: 'error'; message: string } };
-
-/**
- * Every slicer run costs seconds of CPU and counts against the client's rate limit, so the
- * form waits until the user stops changing values before it asks the backend.
- */
-export const QUOTE_DEBOUNCE_MS = 800;
-
-/**
- * Once a quote is on screen, the other filaments at this quality and the other qualities with
- * this filament are fetched in the background, so switching between them is instant. The
- * pause keeps a user who is still changing values from triggering slices that are thrown away.
- */
-export const PREFETCH_DELAY_MS = 1000;
 
 /**
  * Identifies a quote. The colour itself is excluded because it never changes the slice; its
@@ -88,7 +74,7 @@ export const PREVIEW_LIMIT_BYTES_3MF = 8 * 1024 * 1024;
 
 /**
  * Below this size the upload finishes within one progress event, so a transfer bar would only
- * flash at 100 %; the price box goes straight to the slicing phase instead.
+ * flash at 100 %; the loading screen goes straight to the slicing phase instead.
  */
 export const UPLOAD_PROGRESS_MIN_BYTES = 2 * 1024 * 1024;
 
@@ -114,7 +100,7 @@ export const SLICING_STEPS: ReadonlyArray<SlicingStep> = [
 export const REPRICING_FIRST_STEP = 2;
 export const REPRICING_FINAL_TEXT = 'Preis wird neu berechnet...';
 
-/** How long "Fertig." lingers after the quote arrived before the box shows the price. */
+/** How long "Fertig." lingers after the quote arrived before the result takes over. */
 export const QUOTE_DONE_FLASH_MS = 400;
 
 /** The timed stages for a pending phase, rebased so that the first one starts at zero. */
@@ -134,26 +120,31 @@ export function slicingStepsFor(phase: 'slicing' | 'repricing'): ReadonlyArray<S
 const PREFERRED_QUALITY = 'medium';
 
 /**
- * Upload, configure, quote, put in the cart. The catalogue (filaments, colours, qualities,
- * quantity limit) comes from the backend and nothing here is hard-coded: a new material in
- * the backend configuration shows up without a frontend release.
+ * Upload, configure, quote, put in the cart, in that order and one step at a time. The file
+ * is uploaded as soon as it is dropped so the preview and the transfer overlap, but nothing
+ * is sliced until the customer asks for the price; the quote then takes over the screen,
+ * first as a loading screen, then as the result. The catalogue (filaments, colours,
+ * qualities, quantity limit) comes from the backend and nothing here is hard-coded: a new
+ * material in the backend configuration shows up without a frontend release.
  */
 @Component({
     selector: 'app-upload',
-    imports: [ReactiveFormsModule, DecimalPipe, RouterLink, ModelViewerComponent],
+    imports: [ReactiveFormsModule, DecimalPipe, RouterLink, ModelViewerComponent, QuoteOverlayComponent],
     templateUrl: './upload.component.html',
     styleUrl: './upload.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UploadComponent {
-    private readonly router = inject(Router);
     private readonly quoteService = inject(QuoteService);
     private readonly cart = inject(CartService);
     private readonly destroyRef = inject(DestroyRef);
     private readonly uploads = new Subject<File | null>();
     private readonly quoteJobs = new Subject<QuoteJob | null>();
-    private readonly prefetchRuns = new Subject<QuoteJob | null>();
     private readonly doneFlashes = new Subject<void>();
+    private readonly loadingOverlay = viewChild<ElementRef<HTMLElement>>('loadingOverlay');
+    private readonly calculateButton = viewChild<ElementRef<HTMLButtonElement>>('calculateButton');
+    /** True while an overlay holds the focus; it goes back to the button when both close. */
+    private overlayHadFocus = false;
     /** One re-upload per file when the backend has dropped it; a second expiry is an error. */
     private reuploaded = false;
 
@@ -173,15 +164,12 @@ export class UploadComponent {
     readonly errorMessage = signal('');
     /** The line just added; the confirmation with the next steps shows while it is set. */
     readonly addedItem = signal<CartItem | null>(null);
-    readonly cartCount = this.cart.count;
     readonly cartItemCount = computed(() => this.cart.items().length);
-    /** "1 Modell" / "3 Modelle": the number of lines in the cart, for the notes under the buttons. */
+    /** "1 Modell" / "3 Modelle": the number of lines in the cart, for the note under the button. */
     readonly cartModelsLabel = computed(() => {
         const count = this.cartItemCount();
         return `${count} ${count === 1 ? 'Modell' : 'Modelle'}`;
     });
-    readonly cartTotal = this.cart.itemsTotal;
-    readonly cartCurrency = this.cart.currency;
     readonly cartIsFull = this.cart.isFull;
     readonly maxCartItems = CART_MAX_ITEMS;
     readonly selectedFile = signal<File | null>(null);
@@ -197,9 +185,14 @@ export class UploadComponent {
     readonly quote = signal<QuoteResponse | null>(null);
     readonly quoteState = signal<QuoteState>('idle');
     readonly quoteError = signal('');
+    /**
+     * True from "Preis berechnen" until "Anpassen", a failure or a new file: the overlays are
+     * shown only while it is set, so neither of them exists on the server or before the click.
+     */
+    readonly quoteRequested = signal(false);
     /** Index into {@link slicingStepsFor} of the current phase; advanced by timers. */
     readonly slicingStep = signal(0);
-    /** True for a moment after a quote arrived: the box says "Fertig." before the price. */
+    /** True for a moment after a quote arrived: the loading screen says "Fertig." first. */
     readonly quoteDoneFlash = signal(false);
 
     readonly orderForm = new FormGroup({
@@ -246,10 +239,8 @@ export class UploadComponent {
         const file = this.selectedFile();
         return file ? Math.round((file.size / (1024 * 1024)) * 100) / 100 : 0;
     });
-    readonly unitPrintTimeLabel = computed(() => formatPrintDuration(this.quote()?.printTimeSeconds ?? 0));
-    readonly totalPrintTimeLabel = computed(() => formatPrintDuration(this.quote()?.totalPrintTimeSeconds ?? 0));
     /**
-     * True when the quote on screen was computed for exactly what the form says now. It is
+     * True when the quote in hand was computed for exactly what the form says now. It is
      * false while a recalculation is pending and while the form is invalid, because then no
      * request is sent at all and the previous price would otherwise pass for the current one.
      */
@@ -265,21 +256,10 @@ export class UploadComponent {
             quote.color.pricePerKgChf === (this.selectedColor()?.pricePerKgChf ?? 0)
         );
     });
-    /** Quality label of the quote on screen, for the stale marker. */
-    readonly quoteQualityLabel = computed(() => {
-        const code = this.quote()?.quality;
-        return code ? qualityLabel(code, this.qualityOptions()) : '';
-    });
-    /** The quote on screen is shown dimmed: a new one is pending or the form has moved on. */
-    readonly quoteIsStale = computed(
-        () =>
-            this.quote() !== null &&
-            (this.quoteState() !== 'ready' || this.quoteDoneFlash() || !this.quoteMatchesForm())
-    );
-    /** Which status the price box shows; see {@link QuotePhase}. */
+    /** Which status the loading screen shows; see {@link QuotePhase}. */
     readonly quotePhase = computed<QuotePhase>(() => {
         const pending: QuotePhase = this.quote() ? 'repricing' : 'slicing';
-        if (this.uploadState() === 'uploading') {
+        if (this.uploadState() === 'uploading' && this.quoteRequested()) {
             const file = this.selectedFile();
             return file && file.size > UPLOAD_PROGRESS_MIN_BYTES ? 'uploading' : pending;
         }
@@ -294,7 +274,7 @@ export class UploadComponent {
                 return 'idle';
         }
     });
-    /** A progress bar is shown for these phases; the other phases are a line of text. */
+    /** The loading screen is shown for these phases. */
     readonly quoteInProgress = computed(() => {
         const phase = this.quotePhase();
         return phase === 'uploading' || phase === 'slicing' || phase === 'repricing';
@@ -318,16 +298,25 @@ export class UploadComponent {
         const steps = slicingStepsFor(phase);
         return steps[Math.min(this.slicingStep(), steps.length - 1)].text;
     });
+    /** The full-screen loading screen: from the click until the quote (or "Fertig.") is there. */
+    readonly loadingOverlayOpen = computed(
+        () => this.quoteRequested() && (this.quoteInProgress() || this.quoteDoneFlash())
+    );
+    /** The quote on the full-screen result, or null while that screen is closed. */
+    readonly quoteOnScreen = computed<QuoteResponse | null>(() =>
+        this.quoteRequested() && this.quotePhase() === 'ready' && !this.quoteDoneFlash() && this.quoteMatchesForm()
+            ? this.quote()
+            : null
+    );
+    readonly overlayOpen = computed(() => this.loadingOverlayOpen() || this.quoteOnScreen() !== null);
+    /** 1 upload, 2 configuration, 3 price: for the step indicator in the header. */
+    readonly currentStep = computed(() => (!this.selectedFile() ? 1 : this.overlayOpen() ? 3 : 2));
+    /** The price in hand is for the current choices: the button shows it again without a slice. */
+    readonly quoteCurrent = computed(() => this.quoteState() === 'ready' && this.quoteMatchesForm());
     readonly canSubmitOrder = computed(
         () => this.quoteState() === 'ready' && this.quote() !== null && this.quoteMatchesForm()
     );
     readonly canAddToCart = computed(() => this.canSubmitOrder() && !this.cartIsFull());
-    /** The slicer's warnings are collapsed by default; most customers do not need them. */
-    readonly warningsOpen = signal(false);
-
-    toggleWarnings() {
-        this.warningsOpen.update((open) => !open);
-    }
 
     /** "Standard 0.20 mm", the same wording the cart and the order pages use. */
     qualityOptionLabel(option: QualityOption): string {
@@ -361,47 +350,34 @@ export class UploadComponent {
             )
             .subscribe((outcome) => this.applyUploadOutcome(outcome));
 
+        // A newer job cancels the slice still running for an older one.
         this.quoteJobs
             .pipe(
-                debounce((job) => timer(job?.immediate ? 0 : QUOTE_DEBOUNCE_MS)),
-                switchMap((job) => {
-                    if (job === null) {
-                        return EMPTY;
-                    }
-                    // A prefetch may have filled this combination while the job was debounced.
-                    const cached = job.force ? undefined : this.quoteCache.get(job.key);
-                    if (cached) {
-                        return of<QuoteOutcome>({ job, quote: cached, error: '', modelExpired: false });
-                    }
-                    return this.quoteService.requestQuote(job.modelId, {
-                              filament: job.filament,
-                              color: job.color,
-                              quality: job.quality,
-                              quantity: job.quantity
-                          }).pipe(
-                              map((quote): QuoteOutcome => ({ job, quote, error: '', modelExpired: false })),
-                              catchError((error: unknown) =>
-                                  of<QuoteOutcome>({
-                                      job,
-                                      quote: null,
-                                      error: describeQuoteError(error),
-                                      modelExpired: isModelExpired(error)
-                                  })
-                              )
-                          );
-                }),
-                takeUntilDestroyed()
-            )
-            .subscribe((outcome) => this.applyQuoteOutcome(outcome));
-
-        this.prefetchRuns
-            .pipe(
                 switchMap((job) =>
-                    job === null ? EMPTY : timer(PREFETCH_DELAY_MS).pipe(switchMap(() => this.prefetchNeighbours(job)))
+                    job === null
+                        ? EMPTY
+                        : this.quoteService
+                              .requestQuote(job.modelId, {
+                                  filament: job.filament,
+                                  color: job.color,
+                                  quality: job.quality,
+                                  quantity: job.quantity
+                              })
+                              .pipe(
+                                  map((quote): QuoteOutcome => ({ job, quote, error: '', modelExpired: false })),
+                                  catchError((error: unknown) =>
+                                      of<QuoteOutcome>({
+                                          job,
+                                          quote: null,
+                                          error: describeQuoteError(error),
+                                          modelExpired: isModelExpired(error)
+                                      })
+                                  )
+                              )
                 ),
                 takeUntilDestroyed()
             )
-            .subscribe();
+            .subscribe((outcome) => this.applyQuoteOutcome(outcome));
 
         // The staged texts advance on timers that live exactly as long as the pending phase.
         effect((onCleanup) => {
@@ -423,11 +399,8 @@ export class UploadComponent {
             )
             .subscribe(() => this.quoteDoneFlash.set(false));
 
-        this.orderForm.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
-            // A changed configuration is a new line; the confirmation for the previous one goes.
-            this.addedItem.set(null);
-            this.requestQuote();
-        });
+        // A changed configuration is a new line; the confirmation for the previous one goes.
+        this.orderForm.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.addedItem.set(null));
         this.destroyRef.onDestroy(() => this.releaseModelUrl());
 
         // A filament switch may drop the chosen colour; fall back to the first stocked one.
@@ -436,6 +409,22 @@ export class UploadComponent {
             const current = this.selectedColorCode();
             if (colors.length > 0 && !colors.some((color) => color.code === current)) {
                 this.orderForm.controls.color.setValue(colors[0].code);
+            }
+        });
+
+        // The overlays take the focus when they open; the result screen does that itself. When
+        // both are gone the focus returns to the button that opened them.
+        afterRenderEffect(() => {
+            const loading = this.loadingOverlay();
+            const resultOpen = this.quoteOnScreen() !== null;
+            if (loading) {
+                loading.nativeElement.focus();
+                this.overlayHadFocus = true;
+            } else if (resultOpen) {
+                this.overlayHadFocus = true;
+            } else if (this.overlayHadFocus) {
+                this.overlayHadFocus = false;
+                untracked(() => this.calculateButton())?.nativeElement.focus();
             }
         });
 
@@ -504,10 +493,38 @@ export class UploadComponent {
     }
 
     /**
+     * "Preis berechnen": opens the loading screen and asks for the quote. An upload still in
+     * transfer is waited for and the quote follows it; a failed upload is repeated first. A
+     * failed quote is retried; a quote already in hand is shown again without a slice.
+     */
+    onCalculatePrice() {
+        const file = this.selectedFile();
+        if (!file || this.catalogState() !== 'ready') {
+            return;
+        }
+        if (this.orderForm.invalid) {
+            this.orderForm.markAllAsTouched();
+            return;
+        }
+
+        this.quoteRequested.set(true);
+        if (this.uploadState() === 'error') {
+            this.startUpload(file);
+            return;
+        }
+        this.requestQuote(this.quoteState() === 'error');
+    }
+
+    /** "Anpassen" or Escape: back to the configuration; the quote stays cached. */
+    onAdjust() {
+        this.quoteRequested.set(false);
+    }
+
+    /**
      * Asks the backend to slice and price the uploaded model with the current configuration.
-     * Jobs whose slice-relevant values are unchanged are dropped unless {@code force} is set,
-     * which the retry button uses; forced jobs also skip the debounce. Without a catalogue or
-     * before the upload has finished there is nothing to send; the job runs once both are there.
+     * A job whose slice-relevant values match the last one is dropped unless {@code force} is
+     * set, which a retry after a failure needs. Without a catalogue or before the upload has
+     * finished there is nothing to send; the job runs once both are there.
      */
     requestQuote(force = false) {
         const modelId = this.modelId();
@@ -533,9 +550,7 @@ export class UploadComponent {
             color,
             pricePerKgChf,
             quality,
-            quantity: Number(quantity),
-            immediate: force,
-            force
+            quantity: Number(quantity)
         };
 
         this.lastRequestedKey = key;
@@ -553,47 +568,6 @@ export class UploadComponent {
         this.quoteJobs.next(job);
     }
 
-    /**
-     * Fetches the quotes next to the one on screen: the other filaments at this quality, the
-     * other qualities with this filament, and this filament's other material prices (one
-     * colour per price), one after the other so the slicer is not flooded. Best effort: a
-     * failure only means that combination is sliced on demand when chosen. Cache hits on the
-     * backend do not count against the rate limit, so repeating a prefetch after a change is
-     * cheap for the user.
-     */
-    private prefetchNeighbours(job: QuoteJob) {
-        const filaments = this.filamentOptions();
-        const current = filaments.find((option) => option.code === job.filament);
-        const currentColor = current?.colors.find((color) => color.code === job.color) ?? current?.colors[0];
-        const otherTiers = (current?.colors ?? []).filter(
-            (color, index, colors) =>
-                color.pricePerKgChf !== job.pricePerKgChf &&
-                colors.findIndex((other) => other.pricePerKgChf === color.pricePerKgChf) === index
-        );
-        const neighbours: { filament: string; quality: string; color: ColorOption | undefined }[] = [
-            ...filaments
-                .filter((option) => option.code !== job.filament)
-                .map((option) => ({ filament: option.code, quality: job.quality, color: option.colors[0] })),
-            ...this.qualityOptions()
-                .filter((option) => option.code !== job.quality)
-                .map((option) => ({ filament: job.filament, quality: option.code, color: currentColor })),
-            ...otherTiers.map((color) => ({ filament: job.filament, quality: job.quality, color }))
-        ];
-        return from(neighbours).pipe(
-            concatMap(({ filament, quality, color }) => {
-                const key = quoteKey(job.modelId, filament, quality, job.quantity, color?.pricePerKgChf ?? 0);
-                if (this.quoteCache.has(key)) {
-                    return EMPTY;
-                }
-                const params = { filament, color: color?.code ?? '', quality, quantity: job.quantity };
-                return this.quoteService.requestQuote(job.modelId, params).pipe(
-                    tap((quote) => this.quoteCache.set(key, quote)),
-                    catchError(() => EMPTY)
-                );
-            })
-        );
-    }
-
     private applyUploadOutcome({ file, event }: UploadOutcome) {
         if (file !== this.selectedFile()) {
             return;
@@ -606,13 +580,17 @@ export class UploadComponent {
                 this.uploadProgress.set(100);
                 this.uploadState.set('done');
                 this.modelId.set(event.model.modelId);
-                this.requestQuote(true);
+                // The customer asked for the price during the transfer: it follows right away.
+                if (this.quoteRequested()) {
+                    this.requestQuote(true);
+                }
                 break;
             case 'error':
                 this.uploadState.set('error');
                 this.quote.set(null);
                 this.quoteError.set(event.message);
                 this.quoteState.set('error');
+                this.quoteRequested.set(false);
                 break;
         }
     }
@@ -622,26 +600,16 @@ export class UploadComponent {
         this.uploadState.set('uploading');
         this.uploadProgress.set(0);
         this.quoteDoneFlash.set(false);
-        this.quoteState.set('loading');
         this.quoteError.set('');
         this.uploads.next(file);
     }
 
-    /** Adds the configured model as a cart line; the model stays on screen with the next steps. */
+    /** Adds the configured model as a cart line; the result stays on screen with the next steps. */
     onAddToCart() {
         const item = this.putInCart();
         if (item) {
             this.addedItem.set(item);
         }
-    }
-
-    /** Adds the model and goes straight to the checkout. */
-    onDirectCheckout() {
-        if (!this.putInCart()) {
-            return;
-        }
-
-        void this.router.navigate(['/checkout']);
     }
 
     /** Back to the dropzone for the next model; the cart keeps what was added. */
@@ -665,8 +633,7 @@ export class UploadComponent {
             Validators.max(options.maxQuantity)
         ]);
 
-        // Values are set with events so the signals derived from valueChanges follow; the
-        // quote request they trigger is a no-op until the catalogue is marked ready below.
+        // Values are set with events so the signals derived from valueChanges follow.
         const form = this.orderForm.controls;
         if (!options.filaments.some((option) => option.code === form.filament.value)) {
             form.filament.setValue(options.filaments[0].code);
@@ -679,8 +646,6 @@ export class UploadComponent {
         form.quantity.updateValueAndValidity();
 
         this.catalogState.set('ready');
-        // A file dropped while the catalogue was loading gets its quote now.
-        this.requestQuote();
     }
 
     /** Puts the configured model with its quote into the cart as a new line. */
@@ -727,6 +692,7 @@ export class UploadComponent {
         this.isModelLoading.set(previewable);
         this.modelUrl.set(URL.createObjectURL(file));
 
+        // Uploaded right away so the transfer overlaps the preview; the slice waits for the click.
         this.startUpload(file);
     }
 
@@ -741,7 +707,6 @@ export class UploadComponent {
             this.quote.set(outcome.quote);
             this.quoteError.set('');
             this.quoteState.set('ready');
-            this.prefetchRuns.next(outcome.job);
             return;
         }
 
@@ -756,9 +721,11 @@ export class UploadComponent {
             return;
         }
 
+        // The message is shown on the configuration step, under the button that retries.
         this.quote.set(null);
         this.quoteError.set(outcome.error);
         this.quoteState.set('error');
+        this.quoteRequested.set(false);
     }
 
     private resetModel() {
@@ -769,12 +736,12 @@ export class UploadComponent {
         this.quote.set(null);
         this.quoteError.set('');
         this.quoteState.set('idle');
+        this.quoteRequested.set(false);
         this.quoteDoneFlash.set(false);
         this.isModelLoading.set(false);
         this.modelLoadProgress.set(0);
         this.lastRequestedKey = '';
         this.quoteCache.clear();
-        this.prefetchRuns.next(null);
         this.quoteJobs.next(null);
         this.uploads.next(null);
         this.modelId.set(null);
