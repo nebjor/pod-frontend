@@ -10,14 +10,14 @@
                 <p class="status">Bestellung wird geladen...</p>
             }
             @case ('waiting') {
-                <p class="status"><span class="spinner" aria-hidden="true"></span> Zahlung wird bestaetigt...</p>
+                <p class="status"><span class="spinner" aria-hidden="true"></span> Zahlung wird bestätigt...</p>
                 <p class="note">Das dauert meist nur ein paar Sekunden.</p>
             }
             @case ('paid') {
                 <h2>Danke, deine Zahlung ist eingegangen.</h2>
                 <ol class="next-steps">
-                    <li>Eine Bestaetigung mit allen Details geht an <strong>{{ order()?.customerEmail }}</strong>.</li>
-                    <li>Wir pruefen deine Modelle und starten dann den Druck.</li>
+                    <li>Eine Bestätigung mit allen Details geht an <strong>{{ order()?.customerEmail }}</strong>.</li>
+                    <li>Wir prüfen deine Modelle und starten dann den Druck.</li>
                     <li>
                         Den Stand siehst du jederzeit unter
                         <a routerLink="/bestellung" [queryParams]="statusLinkParams()">Meine Bestellung</a>.
@@ -32,9 +32,9 @@
                 }
             }
             @case ('unpaid') {
-                <h2>Die Zahlung ist noch nicht bestaetigt.</h2>
+                <h2>Die Zahlung ist noch nicht bestätigt.</h2>
                 <p class="note">
-                    Die Bestaetigung des Zahlungsanbieters ist noch nicht da. Das kann ein paar Minuten dauern; sobald sie
+                    Die Bestätigung des Zahlungsanbieters ist noch nicht da. Das kann ein paar Minuten dauern; sobald sie
                     eintrifft, bekommst du eine E-Mail an <strong>{{ order()?.customerEmail }}</strong>.
                 </p>
                 @if (order()?.paymentUrl; as url) {
@@ -46,7 +46,7 @@
                 <p class="note">
                     Deine Bestellung ist gespeichert, abgebucht wurde nichts.
                     @if (priceValidUntil(); as until) {
-                        Der Preis bleibt bis {{ until }} gueltig; bis dahin kannst du bezahlen, danach loeschen wir die Bestellung.
+                        Der Preis bleibt bis {{ until }} gültig; bis dahin kannst du bezahlen, danach löschen wir die Bestellung.
                     }
                 </p>
                 @if (order()?.paymentUrl; as url) {

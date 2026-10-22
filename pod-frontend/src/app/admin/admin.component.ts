@@ -28,7 +28,7 @@ import {
 export const STATUS_LABELS: Record<OrderStatus, string> = {
     NEW: 'Neu, unbezahlt',
     PAID: 'Bezahlt',
-    IN_REVIEW: 'In Pruefung',
+    IN_REVIEW: 'In Prüfung',
     APPROVED: 'Freigegeben',
     PRINTING: 'Im Druck',
     SHIPPED: 'Versendet',
@@ -36,9 +36,9 @@ export const STATUS_LABELS: Record<OrderStatus, string> = {
 };
 
 export const TRANSITION_LABELS: Record<OrderStatus, string> = {
-    NEW: 'Zurueck auf neu',
+    NEW: 'Zurück auf neu',
     PAID: 'Als bezahlt markieren',
-    IN_REVIEW: 'Pruefung starten',
+    IN_REVIEW: 'Prüfung starten',
     APPROVED: 'Freigeben',
     PRINTING: 'Druck starten',
     SHIPPED: 'Als versendet markieren',
@@ -242,7 +242,7 @@ export class AdminComponent {
             .resetRateLimits()
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
-                next: () => this.notice.set('Rate-Limits zurueckgesetzt.'),
+                next: () => this.notice.set('Rate-Limits zurückgesetzt.'),
                 error: (error: unknown) => this.errorMessage.set(describeQuoteError(error))
             });
     }
@@ -354,7 +354,7 @@ export class AdminComponent {
         if (!this.auth.loggedIn()) {
             // The interceptor dropped rejected credentials.
             this.state.set('login');
-            this.errorMessage.set('Anmeldung fehlgeschlagen. Bitte Zugangsdaten pruefen.');
+            this.errorMessage.set('Anmeldung fehlgeschlagen. Bitte Zugangsdaten prüfen.');
             return;
         }
         this.state.set('error');

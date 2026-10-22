@@ -484,7 +484,7 @@ export class UploadComponent {
         this.isModelLoading.set(false);
 
         if (state === 'error') {
-            this.errorMessage.set('Modell konnte nicht geladen werden. Bitte pruefe das Dateiformat.');
+            this.errorMessage.set('Modell konnte nicht geladen werden. Bitte prüfe das Dateiformat.');
         }
     }
 

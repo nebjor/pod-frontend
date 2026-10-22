@@ -31,7 +31,7 @@
                 <p class="note">Keine MWST, da nicht MWST-pflichtig.</p>
             }
             <p class="note">
-                Der Preis ist bis {{ priceValidUntil() }} gueltig. Eine Bestaetigung geht an
+                Der Preis ist bis {{ priceValidUntil() }} gültig. Eine Bestätigung geht an
                 <strong>{{ o.customerEmail }}</strong>.
             </p>
             <a class="order-btn link-btn" routerLink="/upload">Weiteres Modell hochladen</a>
@@ -58,7 +58,7 @@
                             </div>
                             <p class="item-config">
                                 <span class="swatch-dot" [style.background]="item.color.hex" aria-hidden="true"></span>
-                                {{ item.filament }} {{ item.color.label }} · Qualitaet {{ qualityLabel(item.quality) }} ·
+                                {{ item.filament }} {{ item.color.label }} · Qualität {{ qualityLabel(item.quality) }} ·
                                 Druckzeit {{ printTimeLabel(item) }}
                             </p>
                         </li>
@@ -79,7 +79,7 @@
                 }
                 <p class="note">
                     Versand nur innerhalb der Schweiz. Nach der Bestellung bleibt der Preis
-                    {{ settings().quoteValidityDays }} Tage gueltig; so lange kannst du bezahlen.
+                    {{ settings().quoteValidityDays }} Tage gültig; so lange kannst du bezahlen.
                 </p>
             </section>
 
@@ -134,14 +134,14 @@
                         <input formControlName="termsAccepted" type="checkbox" />
                         <span>
                             Ich akzeptiere die <a routerLink="/agb" target="_blank">AGB</a> und habe die
-                            <a routerLink="/datenschutz" target="_blank">Datenschutzerklaerung</a> gelesen.
+                            <a routerLink="/datenschutz" target="_blank">Datenschutzerklärung</a> gelesen.
                             @if (customerForm.controls.termsAccepted.touched && customerForm.controls.termsAccepted.invalid) {
                                 <span class="field-error">Bitte akzeptiere die AGB, um zu bestellen.</span>
                             }
                         </span>
                     </label>
                     <p class="note wide">
-                        Deine Teile werden einzeln nach deinen Modellen gefertigt. Eine Rueckgabe ist deshalb
+                        Deine Teile werden einzeln nach deinen Modellen gefertigt. Eine Rückgabe ist deshalb
                         ausgeschlossen. Bis wir mit dem Druck beginnen, kannst du per E-Mail an
                         <a [href]="'mailto:' + supportEmail">{{ supportEmail }}</a> stornieren.
                     </p>
@@ -149,9 +149,9 @@
                     @if (priceChangedTo() !== null) {
                         <div class="price-changed" role="alert">
                             <p>
-                                Beim Pruefen deiner Bestellung hat sich der Preis geaendert:
+                                Beim Prüfen deiner Bestellung hat sich der Preis geändert:
                                 <strong>{{ currency() }} {{ itemsTotal() | number:'1.2-2' }}</strong>
-                                fuer die Positionen, gesamt {{ currency() }} {{ priceChangedTo() | number:'1.2-2' }}.
+                                für die Positionen, gesamt {{ currency() }} {{ priceChangedTo() | number:'1.2-2' }}.
                             </p>
                             <button type="button" class="order-btn" (click)="acceptNewPrice()">Neuen Preis annehmen und bestellen</button>
                         </div>

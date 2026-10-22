@@ -16,7 +16,7 @@ const anna: AccountResponse = {
     name: 'Anna Muster',
     street: 'Bahnhofstrasse 1',
     postalCode: '8001',
-    city: 'Zuerich',
+    city: 'Zürich',
     country: 'CH',
     createdAt: '2026-10-01T09:00:00Z',
     lastLoginAt: '2026-10-20T09:00:00Z'
@@ -163,7 +163,7 @@ describe('AccountService', () => {
     });
 
     it('saves the address and takes over what the backend answers', () => {
-        const address = { name: 'Anna Muster', street: 'Seestrasse 2', postalCode: '8002', city: 'Zuerich', country: 'CH' };
+        const address = { name: 'Anna Muster', street: 'Seestrasse 2', postalCode: '8002', city: 'Zürich', country: 'CH' };
         service.update(address).subscribe();
 
         const request = http.expectOne(ACCOUNT_API_URL);

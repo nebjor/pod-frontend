@@ -180,7 +180,7 @@ describe('OrderSuccessComponent', () => {
         expect(component.state()).toBe('cancelled');
         expect(component.order()?.paymentUrl).toContain('/pay/mock');
         expect(element().textContent).toContain('abgebucht wurde nichts');
-        expect(element().textContent).toContain('bis 02.11.2026 gueltig');
+        expect(element().textContent).toContain('bis 02.11.2026 gültig');
         expect(element().querySelector<HTMLAnchorElement>('a.order-btn[href="/pay/mock?session=mock_1"]')?.textContent).toContain('Jetzt bezahlen');
     });
 

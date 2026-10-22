@@ -128,11 +128,11 @@ export class OrderStatusComponent {
 function describeLookupError(error: unknown): string {
     if (error instanceof HttpErrorResponse) {
         if (error.status === 0) {
-            return 'Der Shop ist gerade nicht erreichbar. Bitte pruefe deine Verbindung und versuche es noch einmal.';
+            return 'Der Shop ist gerade nicht erreichbar. Bitte prüfe deine Verbindung und versuche es noch einmal.';
         }
         if (error.status === 429) {
             return 'Zu viele Anfragen. Bitte warte einen Moment und probier es noch einmal.';
         }
     }
-    return 'Die Bestellung konnte gerade nicht geladen werden. Bitte versuche es spaeter noch einmal.';
+    return 'Die Bestellung konnte gerade nicht geladen werden. Bitte versuche es später noch einmal.';
 }

@@ -10,21 +10,21 @@
             <li [class.active]="currentStep() === 3" [attr.aria-current]="currentStep() === 3 ? 'step' : null">Preis</li>
         </ol>
         @if (!modelUrl()) {
-            <p class="subtext">Zieh deine STL- oder 3MF-Datei in das Feld oder klick hinein, um eine Datei auszuwaehlen.</p>
+            <p class="subtext">Zieh deine STL- oder 3MF-Datei in das Feld oder klick hinein, um eine Datei auszuwählen.</p>
         } @else {
-            <p class="subtext">Waehle Material, Farbe, Qualitaet und Menge. Der Preis wird erst berechnet, wenn du ihn anforderst.</p>
+            <p class="subtext">Wähle Material, Farbe, Qualität und Menge. Der Preis wird erst berechnet, wenn du ihn anforderst.</p>
         }
     </header>
 
     @if (!modelUrl()) {
         <label class="dropzone" [class.dragging]="isDragging()" (dragover)="onDragOver($event)"
             (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
-            <input type="file" accept=".stl,.3mf" aria-label="STL oder 3MF Datei auswaehlen"
+            <input type="file" accept=".stl,.3mf" aria-label="STL oder 3MF Datei auswählen"
                 (change)="onFileInputChange($event)" />
 
             <div class="dropzone-content">
                 <p class="drop-title">DATEI HIER ABLEGEN</p>
-                <p class="drop-hint">oder klicken zum Auswaehlen</p>
+                <p class="drop-hint">oder klicken zum Auswählen</p>
                 <p class="drop-types">STL / 3MF</p>
             </div>
         </label>
@@ -52,9 +52,9 @@
 
                     @if (previewDisabled()) {
                         <div class="viewer-placeholder">
-                            <p class="placeholder-title">Keine Vorschau fuer diese Datei</p>
-                            <p>3MF-Dateien ueber 8 MB werden im Browser nicht dargestellt, weil das Entpacken die
-                                Seite blockieren wuerde. Der Preis wird trotzdem berechnet.</p>
+                            <p class="placeholder-title">Keine Vorschau für diese Datei</p>
+                            <p>3MF-Dateien über 8 MB werden im Browser nicht dargestellt, weil das Entpacken die
+                                Seite blockieren würde. Der Preis wird trotzdem berechnet.</p>
                         </div>
                     } @else {
                         <app-model-viewer [modelUrl]="modelUrl()" [modelFormat]="modelFormat()" [modelColor]="selectedColor()?.hex"
@@ -69,7 +69,7 @@
                     <span>{{ selectedFileName() }}</span>
                     <span>{{ selectedFileSizeMb() }} MB</span>
                 </div>
-                <button type="button" class="text-btn" (click)="onUploadAnother()">Andere Datei waehlen</button>
+                <button type="button" class="text-btn" (click)="onUploadAnother()">Andere Datei wählen</button>
             </section>
 
             <section class="order-card order-card-animated">
@@ -102,7 +102,7 @@
                     </label>
 
                     <label>
-                        Qualitaet
+                        Qualität
                         <select formControlName="quality">
                             @for (option of qualityOptions(); track option.code) {
                                 <option [value]="option.code">{{ qualityOptionLabel(option) }}</option>
@@ -120,7 +120,7 @@
                                 @if (orderForm.controls.quantity.hasError('required')) {
                                     Bitte eine Menge eingeben
                                 } @else {
-                                    Bitte 1 bis {{ maxQuantity() }} Stueck
+                                    Bitte 1 bis {{ maxQuantity() }} Stück
                                 }
                             </span>
                         }
@@ -145,12 +145,12 @@
                             <p class="status-line status-error" role="alert">{{ quoteError() }}</p>
                         } @else if (quoteCurrent() && quote(); as q) {
                             <p class="status-line quote-hint">
-                                Preis fuer diese Konfiguration:
+                                Preis für diese Konfiguration:
                                 <strong>{{ q.currency }} {{ q.totalPriceChf | number:'1.2-2' }}</strong>
                             </p>
                         } @else {
                             <p class="status-line quote-hint">
-                                Die Datei wird dafuer einmal fuer die Bambu Lab A1 gesliced; das dauert ein paar Sekunden.
+                                Die Datei wird dafür einmal für die Bambu Lab A1 gesliced; das dauert ein paar Sekunden.
                             </p>
                         }
                         <button type="submit" class="order-btn calculate-btn" #calculateButton>
@@ -212,7 +212,7 @@
             </div>
 
             <p class="loading-reassurance">
-                Wir slicen deine Datei wirklich, so wie sie spaeter gedruckt wird. Das dauert meist nur
+                Wir slicen deine Datei wirklich, so wie sie später gedruckt wird. Das dauert meist nur
                 ein paar Sekunden.
             </p>
         </section>

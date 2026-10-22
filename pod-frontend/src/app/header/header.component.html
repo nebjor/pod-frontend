@@ -26,7 +26,7 @@
 
             <div class="menu-widget cart-widget" [appHoverMenu]="cartLink" #cartMenu="appHoverMenu">
                 <a #cartLink class="cart-link" routerLink="/warenkorb" aria-haspopup="true" [attr.aria-expanded]="cartMenu.isOpen()"
-                    [attr.aria-label]="cartIsEmpty() ? 'Warenkorb: leer' : 'Warenkorb: ' + cartCount() + ' Stueck, ' + cartCurrency() + ' ' + (cartTotal() | number:'1.2-2')">
+                    [attr.aria-label]="cartIsEmpty() ? 'Warenkorb: leer' : 'Warenkorb: ' + cartCount() + ' Stück, ' + cartCurrency() + ' ' + (cartTotal() | number:'1.2-2')">
                     <span class="cart-icon" aria-hidden="true">
                         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"
                             stroke-linecap="round" stroke-linejoin="round">
@@ -54,7 +54,7 @@
                                         <span class="swatch-dot" [style.background]="item.color.hex" aria-hidden="true"></span>
                                         <span class="preview-text">
                                             <span class="preview-name">{{ item.fileName }}</span>
-                                            <span class="preview-config">{{ item.quantity }} Stueck · {{ item.filament }} {{ item.color.label }}, {{ qualityLabel(item.quality) }}</span>
+                                            <span class="preview-config">{{ item.quantity }} Stück · {{ item.filament }} {{ item.color.label }}, {{ qualityLabel(item.quality) }}</span>
                                         </span>
                                         <span class="preview-price">{{ item.quote.currency }} {{ item.quote.totalPriceChf | number:'1.2-2' }}</span>
                                     </li>

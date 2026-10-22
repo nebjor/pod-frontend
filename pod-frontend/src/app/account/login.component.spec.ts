@@ -12,7 +12,7 @@ const anna: AccountResponse = {
     name: 'Anna Muster',
     street: 'Bahnhofstrasse 1',
     postalCode: '8001',
-    city: 'Zuerich',
+    city: 'Zürich',
     country: 'CH',
     createdAt: '2026-10-01T09:00:00Z',
     lastLoginAt: '2026-10-20T09:00:00Z'
@@ -151,7 +151,7 @@ describe('LoginComponent', () => {
             expect(component.state()).toBe('invalid');
             expect(component.mode()).toBe('register');
             expect(navigateByUrl).not.toHaveBeenCalled();
-            expect(text()).toContain('ungueltig, abgelaufen oder schon benutzt');
+            expect(text()).toContain('ungültig, abgelaufen oder schon benutzt');
             expect(modeButtons()).toHaveLength(2);
             expect(element().querySelector('input[type="email"]')).not.toBeNull();
             expect(element().querySelector('input[type="password"]')).toBeNull();
@@ -259,7 +259,7 @@ describe('LoginComponent', () => {
             expect(text()).toContain('Wir haben dir eine E-Mail geschickt.');
             expect(text()).toContain('Mit dem Link darin legst du ein neues Passwort fest.');
             expect(text()).toContain('anna@example.com');
-            expect(text()).toContain('15 Minuten gueltig');
+            expect(text()).toContain('15 Minuten gültig');
             expect(text()).toContain('Spam-Ordner');
             expect(element().querySelector('input[type="password"]')).toBeNull();
         });
@@ -274,7 +274,7 @@ describe('LoginComponent', () => {
             expect(requestLoginLink).not.toHaveBeenCalled();
             expect(component.passwordForm.controls.email.touched).toBe(true);
             expect(component.passwordForm.controls.password.touched).toBe(false);
-            expect(text()).toContain('Bitte gib eine gueltige E-Mail-Adresse ein.');
+            expect(text()).toContain('Bitte gib eine gültige E-Mail-Adresse ein.');
         });
 
         it('remembers where to go back to when asked from the checkout', async () => {
@@ -371,7 +371,7 @@ describe('LoginComponent', () => {
             expect(text()).toContain('Schau in dein Postfach');
             expect(text()).toContain('legst du dein Passwort fest');
             expect(text()).toContain('anna@example.com');
-            expect(text()).toContain('15 Minuten gueltig');
+            expect(text()).toContain('15 Minuten gültig');
             expect(text()).toContain('Spam-Ordner');
             expect(localStorage.getItem(LOGIN_RETURN_TO_STORAGE_KEY)).toBeNull();
         });

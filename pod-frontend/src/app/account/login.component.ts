@@ -208,7 +208,7 @@ export class LoginComponent {
                     this.errorMessage.set(
                         failure.kind === 'error'
                             ? failure.message
-                            : 'Dieser Link ist ungueltig, abgelaufen oder schon benutzt. Fordere unten einen neuen an.'
+                            : 'Dieser Link ist ungültig, abgelaufen oder schon benutzt. Fordere unten einen neuen an.'
                     );
                     this.mode.set('register');
                     this.state.set('invalid');

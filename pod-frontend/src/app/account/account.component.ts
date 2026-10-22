@@ -144,7 +144,7 @@ export class AccountComponent {
                     const failure = describeAccountError(error);
                     if (failure.kind === 'field-errors') {
                         this.fieldErrors.set(failure.errors);
-                        this.errorMessage.set('Bitte pruefe die markierten Felder.');
+                        this.errorMessage.set('Bitte prüfe die markierten Felder.');
                     } else {
                         this.errorMessage.set(failure.kind === 'error' ? failure.message : 'Die Adresse konnte nicht gespeichert werden.');
                     }
@@ -195,7 +195,7 @@ export class AccountComponent {
                     this.deleteError.set(
                         failure.kind === 'error'
                             ? failure.message
-                            : 'Das Konto konnte gerade nicht geloescht werden. Bitte versuche es noch einmal.'
+                            : 'Das Konto konnte gerade nicht gelöscht werden. Bitte versuche es noch einmal.'
                     );
                 }
             });

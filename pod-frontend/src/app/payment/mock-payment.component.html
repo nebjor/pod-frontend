@@ -17,7 +17,7 @@
 
         <div class="actions">
             <button type="button" class="order-btn" [disabled]="paying() || !session()" (click)="pay()">
-                @if (paying()) { Zahlung wird bestaetigt... } @else { Zahlung simulieren }
+                @if (paying()) { Zahlung wird bestätigt... } @else { Zahlung simulieren }
             </button>
             <button type="button" class="order-btn ghost-btn" [disabled]="paying()" (click)="cancel()">Abbrechen</button>
         </div>

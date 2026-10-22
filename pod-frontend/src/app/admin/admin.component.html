@@ -6,7 +6,7 @@
         </div>
         @if (state() !== 'login' && state() !== 'checking') {
             <div class="header-actions">
-                <button type="button" class="ghost-btn" (click)="resetRateLimits()">Rate-Limits zuruecksetzen</button>
+                <button type="button" class="ghost-btn" (click)="resetRateLimits()">Rate-Limits zurücksetzen</button>
                 <button type="button" class="ghost-btn" (click)="logout()">Abmelden</button>
             </div>
         }
@@ -14,7 +14,7 @@
 
     @switch (state()) {
         @case ('checking') {
-            <p class="status">Pruefe Anmeldung...</p>
+            <p class="status">Prüfe Anmeldung...</p>
         }
         @case ('login') {
             <section class="card login-card">
@@ -89,7 +89,7 @@
                                         <td>
                                             {{ order.orderNumber }}
                                             @if (order.needsInspection) {
-                                                <span class="badge inspect" title="Slicer-Hinweise oder nicht wasserdicht: Modell vor dem Druck oeffnen">Pruefen</span>
+                                                <span class="badge inspect" title="Slicer-Hinweise oder nicht wasserdicht: Modell vor dem Druck öffnen">Prüfen</span>
                                             }
                                         </td>
                                         <td>{{ order.createdAt | date:'dd.MM.yyyy HH:mm' }}</td>
@@ -118,7 +118,7 @@
                             }
                         </div>
                         @if (order.status === 'IN_REVIEW') {
-                            <p class="note">Vor der Freigabe jedes Modell in Bambu Studio oeffnen: Orientierung, Stuetzen, Haftung pruefen.</p>
+                            <p class="note">Vor der Freigabe jedes Modell in Bambu Studio öffnen: Orientierung, Stützen, Haftung prüfen.</p>
                         }
 
                         <div class="detail-grid">
@@ -131,9 +131,9 @@
                                 <div><dt>Adresse</dt><dd>{{ order.street }}, {{ order.postalCode }} {{ order.city }} ({{ order.country }})</dd></div>
                                 <div><dt>Bestellt</dt><dd>{{ order.createdAt | date:'dd.MM.yyyy HH:mm' }}</dd></div>
                                 <div><dt>Bezahlt</dt><dd>{{ order.paidAt ? (order.paidAt | date:'dd.MM.yyyy HH:mm') : 'offen' }} @if (order.paymentProvider) { ({{ order.paymentProvider }}) }</dd></div>
-                                <div><dt>Preis gueltig bis</dt><dd>{{ order.quoteExpiresAt | date:'dd.MM.yyyy' }}</dd></div>
+                                <div><dt>Preis gültig bis</dt><dd>{{ order.quoteExpiresAt | date:'dd.MM.yyyy' }}</dd></div>
                                 @if (order.deleteAfter) {
-                                    <div><dt>Loeschung nach</dt><dd>{{ order.deleteAfter | date:'dd.MM.yyyy' }}</dd></div>
+                                    <div><dt>Löschung nach</dt><dd>{{ order.deleteAfter | date:'dd.MM.yyyy' }}</dd></div>
                                 }
                             </dl>
                             <dl class="details">
@@ -153,7 +153,7 @@
                                         <th class="num">Pos.</th>
                                         <th>Datei</th>
                                         <th>Filament</th>
-                                        <th>Qualitaet</th>
+                                        <th>Qualität</th>
                                         <th class="num">Menge</th>
                                         <th class="num">Platten</th>
                                         <th class="num">Druckzeit</th>
@@ -171,7 +171,7 @@
                                                 @if (item.manifold === false) {
                                                     <span class="tag tag-danger">nicht wasserdicht</span>
                                                 } @else if (item.manifold === null) {
-                                                    <span class="tag tag-muted">Mesh nicht geprueft</span>
+                                                    <span class="tag tag-muted">Mesh nicht geprüft</span>
                                                 }
                                             </td>
                                             <td>
@@ -256,8 +256,8 @@
                                             <th>Modell</th>
                                             <th>Quelle</th>
                                             <th>Filament</th>
-                                            <th>Qualitaet</th>
-                                            <th class="num">Stueck</th>
+                                            <th>Qualität</th>
+                                            <th class="num">Stück</th>
                                             <th class="num">Platten</th>
                                             <th class="num">Druckzeit</th>
                                             <th class="num">Material g</th>
@@ -305,16 +305,16 @@
 
                     @if (showFactors()) {
                         <details class="factors-details">
-                            <summary>Faktoren pruefen (nur mit manuellen Messreihen)</summary>
+                            <summary>Faktoren prüfen (nur mit manuellen Messreihen)</summary>
 
                             <p class="note explain">
-                                Der Zeitfaktor ist das Verhaeltnis der vom Slicer berechneten Druckzeit zur Schaetzung des Preisrechners,
-                                der Laengenfaktor dasselbe fuer die Filamentlaenge; der Median je Qualitaet wird mit dem konfigurierten
-                                Wert verglichen und ab 5 % Abweichung markiert. Bei den Mengen zeigt das Verhaeltnis je Stueck, wie viel
-                                eine Kopie auf einer vollen Platte gegenueber einem Einzeldruck kostet, der Plattenaufschlag die feste
-                                Zeit je Platte und der Rechenfehler, wie weit die arithmetische Mengenschaetzung vom Slicer abweicht.
+                                Der Zeitfaktor ist das Verhältnis der vom Slicer berechneten Druckzeit zur Schätzung des Preisrechners,
+                                der Längenfaktor dasselbe für die Filamentlänge; der Median je Qualität wird mit dem konfigurierten
+                                Wert verglichen und ab 5 % Abweichung markiert. Bei den Mengen zeigt das Verhältnis je Stück, wie viel
+                                eine Kopie auf einer vollen Platte gegenüber einem Einzeldruck kostet, der Plattenaufschlag die feste
+                                Zeit je Platte und der Rechenfehler, wie weit die arithmetische Mengenschätzung vom Slicer abweicht.
                                 Die konfigurierten Werte liegen in der Backend-Konfiguration (application.yml); eine Anpassung ist
-                                eine Backend-Aenderung.
+                                eine Backend-Änderung.
                             </p>
 
                             <h2 class="section-title">Zeitfaktor je Filament</h2>
@@ -351,7 +351,7 @@
                                 </table>
                             </div>
 
-                            <h2 class="section-title">Laengenfaktor je Filament</h2>
+                            <h2 class="section-title">Längenfaktor je Filament</h2>
                             <div class="table-wrap">
                                 <table class="orders factors">
                                     <thead>
@@ -390,8 +390,8 @@
                                 <table class="orders quantities">
                                     <thead>
                                         <tr>
-                                            <th class="num">Stueck</th>
-                                            <th class="num">Verhaeltnis je Stueck</th>
+                                            <th class="num">Stück</th>
+                                            <th class="num">Verhältnis je Stück</th>
                                             <th class="num">Plattenaufschlag</th>
                                             <th class="num">Rechenfehler</th>
                                         </tr>
