@@ -1,0 +1,95 @@
+.shell {
+    display: grid;
+    gap: 1.25rem;
+    max-width: 1080px;
+
+    @media (min-width: 760px) {
+        grid-template-columns: 220px minmax(0, 1fr);
+        gap: 2rem;
+        align-items: start;
+    }
+}
+
+.content {
+    min-width: 0;
+}
+
+/* Wide screens: a column. Narrow screens: a horizontally scrollable tab row above the content. */
+.nav-list {
+    display: flex;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--border-700);
+
+    @media (min-width: 760px) {
+        flex-direction: column;
+        overflow: visible;
+        border-bottom: 0;
+    }
+}
+
+.nav-link {
+    display: block;
+    padding: 0.6rem 0.9rem;
+    border-bottom: 2px solid transparent;
+    color: var(--text-300);
+    text-decoration: none;
+    white-space: nowrap;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05rem;
+
+    &:hover,
+    &:focus-visible {
+        color: var(--text-100);
+    }
+
+    &.active {
+        color: var(--accent-300);
+        border-bottom-color: var(--accent-300);
+    }
+
+    @media (min-width: 760px) {
+        border-bottom: 0;
+        border-left: 2px solid transparent;
+        border-radius: 0 8px 8px 0;
+
+        &.active {
+            border-left-color: var(--accent-300);
+            background: rgba(255, 255, 255, 0.04);
+        }
+    }
+}
+
+.signed-in {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 1rem;
+    margin-top: 0.75rem;
+    color: var(--text-300);
+    font-size: 0.8rem;
+
+    @media (min-width: 760px) {
+        display: block;
+        margin-top: 1.25rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-700);
+    }
+
+    .email {
+        margin: 0 0 0.5rem;
+        overflow-wrap: anywhere;
+    }
+
+    strong {
+        color: var(--text-100);
+
+        @media (min-width: 760px) {
+            display: block;
+        }
+    }
+}

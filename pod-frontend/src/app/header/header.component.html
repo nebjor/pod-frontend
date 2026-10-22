@@ -14,7 +14,8 @@
                         <div class="menu-panel account-menu" role="menu" aria-label="Mein Konto">
                             <p class="account-email">{{ accountEmail() }}</p>
                             <a class="menu-item" role="menuitem" routerLink="/konto">Bestellungen</a>
-                            <a class="menu-item" role="menuitem" routerLink="/konto">Adresse</a>
+                            <a class="menu-item" role="menuitem" routerLink="/konto/adresse">Lieferadresse</a>
+                            <a class="menu-item" role="menuitem" routerLink="/konto/passwort">Konto</a>
                             <button class="menu-item logout-item" role="menuitem" type="button" (click)="logout()"
                                 [disabled]="loggingOut()">Abmelden</button>
                         </div>

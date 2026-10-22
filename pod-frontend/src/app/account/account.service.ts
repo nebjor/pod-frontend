@@ -31,6 +31,9 @@ export class AccountService {
     readonly account = this.current.asReadonly();
     readonly state = this.loadState.asReadonly();
     readonly isSignedIn = computed(() => this.loadState() === 'signedIn');
+    private readonly wasDeleted = signal(false);
+    /** True once this visit removed the account; the account area then shows the farewell card. */
+    readonly deleted = this.wasDeleted.asReadonly();
 
     constructor() {
         if (this.isBrowser) {
@@ -109,7 +112,12 @@ export class AccountService {
 
     /** Removes the account; the orders stay with the backend. */
     deleteAccount(): Observable<void> {
-        return this.http.delete<void>(ACCOUNT_API_URL).pipe(tap(() => this.anonymous()));
+        return this.http.delete<void>(ACCOUNT_API_URL).pipe(
+            tap(() => {
+                this.wasDeleted.set(true);
+                this.anonymous();
+            })
+        );
     }
 
     private signedIn(account: AccountResponse) {

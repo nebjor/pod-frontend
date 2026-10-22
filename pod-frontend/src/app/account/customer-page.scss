@@ -7,6 +7,16 @@
     color: var(--text-200);
     font-family: 'Courier New', 'Lucida Console', monospace;
 
+    &.embedded {
+        max-width: none;
+        margin: 0;
+        padding: 0;
+
+        &.narrow {
+            max-width: 560px;
+        }
+    }
+
     &.narrow {
         max-width: 560px;
     }

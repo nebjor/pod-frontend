@@ -3,8 +3,7 @@ import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
-import { FALLBACK_ORDER_SETTINGS, OrderResponse } from '../order/order.models';
-import { OrderService } from '../order/order.service';
+import { OrderResponse } from '../order/order.models';
 import { AccountComponent } from './account.component';
 import { AccountResponse, AccountState } from './account.models';
 import { AccountService } from './account.service';
@@ -46,32 +45,12 @@ describe('AccountComponent', () => {
     let fixture: ComponentFixture<AccountComponent>;
     let component: AccountComponent;
     let state: ReturnType<typeof signal<AccountState>>;
-    let account: ReturnType<typeof signal<AccountResponse | null>>;
     let orders: ReturnType<typeof vi.fn>;
-    let update: ReturnType<typeof vi.fn>;
-    let logout: ReturnType<typeof vi.fn>;
-    let deleteAccount: ReturnType<typeof vi.fn>;
-    let navigateByUrl: ReturnType<typeof vi.spyOn>;
+    let navigate: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {
         state = signal<AccountState>('signedIn');
-        account = signal<AccountResponse | null>(anna);
         orders = vi.fn(() => of([older, newer]));
-        update = vi.fn((address: Partial<AccountResponse>) => {
-            const updated = { ...anna, ...address };
-            account.set(updated);
-            return of(updated);
-        });
-        logout = vi.fn(() => {
-            account.set(null);
-            state.set('anonymous');
-            return of(undefined);
-        });
-        deleteAccount = vi.fn(() => {
-            account.set(null);
-            state.set('anonymous');
-            return of(undefined);
-        });
     });
 
     async function setup() {
@@ -83,19 +62,14 @@ describe('AccountComponent', () => {
                     provide: AccountService,
                     useValue: {
                         state,
-                        account,
+                        account: signal<AccountResponse | null>(anna),
                         isSignedIn: computed(() => state() === 'signedIn'),
-                        load: vi.fn(() => Promise.resolve()),
-                        orders,
-                        update,
-                        logout,
-                        deleteAccount
+                        orders
                     }
-                },
-                { provide: OrderService, useValue: { loadSettings: () => of(FALLBACK_ORDER_SETTINGS) } }
+                }
             ]
         }).compileComponents();
-        navigateByUrl = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+        navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
         fixture = TestBed.createComponent(AccountComponent);
         component = fixture.componentInstance;
         fixture.detectChanges();
@@ -107,23 +81,10 @@ describe('AccountComponent', () => {
         return fixture.nativeElement as HTMLElement;
     }
 
-    it('sends an anonymous visitor to the login page', async () => {
-        state.set('anonymous');
-        account.set(null);
-        await setup();
-
-        expect(navigateByUrl).toHaveBeenCalledWith('/konto/anmelden');
-        expect(orders).not.toHaveBeenCalled();
-        expect(component.pageState()).toBe('loading');
-    });
-
     it('lists the orders newest first with status, total and a link to the status page', async () => {
         await setup();
 
-        expect(component.pageState()).toBe('ready');
-        expect(element().textContent).toContain('Angemeldet als');
-        expect(element().textContent).toContain('anna@example.com');
-
+        expect(element().querySelector('h1')?.textContent?.trim()).toBe('Bestellungen');
         const rows = element().querySelectorAll<HTMLAnchorElement>('.order-row');
         expect(rows).toHaveLength(2);
         expect(rows[0].textContent).toContain('POD-1001');
@@ -137,6 +98,17 @@ describe('AccountComponent', () => {
         expect(rows[1].querySelector('.status-badge')?.textContent?.trim()).toBe('Versendet');
     });
 
+    it('holds only the orders, nothing about address, login, logout or deletion', async () => {
+        await setup();
+
+        const text = element().textContent ?? '';
+        expect(text).not.toContain('Lieferadresse');
+        expect(text).not.toContain('Anmeldung');
+        expect(text).not.toContain('Angemeldet als');
+        expect(text).not.toContain('Konto löschen');
+        expect(element().querySelector('form')).toBeNull();
+    });
+
     it('says so when there are no orders yet', async () => {
         orders.mockReturnValue(of([]));
         await setup();
@@ -145,120 +117,26 @@ describe('AccountComponent', () => {
         expect(element().querySelector('a[href="/upload"]')).not.toBeNull();
     });
 
+    it('offers to retry when the orders cannot be loaded', async () => {
+        orders.mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 500 })));
+        await setup();
+
+        expect(component.ordersState()).toBe('error');
+        expect(element().querySelector('.error')?.textContent).toContain('konnten gerade nicht geladen werden');
+
+        component.loadOrders();
+        fixture.detectChanges();
+        expect(component.ordersState()).toBe('ready');
+        expect(element().querySelectorAll('.order-row')).toHaveLength(2);
+    });
+
     it('goes to the login when the session has expired meanwhile', async () => {
         orders.mockImplementation(() => {
-            account.set(null);
             state.set('anonymous');
             return throwError(() => new HttpErrorResponse({ status: 401 }));
         });
         await setup();
 
-        expect(navigateByUrl).toHaveBeenCalledWith('/konto/anmelden');
-    });
-
-    it('fills the address form from the account and saves it', async () => {
-        await setup();
-
-        expect(component.addressForm.getRawValue()).toEqual({
-            name: 'Anna Muster',
-            street: 'Bahnhofstrasse 1',
-            postalCode: '8001',
-            city: 'Zürich',
-            country: 'CH'
-        });
-
-        component.addressForm.controls.street.setValue('Seestrasse 2');
-        component.addressForm.controls.postalCode.setValue('8002');
-        component.save();
-        fixture.detectChanges();
-
-        expect(update).toHaveBeenCalledWith({ name: 'Anna Muster', street: 'Seestrasse 2', postalCode: '8002', city: 'Zürich', country: 'CH' });
-        expect(component.saved()).toBe(true);
-        expect(element().textContent).toContain('Adresse gespeichert');
-    });
-
-    it('does not save an incomplete address', async () => {
-        await setup();
-        component.addressForm.controls.city.setValue('');
-
-        component.save();
-
-        expect(update).not.toHaveBeenCalled();
-        expect(component.addressForm.controls.city.touched).toBe(true);
-    });
-
-    it('shows the backend field errors next to the inputs', async () => {
-        update.mockReturnValue(
-            throwError(() => new HttpErrorResponse({ status: 400, error: { errors: { postalCode: 'must be a Swiss postal code' } } }))
-        );
-        await setup();
-
-        component.save();
-        fixture.detectChanges();
-
-        expect(component.fieldError('postalCode')).toBe('must be a Swiss postal code');
-        expect(component.errorMessage()).toContain('markierten Felder');
-        expect(element().textContent).toContain('must be a Swiss postal code');
-    });
-
-    it('asks a customer without a password to set one', async () => {
-        await setup();
-
-        const section = element().querySelector('.login-method');
-        expect(section?.querySelector('h2')?.textContent?.trim()).toBe('Anmeldung');
-        expect(section?.textContent).toContain('Du hast noch kein Passwort. Lege eines fest, um dich künftig direkt anzumelden.');
-        expect(section?.textContent).not.toContain('E-Mail und Passwort');
-        const link = section?.querySelector<HTMLAnchorElement>('a[href="/konto/passwort"]');
-        expect(link?.textContent?.trim()).toBe('Passwort festlegen');
-    });
-
-    it('says that e-mail and password are the way in and offers to change the password', async () => {
-        account.set({ ...anna, hasPassword: true });
-        await setup();
-
-        const section = element().querySelector('.login-method');
-        expect(section?.textContent).toContain('Du meldest dich mit E-Mail und Passwort an.');
-        expect(section?.textContent).not.toContain('noch kein Passwort');
-        expect(section?.querySelector<HTMLAnchorElement>('a[href="/konto/passwort"]')?.textContent?.trim()).toBe('Passwort ändern');
-    });
-
-    it('logs out and goes to the start page', async () => {
-        await setup();
-
-        component.logout();
-
-        expect(logout).toHaveBeenCalled();
-        expect(navigateByUrl).toHaveBeenCalledWith('/');
-    });
-
-    it('deletes the account only after the confirmation step', async () => {
-        await setup();
-
-        // Deletion sits behind a plain text control, not next to the primary actions.
-        const trigger = element().querySelector<HTMLButtonElement>('.account-footer .text-btn');
-        expect(trigger?.textContent?.trim()).toBe('Konto löschen');
-        expect(element().querySelector('.danger-zone')).toBeNull();
-
-        component.askDelete();
-        fixture.detectChanges();
-        expect(deleteAccount).not.toHaveBeenCalled();
-        const confirmation = element().querySelector('.danger-zone')?.textContent ?? '';
-        expect(confirmation).toContain('Dein Konto und deine gespeicherte Adresse werden gelöscht');
-        expect(confirmation).toContain('Deine Bestellungen bleiben als Geschäftsunterlagen gespeichert');
-        expect(confirmation).toContain('unter "Meine Bestellung" weiterhin einsehen');
-
-        component.cancelDelete();
-        expect(component.confirmingDelete()).toBe(false);
-
-        component.askDelete();
-        component.confirmDelete();
-        fixture.detectChanges();
-
-        expect(deleteAccount).toHaveBeenCalledTimes(1);
-        expect(component.pageState()).toBe('deleted');
-        expect(element().textContent).toContain('Dein Konto ist gelöscht');
-        expect(element().querySelector('.error')).toBeNull();
-        expect(element().querySelector('a[href="/bestellung"]')).not.toBeNull();
-        expect(navigateByUrl).not.toHaveBeenCalled();
+        expect(navigate).toHaveBeenCalledWith(['/konto/anmelden'], { queryParams: { returnTo: '/konto' } });
     });
 });

@@ -1,0 +1,44 @@
+@if (deleted()) {
+    <section class="customer-page narrow">
+        <section class="card" aria-live="polite">
+            <h2>Dein Konto ist gelöscht.</h2>
+            <p class="note">
+                Deine Bestellungen bleiben als Geschäftsunterlagen gespeichert; mit Bestellnummer und E-Mail kannst du
+                sie unter <a routerLink="/bestellung">Meine Bestellung</a> weiterhin einsehen. Wenn du dich wieder
+                anmeldest, entsteht ein neues Konto.
+            </p>
+            <a class="order-btn link-btn" routerLink="/">Zur Startseite</a>
+        </section>
+    </section>
+} @else if (state() === 'loading') {
+    <section class="customer-page narrow">
+        <section class="card" aria-live="polite">
+            <p class="status"><span class="spinner" aria-hidden="true"></span> Konto wird geladen...</p>
+        </section>
+    </section>
+} @else {
+    <div class="shell customer-page">
+        <aside class="sidebar">
+            <nav aria-label="Konto">
+                <ul class="nav-list">
+                    @for (item of items; track item.path) {
+                        <li>
+                            <a class="nav-link" [routerLink]="item.path" routerLinkActive="active"
+                                [routerLinkActiveOptions]="{ exact: item.exact }" ariaCurrentWhenActive="page">{{ item.label }}</a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+            <div class="signed-in">
+                <p class="email">Angemeldet als <strong>{{ customer()?.email }}</strong></p>
+                <button type="button" class="text-btn" (click)="logout()" [disabled]="loggingOut()">Abmelden</button>
+                @if (errorMessage()) {
+                    <p class="error" role="alert">{{ errorMessage() }}</p>
+                }
+            </div>
+        </aside>
+        <main class="content">
+            <router-outlet />
+        </main>
+    </div>
+}
