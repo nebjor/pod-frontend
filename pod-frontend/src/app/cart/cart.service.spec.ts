@@ -53,10 +53,17 @@ function newItem(name = 'benchy.stl', overrides: Partial<NewCartItem> = {}): New
     };
 }
 
-/** In-memory stand-in for sessionStorage plus IndexedDB; shared between service instances. */
+/** In-memory stand-in for localStorage plus IndexedDB; shared between service instances. */
 class MemoryCartStorage implements Pick<CartStorage, keyof CartStorage> {
     items: StoredCartItem[] = [];
     files = new Map<string, File>();
+    listeners: Array<() => void> = [];
+
+    /** Simulates a write by another tab: replaces the metadata and notifies the listeners. */
+    writtenElsewhere(items: StoredCartItem[]) {
+        this.items = items.map((item) => ({ ...item }));
+        this.listeners.forEach((listener) => listener());
+    }
 
     readItems() {
         return this.items.map((item) => ({ ...item }));
@@ -82,6 +89,12 @@ class MemoryCartStorage implements Pick<CartStorage, keyof CartStorage> {
     }
     async clearFiles() {
         this.files.clear();
+    }
+    onChange(listener: () => void) {
+        this.listeners.push(listener);
+        return () => {
+            this.listeners = this.listeners.filter((l) => l !== listener);
+        };
     }
 }
 
@@ -247,6 +260,26 @@ describe('CartService', () => {
         expect(after.items().map((item) => item.id)).toEqual([persisted.id, fresh.id]);
     });
 
+    it("takes over another tab's cart: new lines read their file, removed lines go, nothing is written back", async () => {
+        const cart = configure();
+        const kept = cart.add(newItem('benchy.stl'))!;
+        const removedElsewhere = cart.add(newItem('cube.stl'))!;
+        await Promise.resolve();
+        const addedElsewhere: StoredCartItem = { ...storage.items[0], id: 'other-tab', fileName: 'ragno.3mf', quantity: 4 };
+        storage.files.set('other-tab', new File(['r'], 'ragno.3mf'));
+        const writeItems = vi.spyOn(storage, 'writeItems');
+
+        storage.writtenElsewhere([addedElsewhere, { ...storage.items[0], quantity: 7 }]);
+        await cart.sync();
+
+        expect(cart.items().map((item) => item.id)).toEqual(['other-tab', kept.id]);
+        expect(cart.find(kept.id)).toMatchObject({ quantity: 7 });
+        expect(cart.find('other-tab')?.file.name).toBe('ragno.3mf');
+        expect(cart.find(removedElsewhere.id)).toBeUndefined();
+        expect(writeItems).not.toHaveBeenCalled();
+        expect(cart.count()).toBe(11);
+    });
+
     it('starts empty and ready on the server without touching storage', () => {
         const readItems = vi.spyOn(storage, 'readItems');
         const cart = configure('server');
@@ -258,7 +291,7 @@ describe('CartService', () => {
 });
 
 describe('CartStorage', () => {
-    afterEach(() => sessionStorage.clear());
+    afterEach(() => localStorage.clear());
 
     function configure(platform: 'browser' | 'server') {
         TestBed.resetTestingModule();
@@ -278,25 +311,25 @@ describe('CartStorage', () => {
         quote
     };
 
-    it('round-trips the line metadata through sessionStorage and removes the key with the last line', () => {
+    it('round-trips the line metadata through localStorage and removes the key with the last line', () => {
         const storage = configure('browser');
 
         storage.writeItems([stored]);
-        expect(JSON.parse(sessionStorage.getItem(CART_STORAGE_KEY) ?? '{}').items).toHaveLength(1);
+        expect(JSON.parse(localStorage.getItem(CART_STORAGE_KEY) ?? '{}').items).toHaveLength(1);
         expect(storage.readItems()).toEqual([stored]);
 
         storage.writeItems([]);
-        expect(sessionStorage.getItem(CART_STORAGE_KEY)).toBeNull();
+        expect(localStorage.getItem(CART_STORAGE_KEY)).toBeNull();
     });
 
     it('ignores corrupt or foreign data', () => {
         const storage = configure('browser');
 
-        sessionStorage.setItem(CART_STORAGE_KEY, 'not json');
+        localStorage.setItem(CART_STORAGE_KEY, 'not json');
         expect(storage.readItems()).toEqual([]);
-        sessionStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ version: 99, items: [stored] }));
+        localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ version: 99, items: [stored] }));
         expect(storage.readItems()).toEqual([]);
-        sessionStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ version: 1, items: [{ id: 'x' }, stored] }));
+        localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ version: 1, items: [{ id: 'x' }, stored] }));
         expect(storage.readItems()).toEqual([stored]);
     });
 

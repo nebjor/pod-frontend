@@ -2,7 +2,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { ColorOption, QuoteResponse } from '../quote/quote.models';
 
-/** What sessionStorage keeps per cart line: everything but the file, which lives in IndexedDB. */
+/** What localStorage keeps per cart line: everything but the file, which lives in IndexedDB. */
 export interface StoredCartItem {
     id: string;
     fileName: string;
@@ -27,10 +27,13 @@ interface StoredCart {
 }
 
 /**
- * Persists the cart across reloads of the tab. The line metadata and quotes are small and go to
- * sessionStorage; the model files are blobs and go to IndexedDB, keyed by the line id. Both are
- * browser-only and best effort: on the server, in private windows or when a browser blocks
- * storage, every call degrades to "nothing stored" and the cart simply lives in memory.
+ * Persists the cart across reloads, tabs and browser restarts. The line metadata and quotes are
+ * small and go to localStorage; the model files are blobs and go to IndexedDB, keyed by the line
+ * id. Both are shared by every tab of the origin, which matters because the login link in the
+ * registration mail opens a new tab: with tab-scoped storage that tab would see an empty cart and
+ * prune the files the first tab still relies on. Everything is browser-only and best effort: on
+ * the server, in private windows or when a browser blocks storage, every call degrades to
+ * "nothing stored" and the cart simply lives in memory.
  */
 @Injectable({ providedIn: 'root' })
 export class CartStorage {
@@ -42,7 +45,7 @@ export class CartStorage {
             return [];
         }
         try {
-            const raw = sessionStorage.getItem(CART_STORAGE_KEY);
+            const raw = localStorage.getItem(CART_STORAGE_KEY);
             const parsed = raw ? (JSON.parse(raw) as Partial<StoredCart>) : null;
             if (parsed?.version !== CART_STORAGE_VERSION || !Array.isArray(parsed.items)) {
                 return [];
@@ -59,14 +62,33 @@ export class CartStorage {
         }
         try {
             if (items.length === 0) {
-                sessionStorage.removeItem(CART_STORAGE_KEY);
+                localStorage.removeItem(CART_STORAGE_KEY);
             } else {
                 const stored: StoredCart = { version: CART_STORAGE_VERSION, items };
-                sessionStorage.setItem(CART_STORAGE_KEY, JSON.stringify(stored));
+                localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(stored));
             }
         } catch {
             // Quota or private mode: the cart still works for this page view.
         }
+    }
+
+    /**
+     * Calls the listener whenever another tab writes the cart. The browser fires `storage` only in
+     * the tabs that did not make the change, so a tab never hears its own writes. Returns the
+     * unsubscribe function.
+     */
+    onChange(listener: () => void): () => void {
+        if (!this.browser || typeof window === 'undefined') {
+            return () => undefined;
+        }
+        const handler = (event: StorageEvent) => {
+            // A null key means the whole storage was cleared.
+            if (event.key === null || event.key === CART_STORAGE_KEY) {
+                listener();
+            }
+        };
+        window.addEventListener('storage', handler);
+        return () => window.removeEventListener('storage', handler);
     }
 
     async putFile(id: string, file: File): Promise<void> {

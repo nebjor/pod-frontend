@@ -30,7 +30,8 @@ function newItemId(): string {
 /**
  * The shopping cart: the models the customer configured, each with the quote the backend gave
  * for it. It is restored from {@link CartStorage} once the page has rendered in the browser and
- * written back after every change, so a reload keeps the cart. On the server it is empty.
+ * written back after every change, so a reload keeps the cart. Other tabs of the shop share the
+ * storage; their changes are taken over as they happen. On the server it is empty.
  */
 @Injectable({ providedIn: 'root' })
 export class CartService {
@@ -38,6 +39,8 @@ export class CartService {
     private readonly quoteService = inject(QuoteService);
     private readonly state = signal<CartItem[]>([]);
     private readonly restored = signal(false);
+    /** Serialises restore and cross-tab sync so two reads never interleave their writes. */
+    private pending: Promise<void> = Promise.resolve();
     private resolveReady: () => void = () => undefined;
     private readonly readyPromise = new Promise<void>((resolve) => {
         this.resolveReady = resolve;
@@ -58,7 +61,10 @@ export class CartService {
     constructor() {
         if (isPlatformBrowser(inject(PLATFORM_ID))) {
             // After the first render so that hydration compares the prerendered, empty cart.
-            afterNextRender(() => void this.restore());
+            afterNextRender(() => {
+                void this.restore();
+                this.storage.onChange(() => void this.sync());
+            });
         } else {
             this.restored.set(true);
             this.resolveReady();
@@ -139,21 +145,49 @@ export class CartService {
      * Reads the persisted cart back. Lines whose file is gone are dropped: without the file the
      * model could not be uploaded again if the backend has expired it.
      */
-    async restore(): Promise<void> {
-        const restoredItems: CartItem[] = [];
-        for (const entry of this.storage.readItems()) {
-            const file = await this.storage.getFile(entry.id);
+    restore(): Promise<void> {
+        // Read synchronously: a line added in the same tick would overwrite the stored cart
+        // before the queued work ran.
+        const entries = this.storage.readItems();
+        return this.queue(async () => {
+            const restoredItems = await this.loadFiles(entries);
+            // Lines added while the files were loading stay; persisted ones go in front of them.
+            const current = this.state();
+            const known = new Set(current.map((item) => item.id));
+            this.commit([...restoredItems.filter((item) => !known.has(item.id)), ...current]);
+            this.restored.set(true);
+            this.resolveReady();
+            void this.storage.pruneFiles(this.state().map((item) => item.id));
+        });
+    }
+
+    /**
+     * Takes over what another tab wrote: its line order and quotes win, files already in memory
+     * are reused, new ones are read from storage. Nothing is written back, so the tabs never
+     * ping-pong their copies.
+     */
+    sync(): Promise<void> {
+        const entries = this.storage.readItems();
+        return this.queue(async () => {
+            this.state.set(await this.loadFiles(entries));
+        });
+    }
+
+    private async loadFiles(entries: StoredCartItem[]): Promise<CartItem[]> {
+        const inMemory = new Map(this.state().map((item) => [item.id, item.file]));
+        const items: CartItem[] = [];
+        for (const entry of entries) {
+            const file = inMemory.get(entry.id) ?? (await this.storage.getFile(entry.id));
             if (file) {
-                restoredItems.push({ ...entry, file: file.name === entry.fileName ? file : new File([file], entry.fileName, { type: file.type }) });
+                items.push({ ...entry, file: file.name === entry.fileName ? file : new File([file], entry.fileName, { type: file.type }) });
             }
         }
-        // Lines added while the files were loading stay; persisted ones go in front of them.
-        const current = this.state();
-        const known = new Set(current.map((item) => item.id));
-        this.commit([...restoredItems.filter((item) => !known.has(item.id)), ...current]);
-        this.restored.set(true);
-        this.resolveReady();
-        void this.storage.pruneFiles(this.state().map((item) => item.id));
+        return items;
+    }
+
+    private queue(work: () => Promise<void>): Promise<void> {
+        this.pending = this.pending.then(work, work);
+        return this.pending;
     }
 
     private patch(id: string, changes: Partial<StoredCartItem>) {
