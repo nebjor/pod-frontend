@@ -232,14 +232,23 @@ describe('CheckoutComponent', () => {
         expect((fixture.nativeElement as HTMLElement).querySelector('a[href="/warenkorb"]')).not.toBeNull();
     });
 
-    it('invites a visitor to sign in and come back to the checkout', async () => {
+    it('invites a visitor to sign in or register and come back to the checkout', async () => {
         cart.add(benchy());
         await create();
 
         const hint = (fixture.nativeElement as HTMLElement).querySelector('.account-hint');
         expect(hint?.textContent).toContain('Schon Kunde?');
-        expect(hint?.querySelector('a')?.getAttribute('href')).toContain('/konto/anmelden?returnTo=');
-        expect(hint?.querySelector('a')?.getAttribute('href')).toContain('checkout');
+        expect(hint?.textContent).toContain('Neu hier?');
+        const [signIn, register] = Array.from(hint?.querySelectorAll('a') ?? []);
+        expect(signIn.textContent?.trim()).toBe('Anmelden');
+        expect(signIn.getAttribute('href')).toContain('/konto/anmelden?returnTo=');
+        expect(signIn.getAttribute('href')).toContain('checkout');
+        expect(signIn.getAttribute('href')).not.toContain('mode=');
+        expect(register.textContent?.trim()).toBe('Registrieren');
+        expect(register.getAttribute('href')).toContain('/konto/anmelden?');
+        expect(register.getAttribute('href')).toContain('mode=register');
+        expect(register.getAttribute('href')).toContain('returnTo=');
+        expect(register.getAttribute('href')).toContain('checkout');
     });
 
     it('prefills the address of a signed-in customer and says who is signed in', async () => {

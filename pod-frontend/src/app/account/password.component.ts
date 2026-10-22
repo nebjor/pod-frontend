@@ -2,8 +2,9 @@ import { ChangeDetectionStrategy, Component, DestroyRef, afterNextRender, comput
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { CartService } from '../cart/cart.service';
 import { LOGIN_PATH, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, PASSWORD_PATH } from './account.models';
-import { AccountService, describeAccountError } from './account.service';
+import { AccountService, describeAccountError, takeLoginReturnPath } from './account.service';
 
 type PageState = 'loading' | 'ready';
 
@@ -15,9 +16,14 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
 }
 
 /**
- * "Passwort": sets, replaces or removes the optional password of a signed-in customer. The
- * mail link keeps working whatever happens here. Anyone without a session is sent to the
- * login page and comes back afterwards.
+ * "Passwort": sets, replaces or removes the password of a signed-in customer. The link in the
+ * registration and "Passwort vergessen?" mails lands here. Anyone without a session is sent to
+ * the login page and comes back afterwards.
+ *
+ * A customer who arrives without a password (fresh registration) is on the way somewhere:
+ * saving sends them on, to the path remembered when the mail was requested (the checkout),
+ * else to the cart when it has items, else to the landing page. Changing an existing password
+ * stays on the page, unless a remembered path is waiting.
  */
 @Component({
     selector: 'app-password',
@@ -28,6 +34,7 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
 })
 export class PasswordComponent {
     private readonly account = inject(AccountService);
+    private readonly cart = inject(CartService);
     private readonly router = inject(Router);
     private readonly destroyRef = inject(DestroyRef);
 
@@ -79,6 +86,7 @@ export class PasswordComponent {
             return;
         }
 
+        const firstPassword = !this.hasPassword();
         this.saving.set(true);
         this.saved.set(false);
         this.removed.set(false);
@@ -91,7 +99,14 @@ export class PasswordComponent {
                 next: () => {
                     this.form.reset();
                     this.saving.set(false);
-                    this.saved.set(true);
+                    const remembered = takeLoginReturnPath();
+                    if (remembered) {
+                        void this.router.navigateByUrl(remembered);
+                    } else if (firstPassword) {
+                        void this.router.navigateByUrl(this.cart.isEmpty() ? '/' : '/warenkorb');
+                    } else {
+                        this.saved.set(true);
+                    }
                 },
                 error: (error: unknown) => {
                     this.saving.set(false);

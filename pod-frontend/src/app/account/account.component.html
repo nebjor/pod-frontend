@@ -112,15 +112,11 @@
                 <section class="card login-method">
                     <h2>Anmeldung</h2>
                     @if (hasPassword()) {
-                        <p class="note login-status">
-                            <span class="status-badge">Passwort gesetzt</span>
-                            Der Anmeldelink per E-Mail funktioniert weiterhin.
-                        </p>
+                        <p class="note login-status">Du meldest dich mit E-Mail und Passwort an.</p>
                         <a class="order-btn ghost-btn link-btn" [routerLink]="passwordPath">Passwort aendern</a>
                     } @else {
                         <p class="note login-status">
-                            <span class="status-badge">Anmeldung per E-Mail-Link</span>
-                            Optional kannst du zusaetzlich ein Passwort festlegen.
+                            Du hast noch kein Passwort. Lege eines fest, um dich kuenftig direkt anzumelden.
                         </p>
                         <a class="order-btn ghost-btn link-btn" [routerLink]="passwordPath">Passwort festlegen</a>
                     }

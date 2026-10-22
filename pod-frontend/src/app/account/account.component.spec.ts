@@ -201,24 +201,24 @@ describe('AccountComponent', () => {
         expect(element().textContent).toContain('must be a Swiss postal code');
     });
 
-    it('shows the mail link as the way in and offers to set a password', async () => {
+    it('asks a customer without a password to set one', async () => {
         await setup();
 
         const section = element().querySelector('.login-method');
         expect(section?.querySelector('h2')?.textContent?.trim()).toBe('Anmeldung');
-        expect(section?.textContent).toContain('Anmeldung per E-Mail-Link');
-        expect(section?.textContent).not.toContain('Passwort gesetzt');
+        expect(section?.textContent).toContain('Du hast noch kein Passwort. Lege eines fest, um dich kuenftig direkt anzumelden.');
+        expect(section?.textContent).not.toContain('E-Mail und Passwort');
         const link = section?.querySelector<HTMLAnchorElement>('a[href="/konto/passwort"]');
         expect(link?.textContent?.trim()).toBe('Passwort festlegen');
     });
 
-    it('shows that a password is set and offers to change it', async () => {
+    it('says that e-mail and password are the way in and offers to change the password', async () => {
         account.set({ ...anna, hasPassword: true });
         await setup();
 
         const section = element().querySelector('.login-method');
-        expect(section?.textContent).toContain('Passwort gesetzt');
-        expect(section?.textContent).toContain('Anmeldelink per E-Mail funktioniert weiterhin');
+        expect(section?.textContent).toContain('Du meldest dich mit E-Mail und Passwort an.');
+        expect(section?.textContent).not.toContain('noch kein Passwort');
         expect(section?.querySelector<HTMLAnchorElement>('a[href="/konto/passwort"]')?.textContent?.trim()).toBe('Passwort aendern');
     });
 
