@@ -122,6 +122,41 @@
     color: #052015;
     border-radius: 8px;
     font-weight: bold;
+
+    .label-short {
+        display: none;
+    }
+}
+
+// Phone width: the language switcher joins the row, so the header gives up some padding and the
+// upload button its long label (the short one keeps the same destination and meaning).
+@media (max-width: 480px) {
+    .sticky-header {
+        padding: 0 0.75rem;
+    }
+
+    .logo {
+        font-size: 1.25rem;
+    }
+
+    .actions {
+        gap: 0.35rem;
+    }
+
+    .upload-btn {
+        min-width: 0;
+        padding: 0 0.7rem;
+        font-size: 0.75rem;
+        letter-spacing: 0;
+
+        .label-full {
+            display: none;
+        }
+
+        .label-short {
+            display: inline;
+        }
+    }
 }
 
 // Dropdowns: a panel under its trigger, right-aligned, opened on hover or keyboard focus.
