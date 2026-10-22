@@ -13,5 +13,6 @@ describe('AboutComponent', () => {
         expect(text).toContain('Winterthur');
         expect(text).toContain('ZHAW');
         expect(fixture.nativeElement.querySelector('a[href="mailto:info@3dburg.ch"]')).not.toBeNull();
+        expect(fixture.nativeElement.querySelector('img[src="/zhaw-logo.png"]')).not.toBeNull();
     });
 });
