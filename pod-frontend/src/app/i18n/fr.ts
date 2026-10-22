@@ -244,6 +244,8 @@ export const fr: Record<TranslationKey, string> = {
     'cart.shippingNote':
         "Livraison en Suisse uniquement. Lors de la commande, nous vérifions encore une fois le prix ; il reste ensuite valable {days} jours.",
     'cart.maxReached': "{max} modèles au maximum par commande. Supprimez-en un pour en téléverser un autre.",
+    'cart.notice.trimmed': "Votre panier est limité à {max} modèles. {count} modèles de cet appareil n'ont pas été repris.",
+    'cart.notice.dismiss': "Fermer l'avis",
     'cart.error.quantityRange': 'Veuillez indiquer une quantité entre 1 et {max}.',
     'cart.error.quantityMin': 'Veuillez indiquer une quantité à partir de 1.',
 
@@ -278,6 +280,7 @@ export const fr: Record<TranslationKey, string> = {
     'checkout.error.expiredNamed':
         "Le modèle {name} n'est plus sur notre serveur et n'a pas pu être téléversé à nouveau automatiquement. Veuillez le retirer du panier et le téléverser de nouveau.",
     'checkout.error.expired': "L'un de vos modèles n'est plus sur notre serveur. Veuillez le téléverser de nouveau.",
+    'checkout.error.unavailableNamed': "Le modèle {name} n'a pas pu être fourni par le serveur. Veuillez réessayer plus tard ou le retirer du panier.",
 
     // Order success page
     'success.fallbackTitle': 'Votre commande',

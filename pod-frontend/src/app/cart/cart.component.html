@@ -4,6 +4,13 @@
         <h1>{{ 'cart.title' | t }}</h1>
     </header>
 
+    @if (notice(); as notice) {
+        <p class="notice" role="status">
+            {{ 'cart.notice.trimmed' | t:{ max: maxItems, count: notice.dropped } }}
+            <button type="button" class="notice-close" (click)="dismissNotice()">{{ 'cart.notice.dismiss' | t }}</button>
+        </p>
+    }
+
     @if (!ready()) {
         <section class="card" aria-live="polite">
             <p class="status"><span class="spinner" aria-hidden="true"></span> {{ 'cart.loading' | t }}</p>

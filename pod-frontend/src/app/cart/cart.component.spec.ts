@@ -1,4 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
@@ -7,6 +8,8 @@ import { OrderService } from '../order/order.service';
 import { QuoteOptions, QuoteResponse } from '../quote/quote.models';
 import { QuoteService } from '../quote/quote.service';
 import { CART_REQUOTE_DEBOUNCE_MS, CartComponent } from './cart.component';
+import { AccountCartApi } from './account-cart.api';
+import { CartSyncService } from './cart-sync.service';
 import { CartService, NewCartItem } from './cart.service';
 
 const quote: QuoteResponse = {
@@ -62,6 +65,7 @@ describe('CartComponent', () => {
     let fixture: ComponentFixture<CartComponent>;
     let component: CartComponent;
     let cart: CartService;
+    const notice = signal<{ dropped: number } | null>(null);
     let requestQuote: ReturnType<typeof vi.fn>;
 
     beforeEach(async () => {
@@ -73,6 +77,8 @@ describe('CartComponent', () => {
             providers: [
                 provideRouter([]),
                 { provide: QuoteService, useValue: { requestQuote, uploadModel: vi.fn(), loadOptions: () => of(options) } },
+                { provide: AccountCartApi, useValue: {} },
+                { provide: CartSyncService, useValue: { notice, dismissNotice: () => notice.set(null) } },
                 { provide: OrderService, useValue: { loadSettings: () => of(FALLBACK_ORDER_SETTINGS) } }
             ]
         }).compileComponents();
@@ -103,6 +109,28 @@ describe('CartComponent', () => {
         expect(component.ready()).toBe(true);
         expect(text()).toContain('Warenkorb ist leer');
         expect((fixture.nativeElement as HTMLElement).querySelector('a[href="/upload"]')).not.toBeNull();
+    });
+
+    it('lists a line from the account cart that has no file here like any other', async () => {
+        cart.replaceAll([{ ...item('phone.stl', { file: undefined, modelId: '', sizeBytes: 2048 }), id: 'srv-1', serverId: 'srv-1' }]);
+        await create();
+
+        const lines = (fixture.nativeElement as HTMLElement).querySelectorAll('li.item');
+        expect(lines).toHaveLength(1);
+        expect(lines[0].textContent).toContain('phone.stl');
+        expect(lines[0].textContent).toContain('CHF');
+    });
+
+    it('tells the customer when the merge left lines out, until it is dismissed', async () => {
+        notice.set({ dropped: 2 });
+        await create();
+        const root = fixture.nativeElement as HTMLElement;
+
+        expect(root.querySelector('.notice')?.textContent).toContain('2 Modelle');
+
+        root.querySelector<HTMLButtonElement>('.notice-close')?.click();
+        fixture.detectChanges();
+        expect(root.querySelector('.notice')).toBeNull();
     });
 
     it('lists every line with its configuration and sums the order', async () => {

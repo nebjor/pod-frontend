@@ -5,6 +5,8 @@ import { ColorOption, QuoteResponse } from '../quote/quote.models';
 /** What localStorage keeps per cart line: everything but the file, which lives in IndexedDB. */
 export interface StoredCartItem {
     id: string;
+    /** Id of the line in the account cart on the server; set while signed in. */
+    serverId?: string;
     fileName: string;
     sizeBytes: number;
     modelId: string;

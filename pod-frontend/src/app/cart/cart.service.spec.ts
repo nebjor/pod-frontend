@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { QuoteResponse } from '../quote/quote.models';
 import { QuoteService, UploadEvent } from '../quote/quote.service';
+import { AccountCartApi } from './account-cart.api';
 import { CART_STORAGE_KEY, CartStorage, StoredCartItem } from './cart-storage';
 import { CART_MAX_ITEMS, CartService, NewCartItem } from './cart.service';
 
@@ -98,10 +99,26 @@ class MemoryCartStorage implements Pick<CartStorage, keyof CartStorage> {
     }
 }
 
+function serverLine(id: string): StoredCartItem {
+    return {
+        id,
+        serverId: id,
+        fileName: 'benchy.stl',
+        sizeBytes: 28,
+        modelId: '',
+        filament: 'PLA',
+        color: quote.color,
+        quality: 'medium',
+        quantity: 1,
+        quote
+    };
+}
+
 describe('CartService', () => {
     let storage: MemoryCartStorage;
     let requestQuote: ReturnType<typeof vi.fn>;
     let uploadModel: ReturnType<typeof vi.fn>;
+    let registerModel: ReturnType<typeof vi.fn>;
 
     function configure(platform: 'browser' | 'server' = 'browser') {
         TestBed.resetTestingModule();
@@ -109,6 +126,7 @@ describe('CartService', () => {
             providers: [
                 { provide: CartStorage, useValue: storage },
                 { provide: QuoteService, useValue: { requestQuote, uploadModel } },
+                { provide: AccountCartApi, useValue: { registerModel } },
                 { provide: PLATFORM_ID, useValue: platform }
             ]
         });
@@ -118,6 +136,7 @@ describe('CartService', () => {
     beforeEach(() => {
         storage = new MemoryCartStorage();
         requestQuote = vi.fn(() => of(quote));
+        registerModel = vi.fn(() => of({ modelId: NEW_MODEL_ID, fileName: 'benchy.stl', sizeBytes: 28 }));
         uploadModel = vi.fn(() => of<UploadEvent>({ kind: 'done', model: { modelId: NEW_MODEL_ID, fileName: 'benchy.stl', sizeBytes: 28 } }));
     });
 
@@ -201,6 +220,91 @@ describe('CartService', () => {
         expect(cart.find(item.id)).toMatchObject({ modelId: NEW_MODEL_ID, quantity: 2 });
     });
 
+    it('refreshModel uploads the local file when there is one', () => {
+        const cart = configure();
+        const item = cart.add(newItem())!;
+
+        let modelId = '';
+        cart.refreshModel(item.id).subscribe((id) => (modelId = id));
+
+        expect(modelId).toBe(NEW_MODEL_ID);
+        expect(uploadModel).toHaveBeenCalledTimes(1);
+        expect(registerModel).not.toHaveBeenCalled();
+        expect(cart.find(item.id)?.modelId).toBe(NEW_MODEL_ID);
+    });
+
+    it('refreshModel asks the server for its stored copy when the line has no file', async () => {
+        storage.items = [serverLine('srv-1')];
+        const cart = configure();
+        await cart.restore();
+
+        let modelId = '';
+        cart.refreshModel('srv-1').subscribe((id) => (modelId = id));
+
+        expect(modelId).toBe(NEW_MODEL_ID);
+        expect(registerModel).toHaveBeenCalledWith('srv-1');
+        expect(uploadModel).not.toHaveBeenCalled();
+        expect(cart.find('srv-1')?.modelId).toBe(NEW_MODEL_ID);
+    });
+
+    it('does not announce a model refresh as a customer change', async () => {
+        storage.items = [serverLine('srv-1')];
+        const cart = configure();
+        await cart.restore();
+        const changed = vi.fn();
+        cart.changes.subscribe(changed);
+
+        cart.refreshModel('srv-1').subscribe();
+        expect(changed).not.toHaveBeenCalled();
+
+        cart.updateQuantity('srv-1', 2).subscribe();
+        expect(changed).toHaveBeenCalledTimes(1);
+    });
+
+    it('registers the stored file first when a line from the account cart is re-quoted', async () => {
+        storage.items = [serverLine('srv-1')];
+        const cart = configure();
+        await cart.restore();
+
+        cart.updateQuantity('srv-1', 2).subscribe();
+
+        expect(registerModel).toHaveBeenCalledWith('srv-1');
+        expect(requestQuote.mock.calls[0][0]).toBe(NEW_MODEL_ID);
+    });
+
+    it('ensureModelIds registers only the lines that have no upload id', async () => {
+        storage.items = [serverLine('srv-1'), { ...serverLine('srv-2'), modelId: MODEL_ID }];
+        const cart = configure();
+        await cart.restore();
+
+        await new Promise<void>((resolve) => cart.ensureModelIds().subscribe({ complete: resolve }));
+
+        expect(registerModel).toHaveBeenCalledTimes(1);
+        expect(cart.find('srv-1')?.modelId).toBe(NEW_MODEL_ID);
+        expect(cart.find('srv-2')?.modelId).toBe(MODEL_ID);
+    });
+
+    it('keeps account cart lines without a file when restoring and drops other lines without one', async () => {
+        storage.items = [serverLine('srv-1'), { ...serverLine('local-1'), serverId: undefined }];
+        const cart = configure();
+        await cart.restore();
+
+        expect(cart.items().map((item) => item.id)).toEqual(['srv-1']);
+    });
+
+    it('detaches from the account: keeps lines with a file, drops server ids and file-less lines', async () => {
+        const cart = configure();
+        const own = cart.add(newItem('benchy.stl'))!;
+        cart.attachServerIds(new Map([[own.id, 'srv-own']]));
+        cart.replaceAll([...cart.items(), { ...serverLine('srv-1'), id: 'srv-1' }]);
+
+        cart.detachFromAccount();
+
+        expect(cart.items().map((item) => item.id)).toEqual([own.id]);
+        expect(cart.find(own.id)?.serverId).toBeUndefined();
+        expect(storage.items.map((item) => item.serverId)).toEqual([undefined]);
+    });
+
     it('reports other quote failures and leaves the line unchanged', () => {
         const cart = configure();
         const item = cart.add(newItem())!;
@@ -240,7 +344,7 @@ describe('CartService', () => {
         expect(after.ready()).toBe(true);
         expect(after.items().map((item) => item.id)).toEqual([kept.id]);
         expect(after.find(kept.id)).toMatchObject({ fileName: 'benchy.stl', quantity: 2, modelId: MODEL_ID });
-        expect(after.find(kept.id)?.file.name).toBe('benchy.stl');
+        expect(after.find(kept.id)?.file?.name).toBe('benchy.stl');
         // The dropped line and the orphaned blob are gone from storage as well.
         expect(storage.items.map((item) => item.id)).toEqual([kept.id]);
         await Promise.resolve();
@@ -274,7 +378,7 @@ describe('CartService', () => {
 
         expect(cart.items().map((item) => item.id)).toEqual(['other-tab', kept.id]);
         expect(cart.find(kept.id)).toMatchObject({ quantity: 7 });
-        expect(cart.find('other-tab')?.file.name).toBe('ragno.3mf');
+        expect(cart.find('other-tab')?.file?.name).toBe('ragno.3mf');
         expect(cart.find(removedElsewhere.id)).toBeUndefined();
         expect(writeItems).not.toHaveBeenCalled();
         expect(cart.count()).toBe(11);

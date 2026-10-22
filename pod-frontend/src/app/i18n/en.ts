@@ -244,6 +244,8 @@ export const en: Record<TranslationKey, string> = {
     'cart.shippingNote':
         'Shipping within Switzerland only. When you order, we check the price once more; after that it stays valid for {days} days.',
     'cart.maxReached': 'At most {max} models per order. Remove one to upload another.',
+    'cart.notice.trimmed': 'Your cart is limited to {max} models. {count} models from this device were not added.',
+    'cart.notice.dismiss': 'Dismiss notice',
     'cart.error.quantityRange': 'Please enter a quantity between 1 and {max}.',
     'cart.error.quantityMin': 'Please enter a quantity of 1 or more.',
 
@@ -278,6 +280,7 @@ export const en: Record<TranslationKey, string> = {
     'checkout.error.expiredNamed':
         'The model {name} is no longer on our server and could not be re-uploaded automatically. Please remove it from your cart and upload it again.',
     'checkout.error.expired': 'One of your models is no longer on our server. Please upload it again.',
+    'checkout.error.unavailableNamed': 'The model {name} could not be provided by the server. Please try again later or remove it from the cart.',
 
     // Order success page
     'success.fallbackTitle': 'Your order',

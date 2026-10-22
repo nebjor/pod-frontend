@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, provideRouter } from '@angular/router';
+import { CartSyncService } from '../cart/cart-sync.service';
 import { of, throwError } from 'rxjs';
 import { AccountResponse, AccountState, LOGIN_RETURN_TO_STORAGE_KEY } from './account.models';
 import { AccountService } from './account.service';
@@ -27,9 +28,11 @@ describe('LoginComponent', () => {
     let requestLoginLink: ReturnType<typeof vi.fn>;
     let loginWithPassword: ReturnType<typeof vi.fn>;
     let navigateByUrl: ReturnType<typeof vi.spyOn>;
+    let ensureSynced: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
         state = signal<AccountState>('anonymous');
+        ensureSynced = vi.fn(() => Promise.resolve());
         account = signal<AccountResponse | null>(null);
         redeemToken = vi.fn(() => {
             account.set(anna);
@@ -45,6 +48,8 @@ describe('LoginComponent', () => {
     });
 
     afterEach(() => localStorage.clear());
+
+    const settled = () => new Promise<void>((resolve) => setTimeout(resolve));
 
     async function setup(queryParams: Record<string, string>) {
         await TestBed.configureTestingModule({
@@ -63,6 +68,7 @@ describe('LoginComponent', () => {
                         loginWithPassword
                     }
                 },
+                { provide: CartSyncService, useValue: { ensureSynced } },
                 { provide: ActivatedRoute, useValue: { queryParamMap: of({ get: (key: string) => queryParams[key] ?? null }) } }
             ]
         }).compileComponents();
@@ -101,6 +107,19 @@ describe('LoginComponent', () => {
             expect(redeemToken).toHaveBeenCalledTimes(1);
             expect(redeemToken).toHaveBeenCalledWith('tok-123');
             expect(navigateByUrl).toHaveBeenCalledWith('/konto');
+        });
+
+        it('waits for the account cart before it leaves the page', async () => {
+            let finishSync: () => void = () => undefined;
+            ensureSynced.mockReturnValue(new Promise<void>((resolve) => (finishSync = resolve)));
+            await setup({ token: 'tok-123', returnTo: '/warenkorb' });
+            await settled();
+            expect(navigateByUrl).not.toHaveBeenCalled();
+
+            finishSync();
+            await settled();
+
+            expect(navigateByUrl).toHaveBeenCalledWith('/warenkorb');
         });
 
         it('returns to the page that asked for the login, when it is a path of this app', async () => {
@@ -190,6 +209,7 @@ describe('LoginComponent', () => {
 
             component.submitPassword();
             fixture.detectChanges();
+            await settled();
 
             expect(loginWithPassword).toHaveBeenCalledWith('anna@example.com', 'correct horse battery');
             expect(navigateByUrl).toHaveBeenCalledWith('/checkout');
@@ -200,6 +220,7 @@ describe('LoginComponent', () => {
             component.passwordForm.setValue({ email: 'anna@example.com', password: 'correct horse battery' });
 
             component.submitPassword();
+            await settled();
 
             expect(navigateByUrl).toHaveBeenCalledWith('/konto');
         });
@@ -223,6 +244,7 @@ describe('LoginComponent', () => {
 
             component.submitPassword();
             fixture.detectChanges();
+            await settled();
 
             expect(component.state()).toBe('form');
             expect(component.passwordError()).toBe('E-Mail oder Passwort stimmt nicht.');

@@ -11,6 +11,7 @@ import { formatPrintDuration } from '../quote/print-duration';
 import { qualityLabel } from '../quote/quality-labels';
 import { QualityOption } from '../quote/quote.models';
 import { QuoteService, describeQuoteError } from '../quote/quote.service';
+import { CartSyncService } from './cart-sync.service';
 import { CART_MAX_ITEMS, CartItem, CartService } from './cart.service';
 
 /** A quantity change re-slices the model; typing or clicking the spinner should not flood the slicer. */
@@ -34,6 +35,7 @@ interface QuantityChange {
 })
 export class CartComponent {
     private readonly cart = inject(CartService);
+    private readonly cartSync = inject(CartSyncService);
     private readonly quoteService = inject(QuoteService);
     private readonly orderService = inject(OrderService);
     private readonly i18n = inject(I18nService);
@@ -41,6 +43,8 @@ export class CartComponent {
     private readonly quantityChanges = new Subject<QuantityChange>();
 
     readonly maxItems = CART_MAX_ITEMS;
+    /** Set when signing in merged more lines than an order takes. */
+    readonly notice = this.cartSync.notice;
     readonly items = this.cart.items;
     readonly ready = this.cart.ready;
     readonly isEmpty = this.cart.isEmpty;
@@ -83,6 +87,10 @@ export class CartComponent {
 
         // Settings and catalogue are fetched in the browser only; the page is prerendered.
         afterNextRender(() => this.loadSettingsAndCatalogue());
+    }
+
+    dismissNotice() {
+        this.cartSync.dismissNotice();
     }
 
     qualityLabel(item: CartItem): string {

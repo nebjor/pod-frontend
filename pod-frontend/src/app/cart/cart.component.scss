@@ -194,6 +194,28 @@
     }
 }
 
+.notice {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem 1rem;
+    margin: 0 0 1rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--accent-300);
+    border-radius: 8px;
+    color: var(--text-100);
+}
+
+.notice-close {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--accent-300);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
 .note {
     margin: 0.75rem 0 0;
     color: var(--text-300);

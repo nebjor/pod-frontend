@@ -3,6 +3,7 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
+import { CartSyncService } from '../cart/cart-sync.service';
 import { I18nService } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import {
@@ -47,6 +48,7 @@ export class LoginComponent {
     private readonly route = inject(ActivatedRoute);
     private readonly router = inject(Router);
     private readonly account = inject(AccountService);
+    private readonly cartSync = inject(CartSyncService);
     private readonly i18n = inject(I18nService);
     private readonly destroyRef = inject(DestroyRef);
 
@@ -223,6 +225,11 @@ export class LoginComponent {
      * stays put: the password page the mail links to picks it up once the password is saved.
      */
     private continueAfterLogin() {
+        // The account cart is merged first: a customer who opens the link on a new device lands on a filled cart.
+        void this.cartSync.ensureSynced().then(() => this.redirectAfterLogin());
+    }
+
+    private redirectAfterLogin() {
         const { returnTo, next } = this.query();
         if (returnTo) {
             takeLoginReturnPath();
