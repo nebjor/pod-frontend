@@ -1,0 +1,58 @@
+<button #trigger type="button" class="trigger" aria-haspopup="listbox" aria-controls="language-list"
+    [attr.aria-expanded]="isOpen()" [attr.aria-label]="('lang.label' | t) + ': ' + (currentNameKey() | t)"
+    (click)="toggle()">
+    <ng-container *ngTemplateOutlet="flag; context: { $implicit: i18n.lang() }" />
+    <span class="code">{{ currentCode() }}</span>
+    <svg class="chevron" viewBox="0 0 10 6" width="10" height="6" aria-hidden="true">
+        <path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+            stroke-linejoin="round" />
+    </svg>
+</button>
+
+@if (isOpen()) {
+    <div id="language-list" class="panel" role="listbox" [attr.aria-label]="'lang.label' | t">
+        @for (option of options; track option.lang) {
+            <button type="button" class="option" role="option" [attr.aria-selected]="option.lang === i18n.lang()"
+                [class.selected]="option.lang === i18n.lang()" [attr.lang]="option.lang" (click)="choose(option.lang)">
+                <ng-container *ngTemplateOutlet="flag; context: { $implicit: option.lang }" />
+                <span class="name">{{ option.nameKey | t }}</span>
+            </button>
+        }
+    </div>
+}
+
+<!-- 20x14 flags; the United Kingdom is a simplified Union Jack. -->
+<ng-template #flag let-lang>
+    @switch (lang) {
+        @case ('de') {
+            <svg class="flag" viewBox="0 0 20 14" width="20" height="14" aria-hidden="true">
+                <rect width="20" height="14" fill="#000" />
+                <rect y="4.67" width="20" height="4.67" fill="#dd0000" />
+                <rect y="9.33" width="20" height="4.67" fill="#ffce00" />
+            </svg>
+        }
+        @case ('fr') {
+            <svg class="flag" viewBox="0 0 20 14" width="20" height="14" aria-hidden="true">
+                <rect width="20" height="14" fill="#fff" />
+                <rect width="6.67" height="14" fill="#0055a4" />
+                <rect x="13.33" width="6.67" height="14" fill="#ef4135" />
+            </svg>
+        }
+        @case ('it') {
+            <svg class="flag" viewBox="0 0 20 14" width="20" height="14" aria-hidden="true">
+                <rect width="20" height="14" fill="#fff" />
+                <rect width="6.67" height="14" fill="#009246" />
+                <rect x="13.33" width="6.67" height="14" fill="#ce2b37" />
+            </svg>
+        }
+        @case ('en') {
+            <svg class="flag" viewBox="0 0 20 14" width="20" height="14" aria-hidden="true">
+                <rect width="20" height="14" fill="#012169" />
+                <path d="M0 0L20 14M20 0L0 14" stroke="#fff" stroke-width="2.6" />
+                <path d="M0 0L20 14M20 0L0 14" stroke="#c8102e" stroke-width="1" />
+                <path d="M10 0V14M0 7H20" stroke="#fff" stroke-width="4.4" />
+                <path d="M10 0V14M0 7H20" stroke="#c8102e" stroke-width="2.6" />
+            </svg>
+        }
+    }
+</ng-template>

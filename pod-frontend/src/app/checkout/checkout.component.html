@@ -1,13 +1,13 @@
 <section class="checkout-page">
     <header class="checkout-header">
-        <p class="kicker">CHECKOUT</p>
-        <h1>Bestellung</h1>
+        <p class="kicker">{{ 'checkout.kicker' | t }}</p>
+        <h1>{{ 'checkout.title' | t }}</h1>
     </header>
 
     @if (state() === 'placed' && order(); as o) {
         <section class="card placed" aria-live="polite">
-            <h2>Danke, deine Bestellung ist eingegangen.</h2>
-            <p class="order-number">Bestellnummer <strong>{{ o.orderNumber }}</strong></p>
+            <h2>{{ 'checkout.placedTitle' | t }}</h2>
+            <p class="order-number">{{ 'common.orderNumber' | t }} <strong>{{ o.orderNumber }}</strong></p>
             <ul class="item-list">
                 @for (line of o.items; track line.position) {
                     <li>
@@ -23,33 +23,33 @@
                 }
             </ul>
             <dl class="details">
-                <div><dt>Positionen</dt><dd>{{ o.totals.currency }} {{ o.totals.itemsTotal | number:'1.2-2' }}</dd></div>
-                <div><dt>Versand</dt><dd>{{ o.totals.currency }} {{ o.totals.shipping | number:'1.2-2' }}</dd></div>
-                <div class="total"><dt>Gesamt</dt><dd>{{ o.totals.currency }} {{ o.totals.total | number:'1.2-2' }}</dd></div>
+                <div><dt>{{ 'common.positions' | t }}</dt><dd>{{ o.totals.currency }} {{ o.totals.itemsTotal | number:'1.2-2' }}</dd></div>
+                <div><dt>{{ 'common.shipping' | t }}</dt><dd>{{ o.totals.currency }} {{ o.totals.shipping | number:'1.2-2' }}</dd></div>
+                <div class="total"><dt>{{ 'common.total' | t }}</dt><dd>{{ o.totals.currency }} {{ o.totals.total | number:'1.2-2' }}</dd></div>
             </dl>
             @if (o.vatNote) {
-                <p class="note">Keine MWST, da nicht MWST-pflichtig.</p>
+                <p class="note">{{ 'common.noVat' | t }}</p>
             }
             <p class="note">
-                Der Preis ist bis {{ priceValidUntil() }} gültig. Eine Bestätigung geht an
+                {{ 'checkout.priceValid' | t:{ date: priceValidUntil() } }} {{ 'checkout.confirmationTo' | t }}
                 <strong>{{ o.customerEmail }}</strong>.
             </p>
-            <a class="order-btn link-btn" routerLink="/upload">Weiteres Modell hochladen</a>
+            <a class="order-btn link-btn" routerLink="/upload">{{ 'common.uploadAnother' | t }}</a>
         </section>
     } @else if (!ready()) {
         <section class="card" aria-live="polite">
-            <p class="status">Warenkorb wird geladen...</p>
+            <p class="status">{{ 'cart.loading' | t }}</p>
         </section>
     } @else if (isEmpty()) {
         <section class="card empty">
-            <p>Dein Warenkorb ist leer.</p>
-            <a class="order-btn link-btn" routerLink="/upload">Modell hochladen und Preis erhalten</a>
+            <p>{{ 'cart.empty' | t }}</p>
+            <a class="order-btn link-btn" routerLink="/upload">{{ 'common.uploadAndPrice' | t }}</a>
         </section>
     } @else {
         <section class="checkout-layout">
             <section class="card summary">
-                <h2>1. Deine Modelle</h2>
-                <ul class="item-list" aria-label="Positionen">
+                <h2>{{ 'checkout.step1' | t }}</h2>
+                <ul class="item-list" [attr.aria-label]="'checkout.itemsAria' | t">
                     @for (item of items(); track item.id) {
                         <li>
                             <div class="item-line">
@@ -58,74 +58,73 @@
                             </div>
                             <p class="item-config">
                                 <span class="swatch-dot" [style.background]="item.color.hex" aria-hidden="true"></span>
-                                {{ item.filament }} {{ item.color.label }} · Qualität {{ qualityLabel(item.quality) }} ·
-                                Druckzeit {{ printTimeLabel(item) }}
+                                {{ item.filament }} {{ item.color.label }} · {{ 'cart.qualityLine' | t:{ quality: qualityLabel(item.quality) } }} ·
+                                {{ 'cart.printTime' | t:{ time: printTimeLabel(item) } }}
                             </p>
                         </li>
                     }
                 </ul>
-                <a class="edit-link" routerLink="/warenkorb">Warenkorb bearbeiten</a>
+                <a class="edit-link" routerLink="/warenkorb">{{ 'checkout.editCart' | t }}</a>
                 @for (message of itemErrors(); track message) {
                     <p class="error" role="alert">{{ message }}</p>
                 }
 
                 <dl class="details">
-                    <div><dt>Positionen ({{ items().length }})</dt><dd>{{ currency() }} {{ itemsTotal() | number:'1.2-2' }}</dd></div>
-                    <div><dt>Versand (Pauschale)</dt><dd>{{ currency() }} {{ shipping() | number:'1.2-2' }}</dd></div>
-                    <div class="total"><dt>Gesamt</dt><dd>{{ currency() }} {{ total() | number:'1.2-2' }}</dd></div>
+                    <div><dt>{{ 'common.positionsCount' | t:{ count: items().length } }}</dt><dd>{{ currency() }} {{ itemsTotal() | number:'1.2-2' }}</dd></div>
+                    <div><dt>{{ 'common.shippingFlat' | t }}</dt><dd>{{ currency() }} {{ shipping() | number:'1.2-2' }}</dd></div>
+                    <div class="total"><dt>{{ 'common.total' | t }}</dt><dd>{{ currency() }} {{ total() | number:'1.2-2' }}</dd></div>
                 </dl>
                 @if (!settings().vatEnabled) {
-                    <p class="note">Keine MWST, da nicht MWST-pflichtig.</p>
+                    <p class="note">{{ 'common.noVat' | t }}</p>
                 }
                 <p class="note">
-                    Versand nur innerhalb der Schweiz. Nach der Bestellung bleibt der Preis
-                    {{ settings().quoteValidityDays }} Tage gültig; so lange kannst du bezahlen.
+                    {{ 'checkout.shippingNote' | t:{ days: settings().quoteValidityDays } }}
                 </p>
             </section>
 
             <section class="card">
-                <h2>2. Kontakt und Lieferadresse</h2>
+                <h2>{{ 'checkout.step2' | t }}</h2>
                 @if (accountState() === 'signedIn' && customer(); as c) {
-                    <p class="account-hint signed-in">Angemeldet als <strong>{{ c.email }}</strong></p>
+                    <p class="account-hint signed-in">{{ 'checkout.signedInAs' | t }} <strong>{{ c.email }}</strong></p>
                 } @else if (accountState() === 'anonymous') {
                     <p class="account-hint">
-                        Schon Kunde?
-                        <a routerLink="/konto/anmelden" [queryParams]="{ returnTo: '/checkout' }">Anmelden</a>
-                        &middot; Neu hier?
-                        <a routerLink="/konto/anmelden" [queryParams]="{ mode: 'register', returnTo: '/checkout' }">Registrieren</a>
+                        {{ 'checkout.alreadyCustomer' | t }}
+                        <a routerLink="/konto/anmelden" [queryParams]="{ returnTo: '/checkout' }">{{ 'common.login' | t }}</a>
+                        &middot; {{ 'checkout.newHere' | t }}
+                        <a routerLink="/konto/anmelden" [queryParams]="{ mode: 'register', returnTo: '/checkout' }">{{ 'common.register' | t }}</a>
                     </p>
                 }
                 <form [formGroup]="customerForm" class="customer-form" (ngSubmit)="submit()" novalidate>
                     <label>
-                        Name
+                        {{ 'common.name' | t }}
                         <input formControlName="customerName" type="text" autocomplete="name" />
                         @if (fieldError('customerName')) { <span class="field-error">{{ fieldError('customerName') }}</span> }
                     </label>
                     <label>
-                        E-Mail
+                        {{ 'common.email' | t }}
                         <input formControlName="email" type="email" autocomplete="email" />
                         @if (fieldError('email')) { <span class="field-error">{{ fieldError('email') }}</span> }
                     </label>
                     <label class="wide">
-                        Strasse und Nummer
+                        {{ 'common.street' | t }}
                         <input formControlName="street" type="text" autocomplete="street-address" />
                         @if (fieldError('street')) { <span class="field-error">{{ fieldError('street') }}</span> }
                     </label>
                     <label>
-                        PLZ
+                        {{ 'common.postalCode' | t }}
                         <input formControlName="postalCode" type="text" autocomplete="postal-code" inputmode="numeric" />
                         @if (fieldError('postalCode')) { <span class="field-error">{{ fieldError('postalCode') }}</span> }
                     </label>
                     <label>
-                        Ort
+                        {{ 'common.city' | t }}
                         <input formControlName="city" type="text" autocomplete="address-level2" />
                         @if (fieldError('city')) { <span class="field-error">{{ fieldError('city') }}</span> }
                     </label>
                     <label>
-                        Land
+                        {{ 'common.country' | t }}
                         <select formControlName="country">
                             @for (country of settings().shipToCountries; track country) {
-                                <option [value]="country">{{ country === 'CH' ? 'Schweiz' : country }}</option>
+                                <option [value]="country">{{ country === 'CH' ? ('common.countryCH' | t) : country }}</option>
                             }
                         </select>
                     </label>
@@ -133,33 +132,32 @@
                     <label class="terms">
                         <input formControlName="termsAccepted" type="checkbox" />
                         <span>
-                            Ich akzeptiere die <a routerLink="/agb" target="_blank">AGB</a> und habe die
-                            <a routerLink="/datenschutz" target="_blank">Datenschutzerklärung</a> gelesen.
+                            {{ 'checkout.termsStart' | t }} <a routerLink="/agb" target="_blank">{{ 'footer.terms' | t }}</a> {{ 'checkout.termsMiddle' | t }}
+                            <a routerLink="/datenschutz" target="_blank">{{ 'checkout.privacyLink' | t }}</a>{{ 'checkout.termsEnd' | t }}
                             @if (customerForm.controls.termsAccepted.touched && customerForm.controls.termsAccepted.invalid) {
-                                <span class="field-error">Bitte akzeptiere die AGB, um zu bestellen.</span>
+                                <span class="field-error">{{ 'checkout.termsError' | t }}</span>
                             }
                         </span>
                     </label>
                     <p class="note wide">
-                        Deine Teile werden einzeln nach deinen Modellen gefertigt. Eine Rückgabe ist deshalb
-                        ausgeschlossen. Bis wir mit dem Druck beginnen, kannst du per E-Mail an
-                        <a [href]="'mailto:' + supportEmail">{{ supportEmail }}</a> stornieren.
+                        {{ 'checkout.cancelNote' | t }}
+                        <a [href]="'mailto:' + supportEmail">{{ supportEmail }}</a>.
                     </p>
 
                     @if (priceChangedTo() !== null) {
                         <div class="price-changed" role="alert">
                             <p>
-                                Beim Prüfen deiner Bestellung hat sich der Preis geändert:
+                                {{ 'checkout.priceChanged' | t }}
                                 <strong>{{ currency() }} {{ itemsTotal() | number:'1.2-2' }}</strong>
-                                für die Positionen, gesamt {{ currency() }} {{ priceChangedTo() | number:'1.2-2' }}.
+                                {{ 'checkout.priceChangedTail' | t:{ total: currency() + ' ' + (priceChangedTo() | number:'1.2-2') } }}
                             </p>
-                            <button type="button" class="order-btn" (click)="acceptNewPrice()">Neuen Preis annehmen und bestellen</button>
+                            <button type="button" class="order-btn" (click)="acceptNewPrice()">{{ 'checkout.acceptNewPrice' | t }}</button>
                         </div>
                     } @else {
                         <button type="submit" class="order-btn" [disabled]="state() === 'submitting'">
-                            @if (state() === 'submitting') { Bestellung wird angelegt... } @else { Kostenpflichtig bestellen }
+                            @if (state() === 'submitting') { {{ 'checkout.submitting' | t }} } @else { {{ 'checkout.submit' | t }} }
                         </button>
-                        <p class="note wide payment-hint">Danach geht es direkt zur Zahlung.</p>
+                        <p class="note wide payment-hint">{{ 'checkout.paymentHint' | t }}</p>
                     }
 
                     @if (errorMessage()) {

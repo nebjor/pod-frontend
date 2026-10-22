@@ -18,6 +18,9 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { RouterLink } from '@angular/router';
 import { EMPTY, Subject, catchError, map, merge, of, switchMap, timer } from 'rxjs';
 import { CART_MAX_ITEMS, CartItem, CartService } from '../cart/cart.service';
+import { TranslationKey } from '../i18n/de';
+import { I18nService } from '../i18n/i18n.service';
+import { TranslatePipe } from '../i18n/translate.pipe';
 import { ModelViewerComponent } from '../model-viewer/model-viewer.component';
 import { formatQualityOption } from '../quote/quality-labels';
 import { ColorOption, FilamentOption, QualityOption, QuoteOptions, QuoteResponse } from '../quote/quote.models';
@@ -81,7 +84,8 @@ export const UPLOAD_PROGRESS_MIN_BYTES = 2 * 1024 * 1024;
 export interface SlicingStep {
     /** Milliseconds after the phase began at which this text takes over. */
     atMs: number;
-    text: string;
+    /** Dictionary key of the text; it is resolved when shown, so a language switch applies at once. */
+    key: TranslationKey;
 }
 
 /**
@@ -90,17 +94,17 @@ export interface SlicingStep {
  * the last one stays until the quote arrives.
  */
 export const SLICING_STEPS: ReadonlyArray<SlicingStep> = [
-    { atMs: 0, text: 'Modell wird gescannt...' },
-    { atMs: 1500, text: 'Geometrie wird analysiert...' },
-    { atMs: 3500, text: 'Schichten werden berechnet...' },
-    { atMs: 8000, text: 'Druckzeit und Material werden ermittelt...' }
+    { atMs: 0, key: 'upload.phase.scan' },
+    { atMs: 1500, key: 'upload.phase.geometry' },
+    { atMs: 3500, key: 'upload.phase.layers' },
+    { atMs: 8000, key: 'upload.phase.estimate' }
 ];
 
 /** A re-price of a known model skips the scanning stages and ends with its own text. */
 export const REPRICING_FIRST_STEP = 2;
-export const REPRICING_FINAL_TEXT = 'Preis wird neu berechnet...';
+export const REPRICING_FINAL_KEY: TranslationKey = 'upload.phase.reprice';
 
-/** How long "Fertig." lingers after the quote arrived before the result takes over. */
+/** How long "Done." lingers after the quote arrived before the result takes over. */
 export const QUOTE_DONE_FLASH_MS = 400;
 
 /** The timed stages for a pending phase, rebased so that the first one starts at zero. */
@@ -112,7 +116,7 @@ export function slicingStepsFor(phase: 'slicing' | 'repricing'): ReadonlyArray<S
     const offset = steps[0]?.atMs ?? 0;
     return steps.map((step, index) => ({
         atMs: step.atMs - offset,
-        text: index === steps.length - 1 ? REPRICING_FINAL_TEXT : step.text
+        key: index === steps.length - 1 ? REPRICING_FINAL_KEY : step.key
     }));
 }
 
@@ -129,7 +133,7 @@ const PREFERRED_QUALITY = 'medium';
  */
 @Component({
     selector: 'app-upload',
-    imports: [ReactiveFormsModule, DecimalPipe, RouterLink, ModelViewerComponent, QuoteOverlayComponent],
+    imports: [ReactiveFormsModule, DecimalPipe, RouterLink, ModelViewerComponent, QuoteOverlayComponent, TranslatePipe],
     templateUrl: './upload.component.html',
     styleUrl: './upload.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -137,6 +141,7 @@ const PREFERRED_QUALITY = 'medium';
 export class UploadComponent {
     private readonly quoteService = inject(QuoteService);
     private readonly cart = inject(CartService);
+    private readonly i18n = inject(I18nService);
     private readonly destroyRef = inject(DestroyRef);
     private readonly uploads = new Subject<File | null>();
     private readonly quoteJobs = new Subject<QuoteJob | null>();
@@ -165,10 +170,10 @@ export class UploadComponent {
     /** The line just added; the confirmation with the next steps shows while it is set. */
     readonly addedItem = signal<CartItem | null>(null);
     readonly cartItemCount = computed(() => this.cart.items().length);
-    /** "1 Modell" / "3 Modelle": the number of lines in the cart, for the note under the button. */
+    /** "1 model" / "3 models": the number of lines in the cart, for the note under the button. */
     readonly cartModelsLabel = computed(() => {
         const count = this.cartItemCount();
-        return `${count} ${count === 1 ? 'Modell' : 'Modelle'}`;
+        return this.i18n.t(count === 1 ? 'common.modelOne' : 'common.modelMany', { count });
     });
     readonly cartIsFull = this.cart.isFull;
     readonly maxCartItems = CART_MAX_ITEMS;
@@ -224,7 +229,7 @@ export class UploadComponent {
     );
     readonly selectedQualityLabel = computed(() => {
         const option = this.selectedQualityOption();
-        return option ? formatQualityOption(option) : '';
+        return option ? formatQualityOption(option, this.i18n.t) : '';
     });
 
     /** Colours stocked for the selected filament. */
@@ -286,17 +291,17 @@ export class UploadComponent {
         }
         return this.quotePhase() === 'uploading' ? this.uploadProgress() : null;
     });
-    /** The staged text next to the indeterminate bar, or "Fertig." right after the quote came. */
+    /** The staged text next to the indeterminate bar, or "Done." right after the quote came. */
     readonly quoteStatusText = computed(() => {
         if (this.quoteDoneFlash()) {
-            return 'Fertig.';
+            return this.i18n.t('upload.phase.done');
         }
         const phase = this.quotePhase();
         if (phase !== 'slicing' && phase !== 'repricing') {
             return '';
         }
         const steps = slicingStepsFor(phase);
-        return steps[Math.min(this.slicingStep(), steps.length - 1)].text;
+        return this.i18n.t(steps[Math.min(this.slicingStep(), steps.length - 1)].key);
     });
     /** Step 3 while the slicer runs: from the click until the quote (or "Fertig.") is there. */
     readonly loadingOverlayOpen = computed(
@@ -321,7 +326,7 @@ export class UploadComponent {
 
     /** "Standard 0.20 mm", the same wording the cart and the order pages use. */
     qualityOptionLabel(option: QualityOption): string {
-        return formatQualityOption(option);
+        return formatQualityOption(option, this.i18n.t);
     }
 
     /**
@@ -343,7 +348,7 @@ export class UploadComponent {
                         : this.quoteService.uploadModel(file).pipe(
                               map((event): UploadOutcome => ({ file, event })),
                               catchError((error: unknown) =>
-                                  of<UploadOutcome>({ file, event: { kind: 'error', message: describeQuoteError(error) } })
+                                  of<UploadOutcome>({ file, event: { kind: 'error', message: describeQuoteError(error, this.i18n.t) } })
                               )
                           )
                 ),
@@ -370,7 +375,7 @@ export class UploadComponent {
                                       of<QuoteOutcome>({
                                           job,
                                           quote: null,
-                                          error: describeQuoteError(error),
+                                          error: describeQuoteError(error, this.i18n.t),
                                           modelExpired: isModelExpired(error)
                                       })
                                   )
@@ -486,7 +491,7 @@ export class UploadComponent {
         this.isModelLoading.set(false);
 
         if (state === 'error') {
-            this.errorMessage.set('Modell konnte nicht geladen werden. Bitte prüfe das Dateiformat.');
+            this.errorMessage.set(this.i18n.t('upload.error.modelLoad'));
         }
     }
 
@@ -678,7 +683,7 @@ export class UploadComponent {
         const extension = file.name.split('.').pop()?.toLowerCase();
 
         if (extension !== 'stl' && extension !== '3mf') {
-            this.errorMessage.set('Nur STL oder 3MF Dateien sind erlaubt.');
+            this.errorMessage.set(this.i18n.t('upload.error.fileType'));
             return;
         }
 

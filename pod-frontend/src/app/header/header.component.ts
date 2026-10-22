@@ -1,4 +1,4 @@
-import { DecimalPipe, isPlatformBrowser } from '@angular/common';
+import { DecimalPipe, formatNumber, isPlatformBrowser } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,10 +7,13 @@ import { Router, RouterLink } from '@angular/router';
 import { AccountService } from '../account/account.service';
 import { CartService } from '../cart/cart.service';
 import { isAdminHost } from '../host-routes';
+import { I18nService } from '../i18n/i18n.service';
+import { TranslatePipe } from '../i18n/translate.pipe';
 import { qualityLabel } from '../quote/quality-labels';
 import { HoverMenuDirective } from './hover-menu.directive';
+import { LanguageSwitcherComponent } from './language-switcher.component';
 
-/** Lines shown in the cart preview; the rest is summed up as "+ N weitere Positionen". */
+/** Lines shown in the cart preview; the rest is summed up as "+ N more items". */
 export const CART_PREVIEW_MAX_ITEMS = 4;
 
 /**
@@ -25,7 +28,7 @@ export const CART_PREVIEW_MAX_ITEMS = 4;
  */
 @Component({
     selector: 'app-header',
-    imports: [MatToolbarModule, MatButtonModule, RouterLink, DecimalPipe, HoverMenuDirective],
+    imports: [MatToolbarModule, MatButtonModule, RouterLink, DecimalPipe, HoverMenuDirective, LanguageSwitcherComponent, TranslatePipe],
     templateUrl: './header.component.html',
     styleUrl: './header.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -34,6 +37,7 @@ export class HeaderComponent {
     private readonly router = inject(Router);
     private readonly cart = inject(CartService);
     private readonly account = inject(AccountService);
+    private readonly i18n = inject(I18nService);
     private readonly destroyRef = inject(DestroyRef);
     private readonly loggingOutState = signal(false);
 
@@ -50,6 +54,15 @@ export class HeaderComponent {
     readonly cartCount = this.cart.count;
     readonly cartTotal = this.cart.itemsTotal;
     readonly cartCurrency = this.cart.currency;
+    /** Screen readers get the count and the total; the visible badge shows the count only. */
+    readonly cartAriaLabel = computed(() =>
+        this.cart.isEmpty()
+            ? this.i18n.t('header.cartEmptyAria')
+            : this.i18n.t('header.cartAria', {
+                  count: this.cart.count(),
+                  total: `${this.cart.currency()} ${formatNumber(this.cart.itemsTotal(), 'en-US', '1.2-2')}`
+              })
+    );
     readonly previewItems = computed(() => this.cart.items().slice(0, CART_PREVIEW_MAX_ITEMS));
     readonly previewHiddenCount = computed(() => Math.max(0, this.cart.items().length - CART_PREVIEW_MAX_ITEMS));
 
@@ -59,7 +72,7 @@ export class HeaderComponent {
 
     /** The header is on every page and does not fetch the catalogue; the fallback list serves it. */
     qualityLabel(code: string): string {
-        return qualityLabel(code);
+        return qualityLabel(code, [], this.i18n.t);
     }
 
     goToUpload() {

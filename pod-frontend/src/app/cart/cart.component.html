@@ -1,21 +1,21 @@
 <section class="cart-page">
     <header class="cart-header">
-        <p class="kicker">WARENKORB</p>
-        <h1>Dein Warenkorb</h1>
+        <p class="kicker">{{ 'cart.kicker' | t }}</p>
+        <h1>{{ 'cart.title' | t }}</h1>
     </header>
 
     @if (!ready()) {
         <section class="card" aria-live="polite">
-            <p class="status"><span class="spinner" aria-hidden="true"></span> Warenkorb wird geladen...</p>
+            <p class="status"><span class="spinner" aria-hidden="true"></span> {{ 'cart.loading' | t }}</p>
         </section>
     } @else if (isEmpty()) {
         <section class="card empty">
-            <p>Dein Warenkorb ist leer.</p>
-            <a class="order-btn link-btn" routerLink="/upload">Modell hochladen und Preis erhalten</a>
+            <p>{{ 'cart.empty' | t }}</p>
+            <a class="order-btn link-btn" routerLink="/upload">{{ 'common.uploadAndPrice' | t }}</a>
         </section>
     } @else {
         <section class="cart-layout">
-            <ul class="items" aria-label="Modelle im Warenkorb">
+            <ul class="items" [attr.aria-label]="'cart.itemsAria' | t">
                 @for (item of items(); track item.id) {
                     <li class="item card" [class.pending]="pending().has(item.id)">
                         <div class="item-main">
@@ -23,19 +23,20 @@
                             <p class="config">
                                 {{ item.filament }} ·
                                 <span class="swatch-dot" [style.background]="item.color.hex" aria-hidden="true"></span>{{ item.color.label }} ·
-                                Qualität {{ qualityLabel(item) }}
+                                {{ 'cart.qualityLine' | t:{ quality: qualityLabel(item) } }}
                             </p>
                             <p class="meta">
-                                Druckzeit {{ printTimeLabel(item) }} · <strong class="lead-time">Lieferzeit ca. {{ item.quote.leadTimeDays }} Tage</strong> ·
-                                Einrichtung {{ item.quote.currency }} {{ item.quote.setupFeeChf | number:'1.2-2' }} (einmalig)
+                                {{ 'cart.printTime' | t:{ time: printTimeLabel(item) } }} ·
+                                <strong class="lead-time">{{ 'cart.leadTime' | t:{ days: item.quote.leadTimeDays } }}</strong> ·
+                                {{ 'cart.setup' | t:{ fee: item.quote.currency + ' ' + (item.quote.setupFeeChf | number:'1.2-2') } }}
                             </p>
                         </div>
 
                         <div class="item-controls">
                             <label class="quantity">
-                                Menge
+                                {{ 'common.quantity' | t }}
                                 <input type="number" min="1" [max]="maxQuantity()" [value]="item.quantity"
-                                    [attr.aria-label]="'Menge für ' + item.fileName"
+                                    [attr.aria-label]="'cart.quantityFor' | t:{ name: item.fileName }"
                                     (change)="onQuantityChange(item.id, $event)" />
                             </label>
                             <p class="line-total" aria-live="polite">
@@ -46,8 +47,8 @@
                                 <strong>{{ item.quote.currency }} {{ item.quote.totalPriceChf | number:'1.2-2' }}</strong>
                             </p>
                             <button type="button" class="remove-btn" (click)="remove(item.id)"
-                                [attr.aria-label]="item.fileName + ' entfernen'">
-                                Entfernen
+                                [attr.aria-label]="'cart.removeAria' | t:{ name: item.fileName }">
+                                {{ 'cart.remove' | t }}
                             </button>
                         </div>
 
@@ -59,25 +60,24 @@
             </ul>
 
             <aside class="card summary">
-                <h2>Zusammenfassung</h2>
+                <h2>{{ 'cart.summary' | t }}</h2>
                 <dl class="details">
-                    <div><dt>Positionen ({{ items().length }})</dt><dd>{{ currency() }} {{ itemsTotal() | number:'1.2-2' }}</dd></div>
-                    <div><dt>Versand (Pauschale)</dt><dd>{{ currency() }} {{ shipping() | number:'1.2-2' }}</dd></div>
-                    <div class="total"><dt>Gesamt</dt><dd>{{ currency() }} {{ total() | number:'1.2-2' }}</dd></div>
+                    <div><dt>{{ 'common.positionsCount' | t:{ count: items().length } }}</dt><dd>{{ currency() }} {{ itemsTotal() | number:'1.2-2' }}</dd></div>
+                    <div><dt>{{ 'common.shippingFlat' | t }}</dt><dd>{{ currency() }} {{ shipping() | number:'1.2-2' }}</dd></div>
+                    <div class="total"><dt>{{ 'common.total' | t }}</dt><dd>{{ currency() }} {{ total() | number:'1.2-2' }}</dd></div>
                 </dl>
                 @if (!settings().vatEnabled) {
-                    <p class="note">Keine MWST, da nicht MWST-pflichtig.</p>
+                    <p class="note">{{ 'common.noVat' | t }}</p>
                 }
                 <p class="note">
-                    Versand nur innerhalb der Schweiz. Beim Bestellen prüfen wir den Preis noch einmal; danach bleibt er
-                    {{ settings().quoteValidityDays }} Tage gültig.
+                    {{ 'cart.shippingNote' | t:{ days: settings().quoteValidityDays } }}
                 </p>
 
-                <a class="order-btn link-btn" routerLink="/checkout">Zur Kasse</a>
+                <a class="order-btn link-btn" routerLink="/checkout">{{ 'common.toCheckout' | t }}</a>
                 @if (isFull()) {
-                    <p class="note">Maximal {{ maxItems }} Modelle pro Bestellung. Entferne eines, um ein weiteres hochzuladen.</p>
+                    <p class="note">{{ 'cart.maxReached' | t:{ max: maxItems } }}</p>
                 } @else {
-                    <a class="order-btn ghost-btn link-btn" routerLink="/upload">Weiteres Modell hochladen</a>
+                    <a class="order-btn ghost-btn link-btn" routerLink="/upload">{{ 'common.uploadAnother' | t }}</a>
                 }
             </aside>
         </section>

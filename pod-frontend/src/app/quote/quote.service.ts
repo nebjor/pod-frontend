@@ -1,6 +1,7 @@
 import { HttpClient, HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, filter, map } from 'rxjs';
+import { Translate, translateDe } from '../i18n/i18n.service';
 import { QuoteOptions, QuoteRequestParams, QuoteResponse, UploadedModel } from './quote.models';
 
 /** Relative paths; the dev server proxies `/api` to the Spring backend (see proxy.conf.js). */
@@ -74,23 +75,24 @@ export function isModelExpired(error: unknown): boolean {
 /**
  * Turns an HTTP failure into a message the customer can act on. The backend words its problem
  * details for the customer and they are shown as they are; a failure without one gets a short
- * line without status codes.
+ * line without status codes. `t` words the lines of this app in the active language; without
+ * it they are German (the admin area, which stays German, calls it that way).
  */
-export function describeQuoteError(error: unknown): string {
+export function describeQuoteError(error: unknown, t: Translate = translateDe): string {
     if (error instanceof HttpErrorResponse) {
         const problem = (error.error ?? null) as QuoteProblem | null;
 
         if (error.status === 0) {
-            return 'Der Shop ist gerade nicht erreichbar. Bitte prüfe deine Verbindung und versuche es noch einmal.';
+            return t('error.unreachable');
         }
         if (error.status === 413) {
-            return 'Die Datei ist zu gross für eine Online-Berechnung (max. 50 MB).';
+            return t('error.tooLarge');
         }
         if (error.status === 429) {
-            return `Limit erreicht. Probier es ${formatRetry(problem?.retryAfterSeconds)} noch einmal.${supportHint(problem?.supportEmail)}`;
+            return t('error.rateLimit', { retry: formatRetry(problem?.retryAfterSeconds, t) }) + supportHint(problem?.supportEmail, t);
         }
         if (error.status === 503) {
-            return `Die Preisberechnung ist gerade ausgelastet. Probier es ${formatRetry(problem?.retryAfterSeconds)} noch einmal.`;
+            return t('error.busy', { retry: formatRetry(problem?.retryAfterSeconds, t) });
         }
 
         const detail = problem?.detail;
@@ -99,22 +101,20 @@ export function describeQuoteError(error: unknown): string {
         }
     }
 
-    return 'Der Preis konnte gerade nicht berechnet werden. Bitte versuche es noch einmal.';
+    return t('error.quote');
 }
 
-function formatRetry(retryAfterSeconds: unknown): string {
+function formatRetry(retryAfterSeconds: unknown, t: Translate): string {
     const seconds = typeof retryAfterSeconds === 'number' ? Math.ceil(retryAfterSeconds) : 0;
     if (seconds <= 0) {
-        return 'später';
+        return t('error.retryLater');
     }
     if (seconds < 90) {
-        return `in ${seconds} Sekunden`;
+        return t('error.retrySeconds', { count: seconds });
     }
-    return `in ${Math.ceil(seconds / 60)} Minuten`;
+    return t('error.retryMinutes', { count: Math.ceil(seconds / 60) });
 }
 
-function supportHint(supportEmail: unknown): string {
-    return typeof supportEmail === 'string' && supportEmail.length > 0
-        ? ` Falls es eilt, schreib an ${supportEmail}.`
-        : '';
+function supportHint(supportEmail: unknown, t: Translate): string {
+    return typeof supportEmail === 'string' && supportEmail.length > 0 ? t('error.support', { email: supportEmail }) : '';
 }

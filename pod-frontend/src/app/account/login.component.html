@@ -1,67 +1,65 @@
 <section class="customer-page narrow">
     <header class="page-header">
-        <p class="kicker">KONTO</p>
-        <h1>{{ mode() === 'register' ? 'Registrieren' : 'Anmelden' }}</h1>
+        <p class="kicker">{{ 'common.kickerAccount' | t }}</p>
+        <h1>{{ (mode() === 'register' ? 'common.register' : 'common.login') | t }}</h1>
     </header>
 
     <section class="card" aria-live="polite">
         @switch (state()) {
             @case ('redeeming') {
-                <p class="status"><span class="spinner" aria-hidden="true"></span> Du wirst angemeldet...</p>
+                <p class="status"><span class="spinner" aria-hidden="true"></span> {{ 'login.redeeming' | t }}</p>
             }
             @case ('sent') {
-                <h2>Schau in dein Postfach.</h2>
+                <h2>{{ 'login.sentTitle' | t }}</h2>
                 <p class="note">
-                    Mit dem Link in der E-Mail an <strong>{{ sentTo() }}</strong> legst du dein Passwort fest und bist
-                    angemeldet. Er ist {{ linkMinutes }} Minuten gültig und funktioniert nur einmal.
+                    {{ 'login.sentText' | t:{ email: sentTo(), minutes: linkMinutes } }}
                 </p>
                 <p class="note">
-                    Nichts erhalten? Die Mail kann eine Minute brauchen. Prüfe den Spam-Ordner oder fordere eine neue an.
+                    {{ 'login.noMail' | t }}
                 </p>
                 <div class="sent-actions">
-                    <button type="button" class="order-btn ghost-btn" (click)="reset()">Neue E-Mail anfordern</button>
-                    <button type="button" class="text-btn back-to-login" (click)="backToLogin()">Zurück zur Anmeldung</button>
+                    <button type="button" class="order-btn ghost-btn" (click)="reset()">{{ 'login.requestNew' | t }}</button>
+                    <button type="button" class="text-btn back-to-login" (click)="backToLogin()">{{ 'login.backToLogin' | t }}</button>
                 </div>
             }
             @case ('resetSent') {
-                <h2>Wir haben dir eine E-Mail geschickt.</h2>
+                <h2>{{ 'login.resetTitle' | t }}</h2>
                 <p class="note">
-                    Mit dem Link darin legst du ein neues Passwort fest. Die E-Mail geht an <strong>{{ sentTo() }}</strong>;
-                    der Link ist {{ linkMinutes }} Minuten gültig und funktioniert nur einmal.
+                    {{ 'login.resetText' | t:{ email: sentTo(), minutes: linkMinutes } }}
                 </p>
                 <p class="note">
-                    Nichts erhalten? Die Mail kann eine Minute brauchen. Prüfe den Spam-Ordner oder fordere eine neue an.
+                    {{ 'login.noMail' | t }}
                 </p>
-                <button type="button" class="order-btn ghost-btn" (click)="reset()">Zurück zur Anmeldung</button>
+                <button type="button" class="order-btn ghost-btn" (click)="reset()">{{ 'login.backToLogin' | t }}</button>
             }
             @default {
                 @if (state() === 'invalid') {
                     <p class="error invalid-token" role="alert">{{ errorMessage() }}</p>
                 }
-                <div class="mode-switch" role="group" aria-label="Anmelden oder registrieren">
+                <div class="mode-switch" role="group" [attr.aria-label]="'login.modeAria' | t">
                     <button type="button" class="mode-btn" [class.active]="mode() === 'password'"
-                        [attr.aria-pressed]="mode() === 'password'" (click)="switchMode('password')">Anmelden</button>
+                        [attr.aria-pressed]="mode() === 'password'" (click)="switchMode('password')">{{ 'common.login' | t }}</button>
                     <button type="button" class="mode-btn" [class.active]="mode() === 'register'"
-                        [attr.aria-pressed]="mode() === 'register'" (click)="switchMode('register')">Registrieren</button>
+                        [attr.aria-pressed]="mode() === 'register'" (click)="switchMode('register')">{{ 'common.register' | t }}</button>
                 </div>
                 @if (mode() === 'password') {
                     <form [formGroup]="passwordForm" class="customer-form password-form" (ngSubmit)="submitPassword()" novalidate>
                         <label class="wide">
-                            E-Mail
+                            {{ 'common.email' | t }}
                             <input formControlName="email" type="email" autocomplete="email" />
                             @if (passwordForm.controls.email.touched && passwordForm.controls.email.invalid) {
-                                <span class="field-error">Bitte gib eine gültige E-Mail-Adresse ein.</span>
+                                <span class="field-error">{{ 'common.validEmail' | t }}</span>
                             }
                         </label>
                         <label class="wide">
-                            Passwort
+                            {{ 'common.password' | t }}
                             <input formControlName="password" type="password" autocomplete="current-password" />
                             @if (passwordForm.controls.password.touched && passwordForm.controls.password.invalid) {
-                                <span class="field-error">Bitte gib dein Passwort ein.</span>
+                                <span class="field-error">{{ 'login.passwordRequired' | t }}</span>
                             }
                         </label>
                         <button type="submit" class="order-btn" [disabled]="state() === 'signingIn' || state() === 'sending'">
-                            @if (state() === 'signingIn') { Wird angemeldet... } @else { Anmelden }
+                            @if (state() === 'signingIn') { {{ 'login.signingIn' | t }} } @else { {{ 'common.login' | t }} }
                         </button>
                         @if (passwordError()) {
                             <p class="error" role="alert">{{ passwordError() }}</p>
@@ -72,23 +70,23 @@
                     </form>
                     <p class="note forgot">
                         <button type="button" class="text-btn forgot-btn" (click)="forgotPassword()" [disabled]="state() === 'sending'">
-                            @if (state() === 'sending') { E-Mail wird verschickt... } @else { Passwort vergessen? }
+                            @if (state() === 'sending') { {{ 'login.sending' | t }} } @else { {{ 'login.forgot' | t }} }
                         </button>
                     </p>
                 } @else {
                     <p class="intro">
-                        Du bekommst eine E-Mail mit einem Link. Damit legst du dein Passwort fest und bist angemeldet.
+                        {{ 'login.registerIntro' | t }}
                     </p>
                     <form [formGroup]="registerForm" class="customer-form" (ngSubmit)="submitRegister()" novalidate>
                         <label class="wide">
-                            E-Mail
+                            {{ 'common.email' | t }}
                             <input formControlName="email" type="email" autocomplete="email" />
                             @if (registerForm.controls.email.touched && registerForm.controls.email.invalid) {
-                                <span class="field-error">Bitte gib eine gültige E-Mail-Adresse ein.</span>
+                                <span class="field-error">{{ 'common.validEmail' | t }}</span>
                             }
                         </label>
                         <button type="submit" class="order-btn" [disabled]="state() === 'sending'">
-                            @if (state() === 'sending') { E-Mail wird verschickt... } @else { Registrieren }
+                            @if (state() === 'sending') { {{ 'login.sending' | t }} } @else { {{ 'common.register' | t }} }
                         </button>
                         @if (errorMessage() && state() === 'form') {
                             <p class="error" role="alert">{{ errorMessage() }}</p>

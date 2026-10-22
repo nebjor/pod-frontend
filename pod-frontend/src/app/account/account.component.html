@@ -1,40 +1,42 @@
 <section class="customer-page embedded">
     <header class="page-header">
-        <p class="kicker">KONTO</p>
-        <h1>Bestellungen</h1>
+        <p class="kicker">{{ 'common.kickerAccount' | t }}</p>
+        <h1>{{ 'orders.title' | t }}</h1>
     </header>
 
     <section class="card orders">
         @switch (ordersState()) {
             @case ('loading') {
-                <p class="status"><span class="spinner" aria-hidden="true"></span> Bestellungen werden geladen...</p>
+                <p class="status"><span class="spinner" aria-hidden="true"></span> {{ 'orders.loading' | t }}</p>
             }
             @case ('error') {
-                <p class="error" role="alert">Die Bestellungen konnten gerade nicht geladen werden.</p>
-                <button type="button" class="order-btn ghost-btn" (click)="loadOrders()">Noch einmal versuchen</button>
+                <p class="error" role="alert">{{ 'orders.error' | t }}</p>
+                <button type="button" class="order-btn ghost-btn" (click)="loadOrders()">{{ 'orders.retry' | t }}</button>
             }
             @default {
                 @if (orders().length === 0) {
                     @if (cartCount() > 0) {
                         <p class="note">
-                            Noch keine Bestellungen. In deinem Warenkorb {{ cartCount() === 1 ? 'liegt 1 Stück' : 'liegen ' + cartCount() + ' Stück' }}
-                            für {{ cartCurrency() }} {{ cartTotal() | number:'1.2-2' }} zzgl. Versand.
+                            {{ (cartCount() === 1 ? 'orders.noneCartOne' : 'orders.noneCartMany') | t:{
+                                count: cartCount(),
+                                total: cartCurrency() + ' ' + (cartTotal() | number:'1.2-2')
+                            } }}
                         </p>
                         <div class="empty-actions">
-                            <a class="order-btn link-btn" routerLink="/checkout">Jetzt bestellen</a>
-                            <a class="order-btn ghost-btn link-btn" routerLink="/warenkorb">Zum Warenkorb</a>
+                            <a class="order-btn link-btn" routerLink="/checkout">{{ 'common.orderNow' | t }}</a>
+                            <a class="order-btn ghost-btn link-btn" routerLink="/warenkorb">{{ 'common.toCart' | t }}</a>
                         </div>
                     } @else {
-                        <p class="note">Noch keine Bestellungen.</p>
-                        <a class="order-btn link-btn" routerLink="/upload">Modell hochladen und Preis erhalten</a>
+                        <p class="note">{{ 'orders.none' | t }}</p>
+                        <a class="order-btn link-btn" routerLink="/upload">{{ 'common.uploadAndPrice' | t }}</a>
                     }
                 } @else {
-                    <ul class="order-list" aria-label="Deine Bestellungen">
+                    <ul class="order-list" [attr.aria-label]="'orders.listAria' | t">
                         @for (order of orders(); track order.orderNumber) {
                             <li>
                                 <a class="order-row" routerLink="/bestellung"
                                     [queryParams]="{ nr: order.orderNumber, email: order.customerEmail }"
-                                    [attr.aria-label]="'Bestellung ' + order.orderNumber + ', ' + statusLabel(order) + ', ' + order.totals.currency + ' ' + (order.totals.total | number:'1.2-2')">
+                                    [attr.aria-label]="'orders.rowAria' | t:{ number: order.orderNumber, status: statusLabel(order), total: order.totals.currency + ' ' + (order.totals.total | number:'1.2-2') }">
                                     <span class="order-number">{{ order.orderNumber }}</span>
                                     <span class="order-date">{{ order.createdAt | date:'dd.MM.yyyy' }}</span>
                                     <span class="status-badge" [class.cancelled]="order.status === 'CANCELLED'">{{ statusLabel(order) }}</span>
@@ -43,7 +45,7 @@
                             </li>
                         }
                     </ul>
-                    <p class="note">Klick auf eine Bestellung für Positionen, Status und Zahlung.</p>
+                    <p class="note">{{ 'orders.hint' | t }}</p>
                 }
             }
         }

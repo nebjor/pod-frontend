@@ -1,47 +1,47 @@
 <section class="customer-page embedded narrow">
     <header class="page-header">
-        <p class="kicker">KONTO</p>
-        <h1>Lieferadresse</h1>
+        <p class="kicker">{{ 'common.kickerAccount' | t }}</p>
+        <h1>{{ 'address.title' | t }}</h1>
     </header>
 
     <section class="card">
-        <p class="note">Wird im Checkout vorausgefüllt.</p>
+        <p class="note">{{ 'address.prefillNote' | t }}</p>
         <form [formGroup]="addressForm" class="customer-form" (ngSubmit)="save()" novalidate>
             <label class="wide">
-                Name
+                {{ 'common.name' | t }}
                 <input formControlName="name" type="text" autocomplete="name" />
                 @if (fieldError('name')) { <span class="field-error">{{ fieldError('name') }}</span> }
             </label>
             <label class="wide">
-                Strasse und Nummer
+                {{ 'common.street' | t }}
                 <input formControlName="street" type="text" autocomplete="street-address" />
                 @if (fieldError('street')) { <span class="field-error">{{ fieldError('street') }}</span> }
             </label>
             <label>
-                PLZ
+                {{ 'common.postalCode' | t }}
                 <input formControlName="postalCode" type="text" autocomplete="postal-code" inputmode="numeric" />
                 @if (fieldError('postalCode')) { <span class="field-error">{{ fieldError('postalCode') }}</span> }
             </label>
             <label>
-                Ort
+                {{ 'common.city' | t }}
                 <input formControlName="city" type="text" autocomplete="address-level2" />
                 @if (fieldError('city')) { <span class="field-error">{{ fieldError('city') }}</span> }
             </label>
             <label>
-                Land
+                {{ 'common.country' | t }}
                 <select formControlName="country">
                     @for (country of settings().shipToCountries; track country) {
-                        <option [value]="country">{{ country === 'CH' ? 'Schweiz' : country }}</option>
+                        <option [value]="country">{{ country === 'CH' ? ('common.countryCH' | t) : country }}</option>
                     }
                 </select>
                 @if (fieldError('country')) { <span class="field-error">{{ fieldError('country') }}</span> }
             </label>
 
             <button type="submit" class="order-btn" [disabled]="saving()">
-                @if (saving()) { Wird gespeichert... } @else { Adresse speichern }
+                @if (saving()) { {{ 'common.saving' | t }} } @else { {{ 'address.save' | t }} }
             </button>
             @if (saved()) {
-                <p class="success" role="status">Adresse gespeichert.</p>
+                <p class="success" role="status">{{ 'address.saved' | t }}</p>
             }
             @if (errorMessage()) {
                 <p class="error" role="alert">{{ errorMessage() }}</p>

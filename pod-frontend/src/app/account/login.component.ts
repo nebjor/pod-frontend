@@ -3,6 +3,8 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
+import { I18nService } from '../i18n/i18n.service';
+import { TranslatePipe } from '../i18n/translate.pipe';
 import {
     AccountService,
     describeAccountError,
@@ -36,7 +38,7 @@ const EMAIL_VALIDATORS = [Validators.required, Validators.email, Validators.maxL
  */
 @Component({
     selector: 'app-login',
-    imports: [ReactiveFormsModule],
+    imports: [ReactiveFormsModule, TranslatePipe],
     templateUrl: './login.component.html',
     styleUrls: ['./customer-page.scss', './login.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -45,6 +47,7 @@ export class LoginComponent {
     private readonly route = inject(ActivatedRoute);
     private readonly router = inject(Router);
     private readonly account = inject(AccountService);
+    private readonly i18n = inject(I18nService);
     private readonly destroyRef = inject(DestroyRef);
 
     private readonly query = toSignal(
@@ -127,13 +130,13 @@ export class LoginComponent {
             .subscribe({
                 next: () => this.continueAfterLogin(),
                 error: (error: unknown) => {
-                    const failure = describeAccountError(error);
+                    const failure = describeAccountError(error, this.i18n.t);
                     if (failure.kind === 'invalid-credentials') {
-                        this.passwordError.set('E-Mail oder Passwort stimmt nicht.');
+                        this.passwordError.set(this.i18n.t('login.error.credentials'));
                     } else if (failure.kind === 'error') {
                         this.passwordError.set(failure.message);
                     } else {
-                        this.passwordError.set('Die Anmeldung hat nicht geklappt. Bitte versuche es noch einmal.');
+                        this.passwordError.set(this.i18n.t('login.error.signIn'));
                     }
                     this.passwordForm.controls.password.reset();
                     this.state.set('form');
@@ -191,12 +194,8 @@ export class LoginComponent {
                     this.state.set(sentState);
                 },
                 error: (error: unknown) => {
-                    const failure = describeAccountError(error);
-                    this.errorMessage.set(
-                        failure.kind === 'error'
-                            ? failure.message
-                            : 'Die E-Mail konnte nicht verschickt werden. Bitte versuche es noch einmal.'
-                    );
+                    const failure = describeAccountError(error, this.i18n.t);
+                    this.errorMessage.set(failure.kind === 'error' ? failure.message : this.i18n.t('login.error.send'));
                     this.state.set('form');
                 }
             });
@@ -210,12 +209,8 @@ export class LoginComponent {
             .subscribe({
                 next: () => this.continueAfterLogin(),
                 error: (error: unknown) => {
-                    const failure = describeAccountError(error);
-                    this.errorMessage.set(
-                        failure.kind === 'error'
-                            ? failure.message
-                            : 'Dieser Link ist ungültig, abgelaufen oder schon benutzt. Fordere unten einen neuen an.'
-                    );
+                    const failure = describeAccountError(error, this.i18n.t);
+                    this.errorMessage.set(failure.kind === 'error' ? failure.message : this.i18n.t('login.error.token'));
                     this.mode.set('register');
                     this.state.set('invalid');
                 }

@@ -1,18 +1,21 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { I18nService } from '../i18n/i18n.service';
+import { TranslatePipe } from '../i18n/translate.pipe';
 import { ORDER_STATUS_STEPS, orderStatusLabel } from './order-status-labels';
 import { OrderStatus } from './order.models';
 
 /**
- * Horizontal steps from "Neu" to "Versendet" with the reached ones filled and the current
- * one highlighted. A cancelled order shows a single "Storniert" marker instead of the steps.
+ * Horizontal steps from "new" to "shipped" with the reached ones filled and the current
+ * one highlighted. A cancelled order shows a single "cancelled" marker instead of the steps.
  */
 @Component({
     selector: 'app-order-status-timeline',
+    imports: [TranslatePipe],
     template: `
         @if (status() === 'CANCELLED') {
-            <p class="cancelled" role="status">Storniert</p>
+            <p class="cancelled" role="status">{{ 'orderStatus.CANCELLED' | t }}</p>
         } @else {
-            <ol class="steps" [attr.aria-label]="'Status: ' + currentLabel()">
+            <ol class="steps" [attr.aria-label]="'orderStatus.aria' | t:{ status: currentLabel() }">
                 @for (step of steps; track step; let index = $index) {
                     <li class="step" [class.done]="index < currentIndex()" [class.current]="index === currentIndex()"
                         [attr.aria-current]="index === currentIndex() ? 'step' : null">
@@ -114,12 +117,14 @@ import { OrderStatus } from './order.models';
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class OrderStatusTimelineComponent {
+    private readonly i18n = inject(I18nService);
+
     readonly status = input.required<OrderStatus>();
     readonly steps = ORDER_STATUS_STEPS;
     readonly currentIndex = computed(() => this.steps.indexOf(this.status()));
-    readonly currentLabel = computed(() => orderStatusLabel(this.status()));
+    readonly currentLabel = computed(() => orderStatusLabel(this.status(), this.i18n.t));
 
     label(step: OrderStatus): string {
-        return orderStatusLabel(step);
+        return orderStatusLabel(step, this.i18n.t);
     }
 }

@@ -1,37 +1,35 @@
 @if (deleted()) {
     <section class="customer-page narrow">
         <section class="card" aria-live="polite">
-            <h2>Dein Konto ist gelöscht.</h2>
+            <h2>{{ 'account.deletedTitle' | t }}</h2>
             <p class="note">
-                Deine Bestellungen bleiben als Geschäftsunterlagen gespeichert; mit Bestellnummer und E-Mail kannst du
-                sie unter <a routerLink="/bestellung">Meine Bestellung</a> weiterhin einsehen. Wenn du dich wieder
-                anmeldest, entsteht ein neues Konto.
+                {{ 'account.deletedStart' | t }} <a routerLink="/bestellung">{{ 'common.myOrder' | t }}</a>{{ 'account.deletedEnd' | t }}
             </p>
-            <a class="order-btn link-btn" routerLink="/">Zur Startseite</a>
+            <a class="order-btn link-btn" routerLink="/">{{ 'common.toHome' | t }}</a>
         </section>
     </section>
 } @else if (state() === 'loading') {
     <section class="customer-page narrow">
         <section class="card" aria-live="polite">
-            <p class="status"><span class="spinner" aria-hidden="true"></span> Konto wird geladen...</p>
+            <p class="status"><span class="spinner" aria-hidden="true"></span> {{ 'account.loading' | t }}</p>
         </section>
     </section>
 } @else {
     <div class="shell customer-page">
         <aside class="sidebar">
-            <nav aria-label="Konto">
+            <nav [attr.aria-label]="'account.navAria' | t">
                 <ul class="nav-list">
                     @for (item of items; track item.path) {
                         <li>
                             <a class="nav-link" [routerLink]="item.path" routerLinkActive="active"
-                                [routerLinkActiveOptions]="{ exact: item.exact }" ariaCurrentWhenActive="page">{{ item.label }}</a>
+                                [routerLinkActiveOptions]="{ exact: item.exact }" ariaCurrentWhenActive="page">{{ item.labelKey | t }}</a>
                         </li>
                     }
                 </ul>
             </nav>
             <div class="signed-in">
-                <p class="email">Angemeldet als <strong>{{ customer()?.email }}</strong></p>
-                <button type="button" class="text-btn" (click)="logout()" [disabled]="loggingOut()">Abmelden</button>
+                <p class="email">{{ 'account.signedInAs' | t }} <strong>{{ customer()?.email }}</strong></p>
+                <button type="button" class="text-btn" (click)="logout()" [disabled]="loggingOut()">{{ 'common.logout' | t }}</button>
                 @if (errorMessage()) {
                     <p class="error" role="alert">{{ errorMessage() }}</p>
                 }

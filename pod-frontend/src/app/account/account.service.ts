@@ -2,6 +2,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, PLATFORM_ID, afterNextRender, computed, inject, signal } from '@angular/core';
 import { Observable, catchError, firstValueFrom, tap, throwError } from 'rxjs';
+import { Translate, translateDe } from '../i18n/i18n.service';
 import { OrderResponse } from '../order/order.models';
 import {
     AccountAddressRequest,
@@ -147,15 +148,12 @@ export class AccountService {
 }
 
 /** Classifies an account failure so the pages can react to each kind. */
-export function describeAccountError(error: unknown): AccountFailure {
+export function describeAccountError(error: unknown, t: Translate = translateDe): AccountFailure {
     if (error instanceof HttpErrorResponse) {
         const problem = (error.error ?? null) as { code?: unknown; errors?: unknown; detail?: unknown } | null;
 
         if (error.status === 0) {
-            return {
-                kind: 'error',
-                message: 'Der Shop ist gerade nicht erreichbar. Bitte prüfe deine Verbindung und versuche es noch einmal.'
-            };
+            return { kind: 'error', message: t('error.unreachable') };
         }
         if (error.status === 400 && problem?.code === 'invalid-token') {
             return { kind: 'invalid-token' };
@@ -167,17 +165,17 @@ export function describeAccountError(error: unknown): AccountFailure {
             return { kind: 'invalid-credentials' };
         }
         if (error.status === 401) {
-            return { kind: 'error', message: 'Du bist nicht mehr angemeldet. Bitte melde dich neu an.' };
+            return { kind: 'error', message: t('error.notSignedIn') };
         }
         if (error.status === 429) {
-            return { kind: 'error', message: 'Zu viele Versuche. Bitte warte einen Moment und probier es noch einmal.' };
+            return { kind: 'error', message: t('error.tooManyAttempts') };
         }
         // The backend words its problem details for the customer; a bare status gets a generic line.
         if (typeof problem?.detail === 'string' && problem.detail.length > 0) {
             return { kind: 'error', message: problem.detail };
         }
     }
-    return { kind: 'error', message: 'Das hat gerade nicht geklappt. Bitte versuche es noch einmal.' };
+    return { kind: 'error', message: t('error.generic') };
 }
 
 /**

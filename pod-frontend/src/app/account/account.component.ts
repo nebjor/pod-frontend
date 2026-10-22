@@ -2,6 +2,8 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
+import { I18nService } from '../i18n/i18n.service';
+import { TranslatePipe } from '../i18n/translate.pipe';
 import { orderStatusLabel } from '../order/order-status-labels';
 import { OrderResponse } from '../order/order.models';
 import { LOGIN_PATH } from './account.models';
@@ -16,7 +18,7 @@ type OrdersState = 'loading' | 'ready' | 'error';
  */
 @Component({
     selector: 'app-account',
-    imports: [RouterLink, DatePipe, DecimalPipe],
+    imports: [RouterLink, DatePipe, DecimalPipe, TranslatePipe],
     templateUrl: './account.component.html',
     styleUrls: ['./customer-page.scss', './account.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -29,6 +31,7 @@ export class AccountComponent {
     readonly cartTotal = this.cart.itemsTotal;
     readonly cartCurrency = this.cart.currency;
     private readonly router = inject(Router);
+    private readonly i18n = inject(I18nService);
     private readonly destroyRef = inject(DestroyRef);
 
     readonly ordersState = signal<OrdersState>('loading');
@@ -61,6 +64,6 @@ export class AccountComponent {
     }
 
     statusLabel(order: OrderResponse): string {
-        return orderStatusLabel(order.status);
+        return orderStatusLabel(order.status, this.i18n.t);
     }
 }

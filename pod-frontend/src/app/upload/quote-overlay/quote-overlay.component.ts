@@ -12,6 +12,8 @@ import {
     viewChild
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { I18nService } from '../../i18n/i18n.service';
+import { TranslatePipe } from '../../i18n/translate.pipe';
 import { CART_MAX_ITEMS, CartItem, CartService } from '../../cart/cart.service';
 import { formatPrintDuration } from '../../quote/print-duration';
 import { ColorOption, QuoteResponse } from '../../quote/quote.models';
@@ -36,7 +38,7 @@ export function revealStep(el: HTMLElement) {
 
 @Component({
     selector: 'app-quote-overlay',
-    imports: [DecimalPipe, RouterLink],
+    imports: [DecimalPipe, RouterLink, TranslatePipe],
     templateUrl: './quote-overlay.component.html',
     styleUrl: './quote-overlay.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -46,6 +48,7 @@ export function revealStep(el: HTMLElement) {
 })
 export class QuoteOverlayComponent {
     private readonly cart = inject(CartService);
+    private readonly i18n = inject(I18nService);
     private readonly dialog = viewChild.required<ElementRef<HTMLElement>>('dialog');
 
     readonly quote = input.required<QuoteResponse>();
@@ -67,10 +70,10 @@ export class QuoteOverlayComponent {
     readonly cartCurrency = this.cart.currency;
     readonly cartIsFull = this.cart.isFull;
     readonly maxCartItems = CART_MAX_ITEMS;
-    /** "1 Modell" / "3 Modelle": the number of lines in the cart, for the notes under the buttons. */
+    /** "1 model" / "3 models": the number of lines in the cart, for the notes under the buttons. */
     readonly cartModelsLabel = computed(() => {
         const count = this.cart.items().length;
-        return `${count} ${count === 1 ? 'Modell' : 'Modelle'}`;
+        return this.i18n.t(count === 1 ? 'common.modelOne' : 'common.modelMany', { count });
     });
 
     readonly unitPrintTimeLabel = computed(() => formatPrintDuration(this.quote().printTimeSeconds));

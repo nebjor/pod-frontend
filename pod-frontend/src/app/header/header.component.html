@@ -1,33 +1,35 @@
 <mat-toolbar class="sticky-header">
-    <button class="logo" type="button" (click)="goHome()" aria-label="Zur Startseite">
+    <button class="logo" type="button" (click)="goHome()" [attr.aria-label]="'header.home' | t">
         3D<span class="highlight">Burg</span>
     </button>
 
     @if (!onAdminHost()) {
         <div class="actions">
+            <app-language-switcher />
+
             @if (accountState() === 'signedIn') {
                 <div class="menu-widget account-widget" [appHoverMenu]="accountLink" #accountMenu="appHoverMenu">
                     <a #accountLink class="account-link" routerLink="/konto" aria-haspopup="menu"
-                        [attr.aria-expanded]="accountMenu.isOpen()">Mein Konto</a>
+                        [attr.aria-expanded]="accountMenu.isOpen()">{{ 'common.myAccount' | t }}</a>
 
                     @if (accountMenu.isOpen()) {
-                        <div class="menu-panel account-menu" role="menu" aria-label="Mein Konto">
+                        <div class="menu-panel account-menu" role="menu" [attr.aria-label]="'common.myAccount' | t">
                             <p class="account-email">{{ accountEmail() }}</p>
-                            <a class="menu-item" role="menuitem" routerLink="/konto">Bestellungen</a>
-                            <a class="menu-item" role="menuitem" routerLink="/konto/adresse">Lieferadresse</a>
-                            <a class="menu-item" role="menuitem" routerLink="/konto/passwort">Konto</a>
+                            <a class="menu-item" role="menuitem" routerLink="/konto">{{ 'header.orders' | t }}</a>
+                            <a class="menu-item" role="menuitem" routerLink="/konto/adresse">{{ 'header.address' | t }}</a>
+                            <a class="menu-item" role="menuitem" routerLink="/konto/passwort">{{ 'header.account' | t }}</a>
                             <button class="menu-item logout-item" role="menuitem" type="button" (click)="logout()"
-                                [disabled]="loggingOut()">Abmelden</button>
+                                [disabled]="loggingOut()">{{ 'common.logout' | t }}</button>
                         </div>
                     }
                 </div>
             } @else if (accountState() === 'anonymous') {
-                <a class="account-link" routerLink="/konto/anmelden">Anmelden</a>
+                <a class="account-link" routerLink="/konto/anmelden">{{ 'common.login' | t }}</a>
             }
 
             <div class="menu-widget cart-widget" [appHoverMenu]="cartLink" #cartMenu="appHoverMenu">
                 <a #cartLink class="cart-link" routerLink="/warenkorb" aria-haspopup="true" [attr.aria-expanded]="cartMenu.isOpen()"
-                    [attr.aria-label]="cartIsEmpty() ? 'Warenkorb: leer' : 'Warenkorb: ' + cartCount() + ' Stück, ' + cartCurrency() + ' ' + (cartTotal() | number:'1.2-2')">
+                    [attr.aria-label]="cartAriaLabel()">
                     <span class="cart-icon" aria-hidden="true">
                         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"
                             stroke-linecap="round" stroke-linejoin="round">
@@ -43,11 +45,11 @@
                 </a>
 
                 @if (cartMenu.isOpen()) {
-                    <section class="menu-panel cart-preview" [class.is-empty]="cartIsEmpty()" role="region" aria-label="Warenkorb Vorschau"
+                    <section class="menu-panel cart-preview" [class.is-empty]="cartIsEmpty()" role="region" [attr.aria-label]="'header.cartPreviewAria' | t"
                         (click)="onPreviewClick($event)">
                         @if (cartIsEmpty()) {
-                            <p class="preview-empty">Dein Warenkorb ist leer.</p>
-                            <a class="preview-btn primary" routerLink="/upload">Modell hochladen</a>
+                            <p class="preview-empty">{{ 'cart.empty' | t }}</p>
+                            <a class="preview-btn primary" routerLink="/upload">{{ 'common.uploadModel' | t }}</a>
                         } @else {
                             <ul class="preview-items">
                                 @for (item of previewItems(); track item.id) {
@@ -55,28 +57,31 @@
                                         <span class="swatch-dot" [style.background]="item.color.hex" aria-hidden="true"></span>
                                         <span class="preview-text">
                                             <span class="preview-name">{{ item.fileName }}</span>
-                                            <span class="preview-config">{{ item.quantity }} Stück · {{ item.filament }} {{ item.color.label }}, {{ qualityLabel(item.quality) }}</span>
+                                            <span class="preview-config">{{ 'common.pieces' | t:{ count: item.quantity } }} · {{ item.filament }} {{ item.color.label }}, {{ qualityLabel(item.quality) }}</span>
                                         </span>
                                         <span class="preview-price">{{ item.quote.currency }} {{ item.quote.totalPriceChf | number:'1.2-2' }}</span>
                                     </li>
                                 }
                             </ul>
                             @if (previewHiddenCount() > 0) {
-                                <p class="preview-more">+ {{ previewHiddenCount() }} weitere Positionen</p>
+                                <p class="preview-more">{{ 'header.moreItems' | t:{ count: previewHiddenCount() } }}</p>
                             }
                             <div class="preview-subtotal">
-                                <span class="preview-subtotal-label">Zwischensumme <small>zzgl. Versand</small></span>
+                                <span class="preview-subtotal-label">{{ 'header.subtotal' | t }} <small>{{ 'header.plusShipping' | t }}</small></span>
                                 <strong>{{ cartCurrency() }} {{ cartTotal() | number:'1.2-2' }}</strong>
                             </div>
                             <div class="preview-actions">
-                                <a class="preview-btn ghost" routerLink="/warenkorb">Zum Warenkorb</a>
-                                <a class="preview-btn primary" routerLink="/checkout">Zur Kasse</a>
+                                <a class="preview-btn ghost" routerLink="/warenkorb">{{ 'common.toCart' | t }}</a>
+                                <a class="preview-btn primary" routerLink="/checkout">{{ 'common.toCheckout' | t }}</a>
                             </div>
                         }
                     </section>
                 }
             </div>
-            <button mat-raised-button class="upload-btn" type="button" (click)="goToUpload()">Modell hochladen</button>
+            <button mat-raised-button class="upload-btn" type="button" (click)="goToUpload()">
+                <span class="label-full">{{ 'common.uploadModel' | t }}</span>
+                <span class="label-short">{{ 'header.uploadShort' | t }}</span>
+            </button>
         </div>
     }
 </mat-toolbar>

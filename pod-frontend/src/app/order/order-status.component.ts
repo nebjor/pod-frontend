@@ -5,6 +5,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AccountService } from '../account/account.service';
+import { I18nService, Translate } from '../i18n/i18n.service';
+import { TranslatePipe } from '../i18n/translate.pipe';
 import { QualityCatalog } from '../quote/quality-catalog';
 import { orderStatusLabel } from './order-status-labels';
 import { OrderStatusTimelineComponent } from './order-status-timeline.component';
@@ -21,7 +23,7 @@ type LookupState = 'idle' | 'loading' | 'found' | 'not-found' | 'error';
  */
 @Component({
     selector: 'app-order-status',
-    imports: [ReactiveFormsModule, DatePipe, DecimalPipe, RouterLink, OrderStatusTimelineComponent],
+    imports: [ReactiveFormsModule, DatePipe, DecimalPipe, RouterLink, OrderStatusTimelineComponent, TranslatePipe],
     templateUrl: './order-status.component.html',
     styleUrls: ['../account/customer-page.scss', './order-status.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -30,6 +32,7 @@ export class OrderStatusComponent {
     private readonly route = inject(ActivatedRoute);
     private readonly orderService = inject(OrderService);
     private readonly account = inject(AccountService);
+    private readonly i18n = inject(I18nService);
     private readonly qualityCatalog = inject(QualityCatalog);
     private readonly destroyRef = inject(DestroyRef);
     private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
@@ -48,7 +51,7 @@ export class OrderStatusComponent {
     readonly formVisible = computed(() => this.order() === null || this.formRequested());
     readonly statusLabel = computed(() => {
         const order = this.order();
-        return order ? orderStatusLabel(order.status) : '';
+        return order ? orderStatusLabel(order.status, this.i18n.t) : '';
     });
     /** Only a new order still waits for its payment; the backend hands out the link while it does. */
     readonly paymentUrl = computed(() => {
@@ -117,7 +120,7 @@ export class OrderStatusComponent {
                     if (error instanceof HttpErrorResponse && error.status === 404) {
                         this.state.set('not-found');
                     } else {
-                        this.errorMessage.set(describeLookupError(error));
+                        this.errorMessage.set(describeLookupError(error, this.i18n.t));
                         this.state.set('error');
                     }
                 }
@@ -125,14 +128,14 @@ export class OrderStatusComponent {
     }
 }
 
-function describeLookupError(error: unknown): string {
+function describeLookupError(error: unknown, t: Translate): string {
     if (error instanceof HttpErrorResponse) {
         if (error.status === 0) {
-            return 'Der Shop ist gerade nicht erreichbar. Bitte prüfe deine Verbindung und versuche es noch einmal.';
+            return t('error.unreachable');
         }
         if (error.status === 429) {
-            return 'Zu viele Anfragen. Bitte warte einen Moment und probier es noch einmal.';
+            return t('order.error.tooMany');
         }
     }
-    return 'Die Bestellung konnte gerade nicht geladen werden. Bitte versuche es später noch einmal.';
+    return t('order.error.load');
 }

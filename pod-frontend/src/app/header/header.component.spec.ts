@@ -6,6 +6,7 @@ import { AccountResponse, AccountState } from '../account/account.models';
 import { AccountService } from '../account/account.service';
 import { CartService, NewCartItem } from '../cart/cart.service';
 import { QuoteResponse } from '../quote/quote.models';
+import { I18nService } from '../i18n/i18n.service';
 import { HeaderComponent } from './header.component';
 import { HOVER_MENU_CLOSE_DELAY_MS } from './hover-menu.directive';
 
@@ -75,6 +76,7 @@ describe('HeaderComponent', () => {
     });
 
     afterEach(() => {
+        localStorage.clear();
         sessionStorage.clear();
         vi.useRealTimers();
     });
@@ -109,6 +111,32 @@ describe('HeaderComponent', () => {
         expect(link?.querySelector('.cart-count')?.classList.contains('empty')).toBe(false);
         expect(link?.querySelector('.cart-total')?.textContent).toContain('CHF 17.85');
         expect(link?.getAttribute('aria-label')).toBe('Warenkorb: 3 Stück, CHF 17.85');
+    });
+
+    it('puts the language switcher left of the account link, ahead of the cart and the upload button', async () => {
+        accountState.set('anonymous');
+        await fixture.whenStable();
+
+        const children = Array.from((fixture.nativeElement as HTMLElement).querySelector('.actions')!.children).map((child) =>
+            child.tagName === 'APP-LANGUAGE-SWITCHER' ? 'language' : child.classList.contains('account-link') ? 'account' : child.classList.contains('cart-widget') ? 'cart' : 'upload'
+        );
+        expect(children).toEqual(['language', 'account', 'cart', 'upload']);
+    });
+
+    it('switches its texts to the chosen language, including the cart label', async () => {
+        cart.add(item('benchy.stl', 2, 11));
+        accountState.set('anonymous');
+        await fixture.whenStable();
+
+        await TestBed.inject(I18nService).setLang('en');
+        await fixture.whenStable();
+        const header = fixture.nativeElement as HTMLElement;
+
+        expect(header.querySelector('.account-link')?.textContent?.trim()).toBe('Sign in');
+        expect(header.querySelector('.upload-btn .label-full')?.textContent?.trim()).toBe('Upload model');
+        expect(header.querySelector('.upload-btn .label-short')?.textContent?.trim()).toBe('Upload');
+        expect(cartLink()?.getAttribute('aria-label')).toBe('Cart: 2 pcs, CHF 11.00');
+        expect(header.querySelector('.logo')?.getAttribute('aria-label')).toBe('Back to home page');
     });
 
     function accountLink() {

@@ -1,38 +1,38 @@
 <section class="upload-page">
     <header class="upload-header">
-        <p class="kicker">{{ currentStep() === 3 ? 'PREIS' : 'UPLOAD' }}</p>
+        <p class="kicker">{{ (currentStep() === 3 ? 'common.kickerPrice' : 'upload.kicker') | t }}</p>
         <h1>
             @if (loadingOverlayOpen()) {
-                Preis wird berechnet
+                {{ 'upload.calculating' | t }}
             } @else if (currentStep() === 3) {
-                Dein Angebot
+                {{ 'quote.title' | t }}
             } @else {
-                Modell hochladen
+                {{ 'upload.title' | t }}
             }
         </h1>
-        <ol class="steps" aria-label="Schritte">
+        <ol class="steps" [attr.aria-label]="'upload.stepsAria' | t">
             <li [class.active]="currentStep() === 1" [class.done]="currentStep() > 1"
-                [attr.aria-current]="currentStep() === 1 ? 'step' : null">Upload</li>
+                [attr.aria-current]="currentStep() === 1 ? 'step' : null">{{ 'upload.step1' | t }}</li>
             <li [class.active]="currentStep() === 2" [class.done]="currentStep() > 2"
-                [attr.aria-current]="currentStep() === 2 ? 'step' : null">Konfiguration</li>
-            <li [class.active]="currentStep() === 3" [attr.aria-current]="currentStep() === 3 ? 'step' : null">Preis</li>
+                [attr.aria-current]="currentStep() === 2 ? 'step' : null">{{ 'upload.step2' | t }}</li>
+            <li [class.active]="currentStep() === 3" [attr.aria-current]="currentStep() === 3 ? 'step' : null">{{ 'upload.step3' | t }}</li>
         </ol>
         @if (!modelUrl()) {
-            <p class="subtext">Zieh deine STL- oder 3MF-Datei in das Feld oder klick hinein, um eine Datei auszuwählen.</p>
+            <p class="subtext">{{ 'upload.subtextEmpty' | t }}</p>
         } @else if (currentStep() === 2) {
-            <p class="subtext">Wähle Material, Farbe, Qualität und Menge. Der Preis wird erst berechnet, wenn du ihn anforderst.</p>
+            <p class="subtext">{{ 'upload.subtextConfig' | t }}</p>
         }
     </header>
 
     @if (!modelUrl()) {
         <label class="dropzone" [class.dragging]="isDragging()" (dragover)="onDragOver($event)"
             (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
-            <input type="file" accept=".stl,.3mf" aria-label="STL oder 3MF Datei auswählen"
+            <input type="file" accept=".stl,.3mf" [attr.aria-label]="'upload.fileInputAria' | t"
                 (change)="onFileInputChange($event)" />
 
             <div class="dropzone-content">
-                <p class="drop-title">DATEI HIER ABLEGEN</p>
-                <p class="drop-hint">oder klicken zum Auswählen</p>
+                <p class="drop-title">{{ 'upload.dropTitle' | t }}</p>
+                <p class="drop-hint">{{ 'upload.dropHint' | t }}</p>
                 <p class="drop-types">STL / 3MF</p>
             </div>
         </label>
@@ -45,12 +45,12 @@
                              wait after that is the parser, which has no progress to report. -->
                         <div class="viewer-loading">
                             @if (modelLoadProgress() < 100) {
-                                <p>Lade Modell... {{ modelLoadProgress() }}%</p>
+                                <p>{{ 'upload.loadingModel' | t:{ percent: modelLoadProgress() } }}</p>
                                 <div class="loading-track">
                                     <div class="loading-fill" [style.width.%]="modelLoadProgress()"></div>
                                 </div>
                             } @else {
-                                <p>Modell wird aufbereitet...</p>
+                                <p>{{ 'upload.preparingModel' | t }}</p>
                                 <div class="loading-track indeterminate">
                                     <div class="loading-fill"></div>
                                 </div>
@@ -60,9 +60,8 @@
 
                     @if (previewDisabled()) {
                         <div class="viewer-placeholder">
-                            <p class="placeholder-title">Keine Vorschau für diese Datei</p>
-                            <p>3MF-Dateien über 8 MB werden im Browser nicht dargestellt, weil das Entpacken die
-                                Seite blockieren würde. Der Preis wird trotzdem berechnet.</p>
+                            <p class="placeholder-title">{{ 'upload.noPreviewTitle' | t }}</p>
+                            <p>{{ 'upload.noPreviewText' | t }}</p>
                         </div>
                     } @else {
                         <app-model-viewer [modelUrl]="modelUrl()" [modelFormat]="modelFormat()" [modelColor]="selectedColor()?.hex"
@@ -77,7 +76,7 @@
                     <span>{{ selectedFileName() }}</span>
                     <span>{{ selectedFileSizeMb() }} MB</span>
                 </div>
-                <button type="button" class="text-btn" (click)="onUploadAnother()">Andere Datei wählen</button>
+                <button type="button" class="text-btn" (click)="onUploadAnother()">{{ 'upload.otherFile' | t }}</button>
             </section>
 
             @if (loadingOverlayOpen()) {
@@ -95,7 +94,7 @@
                             <span class="spinner" aria-hidden="true"></span>
                         }
                         @if (quotePhase() === 'uploading') {
-                            Modell wird hochgeladen... {{ uploadProgress() }}%
+                            {{ 'upload.uploading' | t:{ percent: uploadProgress() } }}
                         } @else {
                             <!-- Keyed by its text: every stage is a fresh node, so the fade replays. -->
                             @for (text of [quoteStatusText()]; track text) {
@@ -110,8 +109,7 @@
                 </div>
 
                 <p class="loading-reassurance">
-                    Wir slicen deine Datei wirklich, so wie sie später gedruckt wird. Das dauert meist nur
-                    ein paar Sekunden.
+                    {{ 'upload.reassurance' | t }}
                 </p>
             </section>
             } @else if (quoteOnScreen(); as q) {
@@ -120,27 +118,27 @@
                 (addToCart)="onAddToCart()" (adjust)="onAdjust()" (uploadAnother)="onUploadAnother()" />
             } @else {
                 <section class="order-card order-card-animated">
-                    <h2>Konfiguration</h2>
+                    <h2>{{ 'upload.step2' | t }}</h2>
 
                     @switch (catalogState()) {
                         @case ('loading') {
                             <p class="status-line" aria-live="polite">
                                 <span class="spinner" aria-hidden="true"></span>
-                                Materialien werden geladen...
+                                {{ 'upload.catalogLoading' | t }}
                             </p>
                         }
                         @case ('error') {
                             <p class="status-line status-error" role="alert">
-                                Die Materialliste konnte nicht geladen werden.
+                                {{ 'upload.catalogError' | t }}
                             </p>
-                            <button type="button" class="retry-btn" (click)="loadCatalog()">Erneut laden</button>
+                            <button type="button" class="retry-btn" (click)="loadCatalog()">{{ 'upload.reload' | t }}</button>
                         }
                     }
 
                     <form [formGroup]="orderForm" class="order-form" [hidden]="catalogState() !== 'ready'"
                         (ngSubmit)="onCalculatePrice()">
                         <label>
-                            Material
+                            {{ 'upload.material' | t }}
                             <select formControlName="filament">
                                 @for (option of filamentOptions(); track option.code) {
                                     <option [value]="option.code">{{ option.label }}</option>
@@ -149,7 +147,7 @@
                         </label>
 
                         <label>
-                            Qualität
+                            {{ 'upload.quality' | t }}
                             <select formControlName="quality">
                                 @for (option of qualityOptions(); track option.code) {
                                     <option [value]="option.code">{{ qualityOptionLabel(option) }}</option>
@@ -158,23 +156,23 @@
                         </label>
 
                         <label>
-                            Menge
+                            {{ 'common.quantity' | t }}
                             <input formControlName="quantity" type="number" min="1" [max]="maxQuantity()"
                                 [class.invalid]="quantityErrorVisible" [attr.aria-invalid]="quantityErrorVisible"
                                 [attr.aria-describedby]="quantityErrorVisible ? 'quantity-error' : null" />
                             @if (quantityErrorVisible) {
                                 <span id="quantity-error" class="field-error" role="alert">
                                     @if (orderForm.controls.quantity.hasError('required')) {
-                                        Bitte eine Menge eingeben
+                                        {{ 'upload.quantityRequired' | t }}
                                     } @else {
-                                        Bitte 1 bis {{ maxQuantity() }} Stück
+                                        {{ 'upload.quantityRange' | t:{ max: maxQuantity() } }}
                                     }
                                 </span>
                             }
                         </label>
 
                         <fieldset class="color-field">
-                            <legend>Farbe</legend>
+                            <legend>{{ 'upload.color' | t }}</legend>
                             <div class="swatches">
                                 @for (color of availableColors(); track color.code) {
                                     <label class="swatch" [class.selected]="selectedColor()?.code === color.code">
@@ -192,28 +190,28 @@
                                 <p class="status-line status-error" role="alert">{{ quoteError() }}</p>
                             } @else if (quoteCurrent() && quote(); as q) {
                                 <p class="status-line quote-hint">
-                                    Preis für diese Konfiguration:
+                                    {{ 'upload.priceForConfig' | t }}
                                     <strong>{{ q.currency }} {{ q.totalPriceChf | number:'1.2-2' }}</strong>
                                 </p>
                             } @else {
                                 <p class="status-line quote-hint">
-                                    Die Datei wird dafür einmal für die Bambu Lab A1 gesliced; das dauert ein paar Sekunden.
+                                    {{ 'upload.sliceHint' | t }}
                                 </p>
                             }
                             <button type="submit" class="order-btn calculate-btn" #calculateButton>
-                                Preis berechnen
+                                {{ 'upload.priceButton' | t }}
                             </button>
                         </div>
                     </form>
 
                     @if (cartIsFull()) {
                         <p class="cart-note">
-                            Der Warenkorb ist voll: maximal {{ maxCartItems }} Modelle pro Bestellung.
-                            <a routerLink="/warenkorb">Zum Warenkorb</a>
+                            {{ 'common.cartFull' | t:{ max: maxCartItems } }}
+                            <a routerLink="/warenkorb">{{ 'common.toCart' | t }}</a>
                         </p>
                     } @else if (cartItemCount() > 0) {
                         <p class="cart-note">
-                            {{ cartModelsLabel() }} im Warenkorb. <a routerLink="/warenkorb">Zum Warenkorb</a>
+                            {{ 'upload.modelsInCart' | t:{ models: cartModelsLabel() } }} <a routerLink="/warenkorb">{{ 'common.toCart' | t }}</a>
                         </p>
                     }
                 </section>
