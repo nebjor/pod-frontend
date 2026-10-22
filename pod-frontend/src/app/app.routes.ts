@@ -90,7 +90,7 @@ export const shopRoutes: Routes = [
         loadComponent: admin
     },
     {
-        path: 'über-uns',
+        path: 'ueber-uns',
         title: 'Über uns | 3DBurg',
         data: { description: '3D-Druck in der Schweiz: in Winterthur gedruckt, von Studenten der ZHAW lanciert. Sofortpreis aus dem Slicer, Festpreis, Versand in die ganze Schweiz.' },
         loadComponent: () => import('./about/about.component').then((m) => m.AboutComponent)

@@ -24,7 +24,7 @@
 
 - [Startseite](https://3dburg.ch/): Angebot und Ablauf
 - [Modell hochladen](https://3dburg.ch/upload): Upload, Konfiguration und Sofortpreis
-- [Über uns](https://3dburg.ch/über-uns): Produktion in Winterthur, Herkunft aus der ZHAW
+- [Über uns](https://3dburg.ch/ueber-uns): Produktion in Winterthur, Herkunft aus der ZHAW
 - [Impressum](https://3dburg.ch/impressum)
 - [AGB](https://3dburg.ch/agb)
 - [Datenschutz](https://3dburg.ch/datenschutz)
