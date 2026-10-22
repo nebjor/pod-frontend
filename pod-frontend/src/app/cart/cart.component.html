@@ -26,7 +26,7 @@
                                 Qualität {{ qualityLabel(item) }}
                             </p>
                             <p class="meta">
-                                Druckzeit {{ printTimeLabel(item) }} · Lieferzeit ca. {{ item.quote.leadTimeDays }} Tage ·
+                                Druckzeit {{ printTimeLabel(item) }} · <strong class="lead-time">Lieferzeit ca. {{ item.quote.leadTimeDays }} Tage</strong> ·
                                 Einrichtung {{ item.quote.currency }} {{ item.quote.setupFeeChf | number:'1.2-2' }} (einmalig)
                             </p>
                         </div>

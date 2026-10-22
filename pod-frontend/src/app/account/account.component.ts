@@ -6,6 +6,7 @@ import { orderStatusLabel } from '../order/order-status-labels';
 import { OrderResponse } from '../order/order.models';
 import { LOGIN_PATH } from './account.models';
 import { AccountService } from './account.service';
+import { CartService } from '../cart/cart.service';
 
 type OrdersState = 'loading' | 'ready' | 'error';
 
@@ -22,6 +23,11 @@ type OrdersState = 'loading' | 'ready' | 'error';
 })
 export class AccountComponent {
     private readonly account = inject(AccountService);
+    private readonly cart = inject(CartService);
+    /** What is waiting in the cart: the orders page points there when nothing was ordered yet. */
+    readonly cartCount = this.cart.count;
+    readonly cartTotal = this.cart.itemsTotal;
+    readonly cartCurrency = this.cart.currency;
     private readonly router = inject(Router);
     private readonly destroyRef = inject(DestroyRef);
 

@@ -167,6 +167,12 @@ export class LoginComponent {
         this.errorMessage.set('');
     }
 
+    /** From the mailbox hint back to the sign-in form, for customers who already have a password. */
+    backToLogin() {
+        this.reset();
+        this.switchMode('password');
+    }
+
     private sendLink(control: FormControl<string>, sentState: 'sent' | 'resetSent') {
         if (this.state() === 'sending') {
             return;

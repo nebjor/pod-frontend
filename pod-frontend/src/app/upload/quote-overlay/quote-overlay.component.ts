@@ -21,6 +21,19 @@ import { ColorOption, QuoteResponse } from '../../quote/quote.models';
  * into the cart or back to the configuration. It exists only while the quote is on screen,
  * so it takes the focus when it appears and gives it back through {@link adjust} on Escape.
  */
+/**
+ * Brings step 3 into view. On wide screens the card sits beside the preview under the page
+ * title, so the page scrolls to the top; on phones the card is below the preview, so it is
+ * scrolled to directly. Both calls are missing in jsdom, hence the optional calls.
+ */
+export function revealStep(el: HTMLElement) {
+    if (window.matchMedia?.('(min-width: 1024px)').matches) {
+        window.scrollTo?.({ top: 0 });
+    } else {
+        el.scrollIntoView?.({ block: 'start' });
+    }
+}
+
 @Component({
     selector: 'app-quote-overlay',
     imports: [DecimalPipe, RouterLink],
@@ -66,7 +79,13 @@ export class QuoteOverlayComponent {
     readonly warningsOpen = signal(false);
 
     constructor() {
-        afterNextRender(() => this.dialog().nativeElement.focus());
+        // The customer clicked "Preis berechnen" at the bottom of the configuration; bring the
+        // result into view at the top of the card and move focus there for screen readers.
+        afterNextRender(() => {
+            const el = this.dialog().nativeElement;
+            revealStep(el);
+            el.focus({ preventScroll: true });
+        });
     }
 
     toggleWarnings() {

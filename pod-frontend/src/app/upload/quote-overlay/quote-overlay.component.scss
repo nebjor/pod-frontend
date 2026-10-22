@@ -1,33 +1,20 @@
-.overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 100;
-    display: grid;
-    place-items: center;
-    padding: 1rem;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    background: rgba(7, 18, 27, 0.92);
-    backdrop-filter: blur(6px);
+// The quote is step 3 of the upload page: a card in the page flow, header and footer stay.
+.quote-screen {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    scroll-margin-top: 96px; // below the sticky header
     color: var(--text-200);
     font-family: 'Courier New', 'Lucida Console', monospace;
-    animation: overlayIn 180ms ease both;
 
     &:focus {
         outline: none;
     }
 }
 
-@keyframes overlayIn {
-    from {
-        opacity: 0;
-    }
-}
-
 .panel {
     box-sizing: border-box;
-    width: min(100%, 560px);
-    max-height: 100%;
+    width: min(100%, 720px);
     padding: 1.5rem;
     border-radius: 16px;
     border: 1px solid var(--border-700);
@@ -263,4 +250,9 @@
     .panel {
         animation: none;
     }
+}
+
+.lead-time {
+    color: var(--accent-300);
+    font-weight: 700;
 }

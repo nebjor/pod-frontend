@@ -406,6 +406,20 @@ describe('LoginComponent', () => {
             expect(component.errorMessage()).toContain('nicht erreichbar');
         });
 
+        it('leads from the mailbox hint back to the sign-in form', async () => {
+            await setup({ mode: 'register' });
+            component.registerForm.controls.email.setValue('anna@example.com');
+            component.submitRegister();
+            fixture.detectChanges();
+
+            element().querySelector<HTMLButtonElement>('.back-to-login')!.click();
+            fixture.detectChanges();
+
+            expect(component.state()).toBe('form');
+            expect(component.mode()).toBe('password');
+            expect(component.passwordForm.controls.email.value).toBe('anna@example.com');
+        });
+
         it('offers another mail from the mailbox hint', async () => {
             await setup({ mode: 'register' });
             component.registerForm.controls.email.setValue('anna@example.com');
@@ -414,6 +428,7 @@ describe('LoginComponent', () => {
 
             const again = element().querySelector<HTMLButtonElement>('.ghost-btn');
             expect(again?.textContent?.trim()).toBe('Neue E-Mail anfordern');
+            expect(element().querySelector('.back-to-login')?.textContent?.trim()).toBe('Zurück zur Anmeldung');
             again?.click();
             fixture.detectChanges();
 

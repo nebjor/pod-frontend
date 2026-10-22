@@ -539,41 +539,23 @@
     }
 }
 
-// The loading screen: the whole viewport, nothing to click, the staged progress in the middle.
-.overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 100;
-    display: grid;
-    place-items: center;
-    padding: 1rem;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    background: rgba(7, 18, 27, 0.92);
-    backdrop-filter: blur(6px);
-    color: var(--text-200);
-    font-family: 'Courier New', 'Lucida Console', monospace;
-    animation: overlayIn 180ms ease both;
-
-    &:focus {
-        outline: none;
-    }
-}
-
-@keyframes overlayIn {
-    from {
-        opacity: 0;
-    }
-}
-
+// Step 3 while the slicer runs: a page card in place of the configuration.
 .loading-panel {
     box-sizing: border-box;
-    width: min(100%, 480px);
+    width: min(100%, 640px);
+    min-width: 0;
+    scroll-margin-top: 96px; // below the sticky header
     padding: 1.5rem;
     border-radius: 16px;
     border: 1px solid var(--border-700);
     background: linear-gradient(180deg, rgba(19, 39, 58, 0.98), rgba(11, 24, 36, 0.99));
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+    color: var(--text-200);
+    font-family: 'Courier New', 'Lucida Console', monospace;
+
+    &:focus {
+        outline: none;
+    }
 
     .kicker {
         margin: 0 0 0.35rem;

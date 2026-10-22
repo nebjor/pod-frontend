@@ -1,9 +1,7 @@
-<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="quote-title" tabindex="-1" #dialog>
+<div class="quote-screen" tabindex="-1" #dialog>
     @let q = quote();
     <section class="panel">
         <header class="panel-header">
-            <p class="kicker">PREIS</p>
-            <h2 id="quote-title">Dein Angebot</h2>
             <p class="file-name">{{ fileName() }}</p>
         </header>
 
@@ -42,7 +40,7 @@
             </div>
             <div>
                 <dt>Lieferzeit</dt>
-                <dd>ca. {{ q.leadTimeDays }} Tage</dd>
+                <dd class="lead-time">ca. {{ q.leadTimeDays }} Tage</dd>
             </div>
         </dl>
 

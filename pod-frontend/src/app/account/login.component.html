@@ -18,7 +18,10 @@
                 <p class="note">
                     Nichts erhalten? Die Mail kann eine Minute brauchen. Prüfe den Spam-Ordner oder fordere eine neue an.
                 </p>
-                <button type="button" class="order-btn ghost-btn" (click)="reset()">Neue E-Mail anfordern</button>
+                <div class="sent-actions">
+                    <button type="button" class="order-btn ghost-btn" (click)="reset()">Neue E-Mail anfordern</button>
+                    <button type="button" class="text-btn back-to-login" (click)="backToLogin()">Zurück zur Anmeldung</button>
+                </div>
             }
             @case ('resetSent') {
                 <h2>Wir haben dir eine E-Mail geschickt.</h2>

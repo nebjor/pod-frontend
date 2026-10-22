@@ -22,7 +22,7 @@ import { ModelViewerComponent } from '../model-viewer/model-viewer.component';
 import { formatQualityOption } from '../quote/quality-labels';
 import { ColorOption, FilamentOption, QualityOption, QuoteOptions, QuoteResponse } from '../quote/quote.models';
 import { QuoteService, UploadEvent, describeQuoteError, isModelExpired } from '../quote/quote.service';
-import { QuoteOverlayComponent } from './quote-overlay/quote-overlay.component';
+import { QuoteOverlayComponent, revealStep } from './quote-overlay/quote-overlay.component';
 
 type UploadFormat = 'stl' | '3mf';
 type QuoteState = 'idle' | 'loading' | 'ready' | 'error';
@@ -298,19 +298,20 @@ export class UploadComponent {
         const steps = slicingStepsFor(phase);
         return steps[Math.min(this.slicingStep(), steps.length - 1)].text;
     });
-    /** The full-screen loading screen: from the click until the quote (or "Fertig.") is there. */
+    /** Step 3 while the slicer runs: from the click until the quote (or "Fertig.") is there. */
     readonly loadingOverlayOpen = computed(
         () => this.quoteRequested() && (this.quoteInProgress() || this.quoteDoneFlash())
     );
-    /** The quote on the full-screen result, or null while that screen is closed. */
+    /** The quote shown as step 3, or null while the configuration is on screen. */
     readonly quoteOnScreen = computed<QuoteResponse | null>(() =>
         this.quoteRequested() && this.quotePhase() === 'ready' && !this.quoteDoneFlash() && this.quoteMatchesForm()
             ? this.quote()
             : null
     );
-    readonly overlayOpen = computed(() => this.loadingOverlayOpen() || this.quoteOnScreen() !== null);
     /** 1 upload, 2 configuration, 3 price: for the step indicator in the header. */
-    readonly currentStep = computed(() => (!this.selectedFile() ? 1 : this.overlayOpen() ? 3 : 2));
+    readonly currentStep = computed(() =>
+        !this.selectedFile() ? 1 : this.loadingOverlayOpen() || this.quoteOnScreen() !== null ? 3 : 2
+    );
     /** The price in hand is for the current choices: the button shows it again without a slice. */
     readonly quoteCurrent = computed(() => this.quoteState() === 'ready' && this.quoteMatchesForm());
     readonly canSubmitOrder = computed(
@@ -418,13 +419,14 @@ export class UploadComponent {
             const loading = this.loadingOverlay();
             const resultOpen = this.quoteOnScreen() !== null;
             if (loading) {
-                loading.nativeElement.focus();
+                revealStep(loading.nativeElement);
+                loading.nativeElement.focus({ preventScroll: true });
                 this.overlayHadFocus = true;
             } else if (resultOpen) {
                 this.overlayHadFocus = true;
             } else if (this.overlayHadFocus) {
                 this.overlayHadFocus = false;
-                untracked(() => this.calculateButton())?.nativeElement.focus();
+                untracked(() => this.calculateButton())?.nativeElement.focus({ preventScroll: true });
             }
         });
 
