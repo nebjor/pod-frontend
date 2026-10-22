@@ -1,4 +1,5 @@
-import { QUALITY_LABEL_FALLBACK, formatQualityOption, qualityLabel } from './quality-labels';
+import { loadDictionary, translate } from '../i18n/i18n.service';
+import { QUALITY_LAYER_HEIGHT_FALLBACK, formatQualityOption, qualityLabel } from './quality-labels';
 import { QualityOption } from './quote.models';
 
 const catalogue: QualityOption[] = [
@@ -8,6 +9,10 @@ const catalogue: QualityOption[] = [
 ];
 
 describe('qualityLabel', () => {
+    beforeAll(async () => {
+        await Promise.all([loadDictionary('fr'), loadDictionary('en')]);
+    });
+
     it('prefers the catalogue label and adds the layer height with two decimals', () => {
         expect(qualityLabel('medium', catalogue)).toBe('Standard 0.20 mm');
         expect(qualityLabel('coarse', catalogue)).toBe('Grob 0.24 mm');
@@ -32,8 +37,20 @@ describe('qualityLabel', () => {
         expect(qualityLabel('ultra', catalogue)).toBe('ultra');
     });
 
+    it('words the tier names in the active language and keeps the layer height', () => {
+        const french = (key: Parameters<typeof translate>[1]) => translate('fr', key);
+        expect(qualityLabel('coarse', catalogue, french)).toBe('Grossier 0.24 mm');
+        expect(qualityLabel('high', [], french)).toBe('Fin 0.12 mm');
+        expect(qualityLabel('ultra', [], french)).toBe('ultra');
+    });
+
+    it('keeps a label the backend has renamed in every language', () => {
+        const renamed = [{ ...catalogue[1], label: 'Normal' }];
+        expect(qualityLabel('medium', renamed, (key) => translate('en', key))).toBe('Normal 0.20 mm');
+    });
+
     it('formats a catalogue option the same way everywhere', () => {
         expect(formatQualityOption(catalogue[0])).toBe('Grob 0.24 mm');
-        expect(Object.keys(QUALITY_LABEL_FALLBACK)).toEqual(['coarse', 'medium', 'high']);
+        expect(Object.keys(QUALITY_LAYER_HEIGHT_FALLBACK)).toEqual(['coarse', 'medium', 'high']);
     });
 });

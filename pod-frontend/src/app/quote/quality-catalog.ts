@@ -1,4 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { I18nService } from '../i18n/i18n.service';
 import { qualityLabel } from './quality-labels';
 import { QuoteService } from './quote.service';
 import { QualityOption } from './quote.models';
@@ -11,6 +12,7 @@ import { QualityOption } from './quote.models';
 @Injectable({ providedIn: 'root' })
 export class QualityCatalog {
     private readonly quoteService = inject(QuoteService);
+    private readonly i18n = inject(I18nService);
     private readonly options = signal<ReadonlyArray<QualityOption>>([]);
     private requested = false;
 
@@ -32,6 +34,6 @@ export class QualityCatalog {
     }
 
     label(code: string): string {
-        return qualityLabel(code, this.options());
+        return qualityLabel(code, this.options(), this.i18n.t);
     }
 }

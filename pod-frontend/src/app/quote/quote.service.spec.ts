@@ -2,6 +2,7 @@ import { HttpErrorResponse, HttpEventType, provideHttpClient } from '@angular/co
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { QuoteResponse } from './quote.models';
+import { loadDictionary, translate } from '../i18n/i18n.service';
 import { MODEL_API_URL, QUOTE_API_URL, QuoteService, UploadEvent, describeQuoteError, isModelExpired } from './quote.service';
 
 const sampleQuote: QuoteResponse = {
@@ -126,5 +127,22 @@ describe('QuoteService', () => {
         expect(serverError).not.toContain('HTTP');
         expect(serverError).not.toContain('500');
         expect(describeQuoteError(new Error('boom'))).toBe(serverError);
+    });
+
+    it('words its own messages in the language it is given', async () => {
+        await loadDictionary('en');
+        const english = (key: Parameters<typeof translate>[1], params?: Parameters<typeof translate>[2]) =>
+            translate('en', key, params);
+        const limited = new HttpErrorResponse({
+            status: 429,
+            error: { retryAfterSeconds: 42, supportEmail: 'help@example.com' }
+        });
+
+        expect(describeQuoteError(limited, english)).toBe(
+            'Limit reached. Please try again in 42 seconds. If it is urgent, write to help@example.com.'
+        );
+        expect(describeQuoteError(new HttpErrorResponse({ status: 0 }), english)).toContain('unreachable');
+        // The backend's own wording is shown as it is, whatever the language.
+        expect(describeQuoteError(new HttpErrorResponse({ status: 400, error: { detail: 'Nur STL.' } }), english)).toBe('Nur STL.');
     });
 });

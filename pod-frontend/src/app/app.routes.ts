@@ -3,6 +3,8 @@ import { Routes } from '@angular/router';
 const admin = () => import('./admin/admin.component').then((m) => m.AdminComponent);
 
 /**
+ * Page titles and descriptions are dictionary keys in `data` (`titleKey`, `descriptionKey`), not
+ * `title` strings: PageMetaStrategy resolves them in the active language, also after a switch.
  * Every page is lazy loaded so the 3D viewer (three.js) only ships with the pages that
  * render it and stays out of the initial bundle. Which table applies is decided by the host
  * (see host-routes.ts): the shop's pages on the shop host, the admin panel on the admin host.
@@ -10,49 +12,42 @@ const admin = () => import('./admin/admin.component').then((m) => m.AdminCompone
 export const shopRoutes: Routes = [
     {
         path: '',
-        title: '3D-Druck auf Bestellung aus Winterthur',
-        data: { description: 'Modell hochladen, Preis sofort sehen, bestellen. 3D-Druck in PLA, PETG und PCTG aus Winterthur, Versand in der ganzen Schweiz.' },
+        data: { titleKey: 'meta.home.title', descriptionKey: 'meta.home.description' },
         loadComponent: () => import('./landing/landing.component').then((m) => m.LandingComponent)
     },
     {
         path: 'upload',
-        title: 'Modell hochladen und Sofortpreis',
-        data: { description: 'STL oder 3MF hochladen, Material, Farbe und Qualität wählen und den Preis aus einem echten Slicer-Durchlauf sofort sehen.' },
+        data: { titleKey: 'meta.upload.title', descriptionKey: 'meta.upload.description' },
         loadComponent: () => import('./upload/upload.component').then((m) => m.UploadComponent)
     },
     {
         path: 'warenkorb',
-        title: 'Warenkorb',
-        data: { noindex: true },
+        data: { titleKey: 'meta.cart.title', noindex: true },
         loadComponent: () => import('./cart/cart.component').then((m) => m.CartComponent)
     },
     {
         path: 'checkout/success',
-        title: 'Bestellung',
-        data: { noindex: true },
+        data: { titleKey: 'meta.checkout.title', noindex: true },
         loadComponent: () => import('./checkout/order-success.component').then((m) => m.OrderSuccessComponent)
     },
     {
         path: 'checkout',
-        title: 'Bestellung',
-        data: { noindex: true },
+        data: { titleKey: 'meta.checkout.title', noindex: true },
         loadComponent: () => import('./checkout/checkout.component').then((m) => m.CheckoutComponent)
     },
     {
         path: 'pay/mock',
-        title: 'Zahlung',
-        data: { noindex: true },
+        data: { titleKey: 'meta.payment.title', noindex: true },
         loadComponent: () => import('./payment/mock-payment.component').then((m) => m.MockPaymentComponent)
     },
     {
         path: 'bestellung',
-        title: 'Meine Bestellung | 3DBurg',
+        data: { titleKey: 'meta.order.title' },
         loadComponent: () => import('./order/order-status.component').then((m) => m.OrderStatusComponent)
     },
     {
         path: 'konto/anmelden',
-        title: 'Anmelden | 3DBurg',
-        data: { noindex: true },
+        data: { titleKey: 'meta.login.title', noindex: true },
         loadComponent: () => import('./account/login.component').then((m) => m.LoginComponent)
     },
     {
@@ -63,20 +58,17 @@ export const shopRoutes: Routes = [
             {
                 path: '',
                 pathMatch: 'full',
-                title: 'Bestellungen | 3DBurg',
-                data: { noindex: true },
+                data: { titleKey: 'meta.orders.title', noindex: true },
                 loadComponent: () => import('./account/account.component').then((m) => m.AccountComponent)
             },
             {
                 path: 'adresse',
-                title: 'Lieferadresse | 3DBurg',
-                data: { noindex: true },
+                data: { titleKey: 'meta.address.title', noindex: true },
                 loadComponent: () => import('./account/address.component').then((m) => m.AddressComponent)
             },
             {
                 path: 'passwort',
-                title: 'Konto | 3DBurg',
-                data: { noindex: true },
+                data: { titleKey: 'meta.password.title', noindex: true },
                 loadComponent: () => import('./account/password.component').then((m) => m.PasswordComponent)
             }
         ]
@@ -91,25 +83,22 @@ export const shopRoutes: Routes = [
     },
     {
         path: 'ueber-uns',
-        title: 'Über uns | 3DBurg',
-        data: { description: '3D-Druck in der Schweiz: in Winterthur gedruckt, von Studenten der ZHAW lanciert. Sofortpreis aus dem Slicer, Festpreis, Versand in die ganze Schweiz.' },
+        data: { titleKey: 'meta.about.title', descriptionKey: 'meta.about.description' },
         loadComponent: () => import('./about/about.component').then((m) => m.AboutComponent)
     },
     {
         path: 'impressum',
-        title: 'Impressum',
+        data: { titleKey: 'meta.imprint.title' },
         loadComponent: () => import('./legal/imprint.component').then((m) => m.ImprintComponent)
     },
     {
         path: 'agb',
-        title: 'AGB',
-        data: { description: 'Allgemeine Geschäftsbedingungen von 3DBurg: Bestellung, Preise, Zahlung, Lieferung und Widerruf bei individuell gefertigten 3D-Drucken.' },
+        data: { titleKey: 'meta.terms.title', descriptionKey: 'meta.terms.description' },
         loadComponent: () => import('./legal/terms.component').then((m) => m.TermsComponent)
     },
     {
         path: 'datenschutz',
-        title: 'Datenschutz',
-        data: { description: 'Datenschutzerklärung von 3DBurg: welche Daten wir für Angebot, Bestellung und Versand verarbeiten und wann wir sie löschen.' },
+        data: { titleKey: 'meta.privacy.title', descriptionKey: 'meta.privacy.description' },
         loadComponent: () => import('./legal/privacy.component').then((m) => m.PrivacyComponent)
     },
     { path: '**', redirectTo: '' }

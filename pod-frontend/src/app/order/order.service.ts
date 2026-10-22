@@ -1,6 +1,7 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import { Translate, translateDe } from '../i18n/i18n.service';
 import { QuoteResponse } from '../quote/quote.models';
 import { describeQuoteError, isModelExpired } from '../quote/quote.service';
 import {
@@ -66,7 +67,7 @@ export function recallLastOrder(): LastOrderReference | null {
 }
 
 /** Classifies an order failure so the checkout page can react to each kind. */
-export function describeOrderError(error: unknown): OrderFailure {
+export function describeOrderError(error: unknown, t: Translate = translateDe): OrderFailure {
     if (error instanceof HttpErrorResponse) {
         const problem = (error.error ?? null) as {
             currentQuotes?: unknown;
@@ -91,5 +92,5 @@ export function describeOrderError(error: unknown): OrderFailure {
         }
     }
 
-    return { kind: 'error', message: describeQuoteError(error) };
+    return { kind: 'error', message: describeQuoteError(error, t) };
 }
