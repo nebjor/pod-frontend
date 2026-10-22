@@ -1,6 +1,9 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, afterNextRender, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { TranslationKey } from '../i18n/de';
+import { I18nService } from '../i18n/i18n.service';
+import { TranslatePipe } from '../i18n/translate.pipe';
 import { LOGIN_PATH } from './account.models';
 import { AccountService } from './account.service';
 
@@ -14,7 +17,7 @@ type ShellState = 'loading' | 'ready';
  */
 @Component({
     selector: 'app-account-shell',
-    imports: [RouterOutlet, RouterLink, RouterLinkActive],
+    imports: [RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe],
     templateUrl: './account-shell.component.html',
     styleUrls: ['./customer-page.scss', './account-shell.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -22,6 +25,7 @@ type ShellState = 'loading' | 'ready';
 export class AccountShellComponent {
     private readonly account = inject(AccountService);
     private readonly router = inject(Router);
+    private readonly i18n = inject(I18nService);
     private readonly destroyRef = inject(DestroyRef);
 
     readonly customer = this.account.account;
@@ -30,10 +34,10 @@ export class AccountShellComponent {
     readonly loggingOut = signal(false);
     readonly errorMessage = signal('');
 
-    readonly items = [
-        { label: 'Bestellungen', path: '/konto', exact: true },
-        { label: 'Lieferadresse', path: '/konto/adresse', exact: false },
-        { label: 'Konto', path: '/konto/passwort', exact: false }
+    readonly items: ReadonlyArray<{ labelKey: TranslationKey; path: string; exact: boolean }> = [
+        { labelKey: 'account.nav.orders', path: '/konto', exact: true },
+        { labelKey: 'account.nav.address', path: '/konto/adresse', exact: false },
+        { labelKey: 'account.nav.account', path: '/konto/passwort', exact: false }
     ];
 
     constructor() {
@@ -69,7 +73,7 @@ export class AccountShellComponent {
                 next: () => void this.router.navigateByUrl('/'),
                 error: () => {
                     this.loggingOut.set(false);
-                    this.errorMessage.set('Abmelden hat nicht geklappt. Bitte versuche es noch einmal.');
+                    this.errorMessage.set(this.i18n.t('account.logoutError'));
                 }
             });
     }

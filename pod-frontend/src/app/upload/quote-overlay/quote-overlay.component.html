@@ -2,66 +2,29 @@
     @let q = quote();
     <section class="panel">
         <header class="panel-header">
-            <p class="file-name">{{ fileName() }}</p>
-        </header>
-
-        <p class="price" aria-live="polite">
-            <span class="price-label">Preis gesamt</span>
-            <strong class="price-value">{{ q.currency }} {{ q.totalPriceChf | number:'1.2-2' }}</strong>
-            <span class="price-sub">
-                {{ q.quantity }} x {{ q.currency }} {{ q.unitPriceChf | number:'1.2-2' }}
-                + {{ q.currency }} {{ q.setupFeeChf | number:'1.2-2' }} Einrichtung, zzgl. Versand
-            </span>
-        </p>
-
-        <dl class="facts">
-            <div>
-                <dt>Druckzeit</dt>
-                <dd>{{ totalPrintTimeLabel() }}@if (q.quantity > 1) {<span class="muted"> ({{ unitPrintTimeLabel() }} je Stück)</span>}</dd>
-            </div>
-            <div>
-                <dt>Material</dt>
-                <dd>{{ q.totalFilamentGrams | number:'1.0-1' }} g {{ q.filament }}</dd>
-            </div>
-            <div>
-                <dt>Farbe</dt>
-                <dd class="color-value">
-                    <span class="swatch-dot" [style.background]="color()?.hex" aria-hidden="true"></span>
-                    {{ color()?.label }}
-                </dd>
-            </div>
-            <div>
-                <dt>Qualität</dt>
-                <dd>{{ qualityLabel() }}</dd>
-            </div>
-            <div>
-                <dt>Menge</dt>
-                <dd>{{ q.quantity }} Stück</dd>
-            </div>
-            <div>
-                <dt>Lieferzeit</dt>
-                <dd class="lead-time">ca. {{ q.leadTimeDays }} Tage</dd>
             </div>
         </dl>
 
         <p class="details">
-            {{ q.boundingBoxMm.widthMm | number:'1.0-1' }} x {{ q.boundingBoxMm.depthMm | number:'1.0-1' }} x
-            {{ q.boundingBoxMm.heightMm | number:'1.0-1' }} mm · ca. {{ q.plateCount }} Druckplatte(n) ·
-            {{ q.layerHeightMm }} mm Schichthöhe auf der Bambu Lab A1. Der Preis stammt aus einem echten
-            Slicer-Durchlauf deiner Datei.
+            {{ 'quote.details' | t:{
+                width: (q.boundingBoxMm.widthMm | number:'1.0-1'),
+                depth: (q.boundingBoxMm.depthMm | number:'1.0-1'),
+                height: (q.boundingBoxMm.heightMm | number:'1.0-1'),
+                plates: q.plateCount,
+                layer: q.layerHeightMm
+            } }}
         </p>
 
         @if (q.manifold === false) {
             <p class="manifold-note" role="note">
-                Das Modell ist nicht wasserdicht (nicht manifold). Wir prüfen es vor dem Druck; es kann zu
-                Rückfragen kommen.
+                {{ 'quote.notManifold' | t }}
             </p>
         }
         @if (q.warnings.length > 0) {
             <div class="slicer-warnings">
                 <button type="button" class="warnings-toggle" (click)="toggleWarnings()"
                     [attr.aria-expanded]="warningsOpen()">
-                    Hinweise vom Slicer ({{ q.warnings.length }})
+                    {{ 'quote.warnings' | t:{ count: q.warnings.length } }}
                 </button>
                 @if (warningsOpen()) {
                     <ul class="warnings-list">
@@ -76,39 +39,42 @@
         @if (addedItem(); as added) {
             <div class="cart-added" role="status">
                 <p class="cart-note">
-                    <strong>{{ added.fileName }}</strong> liegt im Warenkorb. Darin jetzt:
-                    {{ cartModelsLabel() }}, {{ cartCount() }} Stück,
-                    {{ cartCurrency() }} {{ cartTotal() | number:'1.2-2' }} zzgl. Versand.
+                    <strong>{{ added.fileName }}</strong>
+                    {{ 'quote.addedToCart' | t:{
+                        models: cartModelsLabel(),
+                        pieces: ('common.pieces' | t:{ count: cartCount() }),
+                        total: cartCurrency() + ' ' + (cartTotal() | number:'1.2-2')
+                    } }}
                 </p>
                 <div class="actions">
-                    <a class="order-btn link-btn" routerLink="/checkout">Zur Kasse</a>
-                    <a class="order-btn ghost-btn link-btn" routerLink="/warenkorb">Zum Warenkorb</a>
+                    <a class="order-btn link-btn" routerLink="/checkout">{{ 'common.toCheckout' | t }}</a>
+                    <a class="order-btn ghost-btn link-btn" routerLink="/warenkorb">{{ 'common.toCart' | t }}</a>
                     <button type="button" class="order-btn ghost-btn" (click)="uploadAnother.emit()">
-                        Weiteres Modell hochladen
+                        {{ 'common.uploadAnother' | t }}
                     </button>
                 </div>
             </div>
         } @else {
             <div class="actions">
                 <button type="button" class="order-btn add-btn" [disabled]="!canAddToCart()" (click)="addToCart.emit()">
-                    In den Warenkorb
+                    {{ 'quote.addToCart' | t }}
                 </button>
                 <button type="button" class="order-btn ghost-btn adjust-btn" (click)="adjust.emit()">
-                    Anpassen
+                    {{ 'quote.adjust' | t }}
                 </button>
             </div>
         }
 
         @if (cartIsFull()) {
             <p class="cart-note">
-                Der Warenkorb ist voll: maximal {{ maxCartItems }} Modelle pro Bestellung.
-                <a routerLink="/warenkorb">Zum Warenkorb</a>
+                {{ 'common.cartFull' | t:{ max: maxCartItems } }}
+                <a routerLink="/warenkorb">{{ 'common.toCart' | t }}</a>
             </p>
         }
 
         @if (addedItem()) {
             <button type="button" class="text-btn adjust-btn" (click)="adjust.emit()">
-                Gleiches Modell anders konfigurieren
+                {{ 'quote.reconfigure' | t }}
             </button>
         }
     </section>

@@ -3,6 +3,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CartService } from '../cart/cart.service';
+import { I18nService } from '../i18n/i18n.service';
+import { TranslatePipe } from '../i18n/translate.pipe';
 import { LOGIN_PATH, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, PASSWORD_PATH } from './account.models';
 import { AccountService, describeAccountError, takeLoginReturnPath } from './account.service';
 
@@ -25,7 +27,7 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
  */
 @Component({
     selector: 'app-password',
-    imports: [ReactiveFormsModule],
+    imports: [ReactiveFormsModule, TranslatePipe],
     templateUrl: './password.component.html',
     styleUrls: ['./customer-page.scss', './password.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -34,6 +36,7 @@ export class PasswordComponent {
     private readonly account = inject(AccountService);
     private readonly cart = inject(CartService);
     private readonly router = inject(Router);
+    private readonly i18n = inject(I18nService);
     private readonly destroyRef = inject(DestroyRef);
 
     readonly hasPassword = computed(() => this.account.account()?.hasPassword === true);
@@ -100,13 +103,13 @@ export class PasswordComponent {
                         this.toLogin();
                         return;
                     }
-                    const failure = describeAccountError(error);
+                    const failure = describeAccountError(error, this.i18n.t);
                     if (failure.kind === 'field-errors') {
                         this.fieldError.set(failure.errors['password'] ?? '');
-                        this.errorMessage.set('Bitte prüfe das Passwort.');
+                        this.errorMessage.set(this.i18n.t('password.error.check'));
                     } else {
                         this.errorMessage.set(
-                            failure.kind === 'error' ? failure.message : 'Das Passwort konnte nicht gespeichert werden.'
+                            failure.kind === 'error' ? failure.message : this.i18n.t('password.error.save')
                         );
                     }
                 }
@@ -144,12 +147,8 @@ export class PasswordComponent {
                         this.toLogin();
                         return;
                     }
-                    const failure = describeAccountError(error);
-                    this.removeError.set(
-                        failure.kind === 'error'
-                            ? failure.message
-                            : 'Das Passwort konnte gerade nicht entfernt werden. Bitte versuche es noch einmal.'
-                    );
+                    const failure = describeAccountError(error, this.i18n.t);
+                    this.removeError.set(failure.kind === 'error' ? failure.message : this.i18n.t('password.error.remove'));
                 }
             });
     }
@@ -176,12 +175,8 @@ export class PasswordComponent {
             .subscribe({
                 error: (error: unknown) => {
                     this.deleting.set(false);
-                    const failure = describeAccountError(error);
-                    this.deleteError.set(
-                        failure.kind === 'error'
-                            ? failure.message
-                            : 'Das Konto konnte gerade nicht gelöscht werden. Bitte versuche es noch einmal.'
-                    );
+                    const failure = describeAccountError(error, this.i18n.t);
+                    this.deleteError.set(failure.kind === 'error' ? failure.message : this.i18n.t('password.error.delete'));
                 }
             });
     }

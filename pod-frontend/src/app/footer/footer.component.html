@@ -4,33 +4,33 @@
             <section class="brand-column">
                 <h2 class="brand">{{ business.shopName }}</h2>
                 <p class="brand-copy">
-                    3D-Druck auf Bestellung aus {{ business.city }}.<br />
-                    Modell hochladen, Preis sehen, bestellen.
+                    {{ 'footer.tagline' | t:{ city: business.city } }}<br />
+                    {{ 'footer.taglineSteps' | t }}
                 </p>
             </section>
 
             <section class="link-column">
-                <h3>Shop</h3>
+                <h3>{{ 'footer.shop' | t }}</h3>
                 <ul>
-                    <li><a routerLink="/upload">Modell hochladen</a></li>
-                    <li><a routerLink="/" fragment="how-it-works">So funktioniert es</a></li>
-                    <li><a routerLink="/ueber-uns">Über uns</a></li>
-                    <li><a routerLink="/bestellung">Meine Bestellung</a></li>
-                    <li><a routerLink="/konto">Mein Konto</a></li>
+                    <li><a routerLink="/upload">{{ 'common.uploadModel' | t }}</a></li>
+                    <li><a routerLink="/" fragment="how-it-works">{{ 'footer.howItWorks' | t }}</a></li>
+                    <li><a routerLink="/ueber-uns">{{ 'footer.about' | t }}</a></li>
+                    <li><a routerLink="/bestellung">{{ 'common.myOrder' | t }}</a></li>
+                    <li><a routerLink="/konto">{{ 'common.myAccount' | t }}</a></li>
                 </ul>
             </section>
 
             <section class="link-column">
-                <h3>Rechtliches</h3>
+                <h3>{{ 'footer.legal' | t }}</h3>
                 <ul>
-                    <li><a routerLink="/impressum">Impressum</a></li>
-                    <li><a routerLink="/agb">AGB</a></li>
-                    <li><a routerLink="/datenschutz">Datenschutz</a></li>
+                    <li><a routerLink="/impressum">{{ 'footer.imprint' | t }}</a></li>
+                    <li><a routerLink="/agb">{{ 'footer.terms' | t }}</a></li>
+                    <li><a routerLink="/datenschutz">{{ 'footer.privacy' | t }}</a></li>
                 </ul>
             </section>
 
             <section class="link-column">
-                <h3>Kontakt</h3>
+                <h3>{{ 'footer.contact' | t }}</h3>
                 <ul>
                     <li><a [href]="'mailto:' + business.email">{{ business.email }}</a></li>
                     <li>{{ business.street }}, {{ business.postalCode }} {{ business.city }}</li>
@@ -40,7 +40,7 @@
 
         <div class="footer-bottom">
             <p>© {{ year }} {{ business.shopName }} · {{ business.owner }}, {{ business.city }}</p>
-            <p>Gedruckt und versendet in der Schweiz</p>
+            <p>{{ 'footer.madeIn' | t }}</p>
         </div>
     </div>
 </footer>

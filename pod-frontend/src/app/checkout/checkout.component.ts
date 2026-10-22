@@ -6,17 +6,19 @@ import { Router, RouterLink } from '@angular/router';
 import { AccountResponse } from '../account/account.models';
 import { AccountService } from '../account/account.service';
 import { CartItem, CartService } from '../cart/cart.service';
+import { I18nService } from '../i18n/i18n.service';
 import { BUSINESS } from '../legal/business';
 import { FALLBACK_ORDER_SETTINGS, OrderFailure, OrderRequest, OrderResponse, OrderSettings } from '../order/order.models';
 import { OrderService, describeOrderError, rememberLastOrder } from '../order/order.service';
 import { formatPrintDuration } from '../quote/print-duration';
+import { TranslatePipe } from '../i18n/translate.pipe';
 import { QualityCatalog } from '../quote/quality-catalog';
 
 type CheckoutState = 'idle' | 'submitting' | 'placed';
 
 @Component({
     selector: 'app-checkout',
-    imports: [ReactiveFormsModule, DecimalPipe, RouterLink],
+    imports: [ReactiveFormsModule, DecimalPipe, RouterLink, TranslatePipe],
     templateUrl: './checkout.component.html',
     styleUrl: './checkout.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -27,6 +29,7 @@ export class CheckoutComponent {
     private readonly account = inject(AccountService);
     private readonly qualityCatalog = inject(QualityCatalog);
     private readonly router = inject(Router);
+    private readonly i18n = inject(I18nService);
     private readonly destroyRef = inject(DestroyRef);
     /** Lines uploaded again during the current submit; a second expiry of the same line is an error. */
     private reuploaded = new Set<string>();
@@ -159,7 +162,7 @@ export class CheckoutComponent {
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: (order) => this.placed(order),
-                error: (error: unknown) => this.failed(describeOrderError(error), items)
+                error: (error: unknown) => this.failed(describeOrderError(error, this.i18n.t), items)
             });
     }
 
@@ -201,7 +204,7 @@ export class CheckoutComponent {
                 break;
             case 'field-errors':
                 this.fieldErrors.set(failure.errors);
-                this.errorMessage.set('Bitte prüfe die markierten Felder.');
+                this.errorMessage.set(this.i18n.t('common.fieldsCheck'));
                 this.state.set('idle');
                 break;
             default:
@@ -232,8 +235,8 @@ export class CheckoutComponent {
         this.state.set('idle');
         this.errorMessage.set(
             item
-                ? `Das Modell ${item.fileName} liegt nicht mehr auf unserem Server und konnte nicht automatisch neu hochgeladen werden. Bitte entferne es aus dem Warenkorb und lade es noch einmal hoch.`
-                : 'Eines deiner Modelle liegt nicht mehr auf unserem Server. Bitte lade es noch einmal hoch.'
+                ? this.i18n.t('checkout.error.expiredNamed', { name: item.fileName })
+                : this.i18n.t('checkout.error.expired')
         );
     }
 

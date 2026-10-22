@@ -1,9 +1,11 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { BUSINESS } from './business';
+import { LegalLanguageNoticeComponent } from './legal-language-notice.component';
 
 /** Datenschutzerklärung under the Swiss FADP; mirrors docs/data-protection.md in the backend repo. */
 @Component({
     selector: 'app-privacy',
+    imports: [LegalLanguageNoticeComponent],
     templateUrl: './privacy.component.html',
     styleUrl: './legal-page.scss',
     changeDetection: ChangeDetectionStrategy.OnPush

@@ -1,10 +1,9 @@
 <section class="hero-section">
     <div class="hero-copy">
-        <p class="subtitle">3D-Druck auf Bestellung aus Winterthur</p>
-        <h1>Dein Modell. <span class="highlight">Gedruckt.</span> Geliefert.</h1>
+        <p class="subtitle">{{ 'landing.subtitle' | t }}</p>
+        <h1>{{ 'landing.titleStart' | t }} <span class="highlight">{{ 'landing.titleHighlight' | t }}</span> {{ 'landing.titleEnd' | t }}</h1>
         <p class="description">
-            Lade dein STL oder 3MF hoch, wähle Material, Farbe und Qualität und sieh den Preis sofort.
-            Gedruckt auf Bambu Lab A1, versendet in der ganzen Schweiz.
+            {{ 'landing.description' | t }}
         </p>
     </div>
 
@@ -14,51 +13,48 @@
         <div class="viewer-wrapper">
             <app-model-viewer modelUrl="/3DBenchy.glb" sourceUpAxis="y" [autoRotate]="true"
                 [autoRotateSpeed]="1.25" [interactive]="false" [zoom]="1.9" modelColor="#4f8df5"></app-model-viewer>
-            <span class="showcase-label">Dein Modell</span>
+            <span class="showcase-label">{{ 'landing.yourModel' | t }}</span>
         </div>
         <div class="hero-cta">
             <button mat-raised-button class="primary-btn" type="button" (click)="goToUpload()">
-                Modell hochladen und Preis erhalten
+                {{ 'common.uploadAndPrice' | t }}
             </button>
         </div>
         <figure class="print-photo">
             <picture>
                 <source srcset="/benchy-print.webp" type="image/webp" />
                 <img src="/benchy-print.jpg" width="1200" height="900" fetchpriority="high"
-                    alt="Gedruckter 3DBenchy aus blauem PLA auf der Druckplatte" />
+                    [alt]="'landing.printAlt' | t" />
             </picture>
-            <span class="showcase-label">Gedruckt in Winterthur</span>
+            <span class="showcase-label">{{ 'landing.printedIn' | t }}</span>
         </figure>
     </div>
 </section>
 
 <section class="how-it-works" id="how-it-works">
-    <p class="kicker">In drei Schritten</p>
-    <h2>So funktioniert es</h2>
+    <p class="kicker">{{ 'landing.kicker' | t }}</p>
+    <h2>{{ 'landing.howTitle' | t }}</h2>
     <p class="intro">
-        Du entscheidest nur das Wesentliche: Material, Farbe, Qualität, Menge. Den Rest übernehmen wir.
+        {{ 'landing.howIntro' | t }}
     </p>
 
     <div class="steps-grid">
         <article class="step-card">
             <span class="step-number">1</span>
-            <h3>Modell hochladen</h3>
-            <p>Zieh dein STL- oder 3MF-Modell in den Upload und kontrolliere es direkt in der 3D-Vorschau.</p>
+            <h3>{{ 'landing.step1.title' | t }}</h3>
+            <p>{{ 'landing.step1.text' | t }}</p>
         </article>
 
         <article class="step-card">
             <span class="step-number">2</span>
-            <h3>Material und Qualität wählen</h3>
-            <p>Wähle Material, Farbe und Qualitätsstufe passend zu Funktion, Optik und Budget. Der Preis folgt sofort.</p>
+            <h3>{{ 'landing.step2.title' | t }}</h3>
+            <p>{{ 'landing.step2.text' | t }}</p>
         </article>
 
         <article class="step-card">
             <span class="step-number">3</span>
-            <h3>Bestellen und abwarten</h3>
-            <p>
-                Nach deiner Zahlung prüfen wir das Modell, drucken es und schicken es dir mit der Post. Die Lieferzeit
-                siehst du schon beim Preis.
-            </p>
+            <h3>{{ 'landing.step3.title' | t }}</h3>
+            <p>{{ 'landing.step3.text' | t }}</p>
         </article>
     </div>
 </section>

@@ -3,6 +3,8 @@ import { ChangeDetectionStrategy, Component, DestroyRef, afterNextRender, comput
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { Subject, catchError, debounceTime, groupBy, map, mergeMap, of, switchMap } from 'rxjs';
+import { I18nService } from '../i18n/i18n.service';
+import { TranslatePipe } from '../i18n/translate.pipe';
 import { FALLBACK_ORDER_SETTINGS, OrderSettings } from '../order/order.models';
 import { OrderService } from '../order/order.service';
 import { formatPrintDuration } from '../quote/print-duration';
@@ -25,7 +27,7 @@ interface QuantityChange {
  */
 @Component({
     selector: 'app-cart',
-    imports: [DecimalPipe, RouterLink],
+    imports: [DecimalPipe, RouterLink, TranslatePipe],
     templateUrl: './cart.component.html',
     styleUrl: './cart.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -34,6 +36,7 @@ export class CartComponent {
     private readonly cart = inject(CartService);
     private readonly quoteService = inject(QuoteService);
     private readonly orderService = inject(OrderService);
+    private readonly i18n = inject(I18nService);
     private readonly destroyRef = inject(DestroyRef);
     private readonly quantityChanges = new Subject<QuantityChange>();
 
@@ -66,7 +69,7 @@ export class CartComponent {
                         switchMap(({ id, quantity }) =>
                             this.cart.updateQuantity(id, quantity).pipe(
                                 map(() => ({ id, error: '' })),
-                                catchError((error: unknown) => of({ id, error: describeQuoteError(error) }))
+                                catchError((error: unknown) => of({ id, error: describeQuoteError(error, this.i18n.t) }))
                             )
                         )
                     )
@@ -83,7 +86,7 @@ export class CartComponent {
     }
 
     qualityLabel(item: CartItem): string {
-        return qualityLabel(item.quality, this.qualities());
+        return qualityLabel(item.quality, this.qualities(), this.i18n.t);
     }
 
     printTimeLabel(item: CartItem): string {
@@ -103,7 +106,10 @@ export class CartComponent {
         const quantity = Number(value);
         const max = this.maxQuantity();
         if (!Number.isInteger(quantity) || quantity < 1 || (max !== null && quantity > max)) {
-            this.setLineError(id, max !== null ? `Bitte eine Menge zwischen 1 und ${max} angeben.` : 'Bitte eine Menge ab 1 angeben.');
+            this.setLineError(
+                id,
+                max !== null ? this.i18n.t('cart.error.quantityRange', { max }) : this.i18n.t('cart.error.quantityMin')
+            );
             return;
         }
 

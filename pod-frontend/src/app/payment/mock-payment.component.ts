@@ -3,6 +3,8 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signa
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
+import { I18nService } from '../i18n/i18n.service';
+import { TranslatePipe } from '../i18n/translate.pipe';
 import { OrderService, describeOrderError } from '../order/order.service';
 
 /**
@@ -12,7 +14,7 @@ import { OrderService, describeOrderError } from '../order/order.service';
  */
 @Component({
     selector: 'app-mock-payment',
-    imports: [DecimalPipe],
+    imports: [DecimalPipe, TranslatePipe],
     templateUrl: './mock-payment.component.html',
     styleUrl: './mock-payment.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -21,6 +23,7 @@ export class MockPaymentComponent {
     private readonly route = inject(ActivatedRoute);
     private readonly router = inject(Router);
     private readonly orderService = inject(OrderService);
+    private readonly i18n = inject(I18nService);
     private readonly destroyRef = inject(DestroyRef);
 
     private readonly query = toSignal(this.route.queryParamMap.pipe(map((params) => ({
@@ -53,8 +56,8 @@ export class MockPaymentComponent {
                 },
                 error: (error: unknown) => {
                     this.paying.set(false);
-                    const failure = describeOrderError(error);
-                    this.errorMessage.set(failure.kind === 'error' ? failure.message : 'Die Zahlung konnte nicht bestätigt werden.');
+                    const failure = describeOrderError(error, this.i18n.t);
+                    this.errorMessage.set(failure.kind === 'error' ? failure.message : this.i18n.t('pay.error'));
                 }
             });
     }

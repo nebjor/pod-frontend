@@ -4,6 +4,8 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subscription, map, timer } from 'rxjs';
 import { AccountService } from '../account/account.service';
+import { I18nService } from '../i18n/i18n.service';
+import { TranslatePipe } from '../i18n/translate.pipe';
 import { orderStatusLabel } from '../order/order-status-labels';
 import { OrderResponse } from '../order/order.models';
 import { OrderService, recallLastOrder } from '../order/order.service';
@@ -22,7 +24,7 @@ type SuccessState = 'loading' | 'waiting' | 'paid' | 'unpaid' | 'cancelled' | 'm
  */
 @Component({
     selector: 'app-order-success',
-    imports: [DecimalPipe, RouterLink],
+    imports: [DecimalPipe, RouterLink, TranslatePipe],
     templateUrl: './order-success.component.html',
     styleUrl: './order-success.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -31,6 +33,7 @@ export class OrderSuccessComponent {
     private readonly route = inject(ActivatedRoute);
     private readonly orderService = inject(OrderService);
     private readonly account = inject(AccountService);
+    private readonly i18n = inject(I18nService);
     private readonly qualityCatalog = inject(QualityCatalog);
     private readonly destroyRef = inject(DestroyRef);
     private polling?: Subscription;
@@ -48,7 +51,7 @@ export class OrderSuccessComponent {
     readonly accountState = this.account.state;
     readonly statusLabel = computed(() => {
         const order = this.order();
-        return order ? orderStatusLabel(order.status) : '';
+        return order ? orderStatusLabel(order.status, this.i18n.t) : '';
     });
     /** Query for the status page, the same the order mail links to. */
     readonly statusLinkParams = computed(() => {

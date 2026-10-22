@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { I18nService } from '../i18n/i18n.service';
+import { TranslatePipe } from '../i18n/translate.pipe';
 import { FALLBACK_ORDER_SETTINGS, OrderSettings } from '../order/order.models';
 import { OrderService } from '../order/order.service';
 import { AccountResponse, LOGIN_PATH } from './account.models';
@@ -13,7 +15,7 @@ import { AccountService, describeAccountError } from './account.service';
  */
 @Component({
     selector: 'app-address',
-    imports: [ReactiveFormsModule],
+    imports: [ReactiveFormsModule, TranslatePipe],
     templateUrl: './address.component.html',
     styleUrls: ['./customer-page.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -22,6 +24,7 @@ export class AddressComponent {
     private readonly account = inject(AccountService);
     private readonly orderService = inject(OrderService);
     private readonly router = inject(Router);
+    private readonly i18n = inject(I18nService);
     private readonly destroyRef = inject(DestroyRef);
 
     readonly settings = signal<OrderSettings>(FALLBACK_ORDER_SETTINGS);
@@ -86,12 +89,12 @@ export class AddressComponent {
                         void this.router.navigate([LOGIN_PATH], { queryParams: { returnTo: '/konto/adresse' } });
                         return;
                     }
-                    const failure = describeAccountError(error);
+                    const failure = describeAccountError(error, this.i18n.t);
                     if (failure.kind === 'field-errors') {
                         this.fieldErrors.set(failure.errors);
-                        this.errorMessage.set('Bitte prüfe die markierten Felder.');
+                        this.errorMessage.set(this.i18n.t('common.fieldsCheck'));
                     } else {
-                        this.errorMessage.set(failure.kind === 'error' ? failure.message : 'Die Adresse konnte nicht gespeichert werden.');
+                        this.errorMessage.set(failure.kind === 'error' ? failure.message : this.i18n.t('address.error.save'));
                     }
                 }
             });

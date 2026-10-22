@@ -1,36 +1,27 @@
 <article class="legal-page">
-    <p class="kicker">Über uns</p>
-    <h1>3D-Druck aus Winterthur</h1>
+    <p class="kicker">{{ 'about.kicker' | t }}</p>
+    <h1>{{ 'about.title' | t }}</h1>
 
-    <p>
-        3DBurg druckt deine Modelle in der Schweiz. Jedes Teil entsteht in Winterthur auf unseren
-        eigenen Druckern, wird von Hand geprüft und von hier aus verschickt. Keine Sammelbestellung
-        im Ausland, keine Wochen Wartezeit: in der Regel ist dein Druck in 3 bis 5 Werktagen bei dir.
-    </p>
+    <p>{{ 'about.intro' | t }}</p>
 
-    <h2>Von Studenten der ZHAW lanciert</h2>
+    <h2>{{ 'about.originTitle' | t }}</h2>
     <div class="origin">
         <figure class="partner-logo">
             <img src="/zhaw-logo.png" width="480" height="565" loading="lazy"
-                alt="ZHAW Zürcher Hochschule für Angewandte Wissenschaften" />
+                [alt]="'about.zhawAlt' | t" />
         </figure>
-        <p>
-            3DBurg ist aus einem Projekt von Studenten der Zürcher Hochschule für Angewandte Wissenschaften
-            (ZHAW) in Winterthur entstanden. Was als Werkzeug für eigene Prototypen begann, ist heute ein
-            Shop, der ein hochgeladenes Modell in Sekunden mit einem echten Slicer-Durchlauf kalkuliert
-            und zum Festpreis druckt.
-        </p>
+        <p>{{ 'about.originText' | t }}</p>
     </div>
 
-    <h2>Was du bekommst</h2>
+    <h2>{{ 'about.offerTitle' | t }}</h2>
     <ul>
-        <li>Sofortpreis: Druckzeit und Materialverbrauch werden aus deinem Modell berechnet, nicht geschätzt.</li>
-        <li>Materialwahl: PLA matt, Basic und Silk, PETG sowie PCTG transparent, in mehreren Farben.</li>
-        <li>Drei Qualitätsstufen von 0.12 bis 0.24 mm Schichthöhe, automatische Stützstrukturen.</li>
-        <li>Gedruckt auf Bambu Lab A1, kontrolliert und verpackt in Winterthur, Versand in die ganze Schweiz.</li>
+        <li>{{ 'about.offer1' | t }}</li>
+        <li>{{ 'about.offer2' | t }}</li>
+        <li>{{ 'about.offer3' | t }}</li>
+        <li>{{ 'about.offer4' | t }}</li>
     </ul>
 
-    <h2>Kontakt</h2>
+    <h2>{{ 'about.contact' | t }}</h2>
     <address>
         {{ business.shopName }}, {{ business.street }}, {{ business.postalCode }} {{ business.city }}<br />
         <a [href]="'mailto:' + business.email">{{ business.email }}</a>

@@ -1,69 +1,68 @@
 <section class="success-page">
     <header class="success-header">
-        <p class="kicker">BESTELLUNG</p>
-        <h1>{{ orderNumber() || 'Deine Bestellung' }}</h1>
+        <p class="kicker">{{ 'common.kickerOrder' | t }}</p>
+        <h1>{{ orderNumber() || ('success.fallbackTitle' | t) }}</h1>
     </header>
 
     <section class="card" aria-live="polite">
         @switch (state()) {
             @case ('loading') {
-                <p class="status">Bestellung wird geladen...</p>
+                <p class="status">{{ 'success.loading' | t }}</p>
             }
             @case ('waiting') {
-                <p class="status"><span class="spinner" aria-hidden="true"></span> Zahlung wird bestätigt...</p>
-                <p class="note">Das dauert meist nur ein paar Sekunden.</p>
+                <p class="status"><span class="spinner" aria-hidden="true"></span> {{ 'success.confirming' | t }}</p>
+                <p class="note">{{ 'success.confirmingNote' | t }}</p>
             }
             @case ('paid') {
-                <h2>Danke, deine Zahlung ist eingegangen.</h2>
+                <h2>{{ 'success.paidTitle' | t }}</h2>
                 <ol class="next-steps">
-                    <li>Eine Bestätigung mit allen Details geht an <strong>{{ order()?.customerEmail }}</strong>.</li>
-                    <li>Wir prüfen deine Modelle und starten dann den Druck.</li>
+                    <li>{{ 'success.paid1' | t }} <strong>{{ order()?.customerEmail }}</strong>.</li>
+                    <li>{{ 'success.paid2' | t }}</li>
                     <li>
-                        Den Stand siehst du jederzeit unter
-                        <a routerLink="/bestellung" [queryParams]="statusLinkParams()">Meine Bestellung</a>.
+                        {{ 'success.paid3' | t }}
+                        <a routerLink="/bestellung" [queryParams]="statusLinkParams()">{{ 'common.myOrder' | t }}</a>.
                     </li>
                 </ol>
                 @if (accountState() === 'anonymous') {
                     <p class="note">
-                        Mit deiner E-Mail kannst du dich jederzeit
-                        <a routerLink="/konto/anmelden" [queryParams]="{ mode: 'register' }">registrieren</a> und alle
-                        Bestellungen an einem Ort sehen.
+                        {{ 'success.registerStart' | t }}
+                        <a routerLink="/konto/anmelden" [queryParams]="{ mode: 'register' }">{{ 'success.registerLink' | t }}</a>
+                        {{ 'success.registerEnd' | t }}
                     </p>
                 }
             }
             @case ('unpaid') {
-                <h2>Die Zahlung ist noch nicht bestätigt.</h2>
+                <h2>{{ 'success.unpaidTitle' | t }}</h2>
                 <p class="note">
-                    Die Bestätigung des Zahlungsanbieters ist noch nicht da. Das kann ein paar Minuten dauern; sobald sie
-                    eintrifft, bekommst du eine E-Mail an <strong>{{ order()?.customerEmail }}</strong>.
+                    {{ 'success.unpaidNote' | t }} <strong>{{ order()?.customerEmail }}</strong>.
                 </p>
                 @if (order()?.paymentUrl; as url) {
-                    <p class="note">Falls du noch nicht bezahlt hast: <a [href]="url">zur Zahlung</a>.</p>
+                    <p class="note">{{ 'success.unpaidPay' | t }} <a [href]="url">{{ 'success.unpaidPayLink' | t }}</a>.</p>
                 }
             }
             @case ('cancelled') {
-                <h2>Die Zahlung wurde abgebrochen.</h2>
+                <h2>{{ 'success.cancelledTitle' | t }}</h2>
                 <p class="note">
-                    Deine Bestellung ist gespeichert, abgebucht wurde nichts.
+                    {{ 'success.cancelledNote' | t }}
                     @if (priceValidUntil(); as until) {
-                        Der Preis bleibt bis {{ until }} gültig; bis dahin kannst du bezahlen, danach löschen wir die Bestellung.
+                        {{ 'success.cancelledValid' | t:{ date: until } }}
                     }
                 </p>
                 @if (order()?.paymentUrl; as url) {
-                    <a class="order-btn link-btn" [href]="url">Jetzt bezahlen</a>
+                    <a class="order-btn link-btn" [href]="url">{{ 'common.payNow' | t }}</a>
                 }
             }
             @case ('missing') {
-                <h2>Bestellung nicht gefunden.</h2>
+                <h2>{{ 'success.missingTitle' | t }}</h2>
                 <p class="note">
-                    Mit Bestellnummer und E-Mail-Adresse findest du sie unter
-                    <a routerLink="/bestellung">Meine Bestellung</a>.
+                    {{ 'success.missingNote' | t }}
+                    <a routerLink="/bestellung">{{ 'common.myOrder' | t }}</a>.
                 </p>
             }
         }
 
         @if (order(); as o) {
-            <ul class="item-list" aria-label="Positionen">
+            <ul class="item-list" [attr.aria-label]="'checkout.itemsAria' | t">
                 @for (line of items(); track line.position) {
                     <li>
                         <div class="item-line">
@@ -78,16 +77,16 @@
                 }
             </ul>
             <dl class="details">
-                <div><dt>Positionen ({{ items().length }})</dt><dd>{{ o.totals.currency }} {{ o.totals.itemsTotal | number:'1.2-2' }}</dd></div>
-                <div><dt>Versand</dt><dd>{{ o.totals.currency }} {{ o.totals.shipping | number:'1.2-2' }}</dd></div>
-                <div class="total"><dt>Gesamt</dt><dd>{{ o.totals.currency }} {{ o.totals.total | number:'1.2-2' }}</dd></div>
-                <div class="status-row"><dt>Status</dt><dd>{{ statusLabel() }}</dd></div>
+                <div><dt>{{ 'common.positionsCount' | t:{ count: items().length } }}</dt><dd>{{ o.totals.currency }} {{ o.totals.itemsTotal | number:'1.2-2' }}</dd></div>
+                <div><dt>{{ 'common.shipping' | t }}</dt><dd>{{ o.totals.currency }} {{ o.totals.shipping | number:'1.2-2' }}</dd></div>
+                <div class="total"><dt>{{ 'common.total' | t }}</dt><dd>{{ o.totals.currency }} {{ o.totals.total | number:'1.2-2' }}</dd></div>
+                <div class="status-row"><dt>{{ 'success.status' | t }}</dt><dd>{{ statusLabel() }}</dd></div>
             </dl>
             @if (o.vatNote) {
-                <p class="note">Keine MWST, da nicht MWST-pflichtig.</p>
+                <p class="note">{{ 'common.noVat' | t }}</p>
             }
         }
 
-        <a class="order-btn link-btn" routerLink="/upload">Weiteres Modell hochladen</a>
+        <a class="order-btn link-btn" routerLink="/upload">{{ 'common.uploadAnother' | t }}</a>
     </section>
 </section>

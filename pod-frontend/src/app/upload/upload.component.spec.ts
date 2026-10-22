@@ -3,13 +3,14 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { CART_MAX_ITEMS, CartService } from '../cart/cart.service';
+import { translateDe } from '../i18n/i18n.service';
 import { formatPrintDuration } from '../quote/print-duration';
 import { QuoteOptions, QuoteRequestParams, QuoteResponse } from '../quote/quote.models';
 import { QuoteService, UploadEvent } from '../quote/quote.service';
 import {
     PREVIEW_LIMIT_BYTES_3MF,
     QUOTE_DONE_FLASH_MS,
-    REPRICING_FINAL_TEXT,
+    REPRICING_FINAL_KEY,
     SLICING_STEPS,
     UPLOAD_PROGRESS_MIN_BYTES,
     UploadComponent
@@ -249,7 +250,7 @@ describe('UploadComponent', () => {
         expect(host.querySelector('h1')?.textContent).toContain('Preis wird berechnet');
         expect(host.querySelector('.order-card')).toBeNull();
         expect(overlay.textContent).toContain('benchy.stl');
-        expect(overlay.textContent).toContain(SLICING_STEPS[0].text);
+        expect(overlay.textContent).toContain(translateDe(SLICING_STEPS[0].key));
         expect(overlay.textContent).toContain('Wir slicen deine Datei wirklich');
         expect(overlay.getAttribute('aria-live')).toBe('polite');
         expect(overlay.querySelector('.loading-track')?.classList.contains('indeterminate')).toBe(true);
@@ -464,7 +465,7 @@ describe('UploadComponent', () => {
         fixture.detectChanges();
         expect(component.uploadState()).toBe('done');
         expect(component.quotePhase()).toBe('slicing');
-        expect(loadingOverlay()?.textContent).toContain(SLICING_STEPS[0].text);
+        expect(loadingOverlay()?.textContent).toContain(translateDe(SLICING_STEPS[0].key));
         expect(loadingOverlay()!.querySelector('.loading-track')?.classList.contains('indeterminate')).toBe(true);
         expect(loadingOverlay()!.querySelector('.loading-track')?.hasAttribute('aria-valuenow')).toBe(false);
 
@@ -482,7 +483,7 @@ describe('UploadComponent', () => {
         fixture.detectChanges();
         expect(component.uploadState()).toBe('uploading');
         expect(component.quotePhase()).toBe('slicing');
-        expect(loadingOverlay()?.textContent).toContain(SLICING_STEPS[0].text);
+        expect(loadingOverlay()?.textContent).toContain(translateDe(SLICING_STEPS[0].key));
         expect(loadingOverlay()?.textContent).not.toContain('hochgeladen');
         expect(loadingOverlay()!.querySelector('.loading-track')?.classList.contains('indeterminate')).toBe(true);
     });
@@ -636,14 +637,14 @@ describe('UploadComponent', () => {
         component.onDrop(dropEvent(benchy));
         calculate();
         expect(component.quotePhase()).toBe('slicing');
-        expect(text()).toBe(SLICING_STEPS[0].text);
+        expect(text()).toBe(translateDe(SLICING_STEPS[0].key));
 
-        expect(showAfter(1499)).toBe(SLICING_STEPS[0].text);
-        expect(showAfter(1)).toBe(SLICING_STEPS[1].text);
-        expect(showAfter(2000)).toBe(SLICING_STEPS[2].text);
-        expect(showAfter(4500)).toBe(SLICING_STEPS[3].text);
+        expect(showAfter(1499)).toBe(translateDe(SLICING_STEPS[0].key));
+        expect(showAfter(1)).toBe(translateDe(SLICING_STEPS[1].key));
+        expect(showAfter(2000)).toBe(translateDe(SLICING_STEPS[2].key));
+        expect(showAfter(4500)).toBe(translateDe(SLICING_STEPS[3].key));
         // The last stage stays however long the slicer takes.
-        expect(showAfter(30000)).toBe(SLICING_STEPS[3].text);
+        expect(showAfter(30000)).toBe(translateDe(SLICING_STEPS[3].key));
         expect(requestQuote).toHaveBeenCalledTimes(1);
 
         pending.next(quoteFor({ filament: 'PLA', color: 'black', quality: 'medium', quantity: 1 }));
@@ -681,14 +682,14 @@ describe('UploadComponent', () => {
         expect(component.quotePhase()).toBe('repricing');
         expect(loadingOverlay()).not.toBeNull();
         expect(quoteScreen()).toBeNull();
-        expect(text()).toBe(SLICING_STEPS[2].text);
+        expect(text()).toBe(translateDe(SLICING_STEPS[2].key));
 
         vi.advanceTimersByTime(4499);
         fixture.detectChanges();
-        expect(text()).toBe(SLICING_STEPS[2].text);
+        expect(text()).toBe(translateDe(SLICING_STEPS[2].key));
         vi.advanceTimersByTime(1);
         fixture.detectChanges();
-        expect(text()).toBe(REPRICING_FINAL_TEXT);
+        expect(text()).toBe(translateDe(REPRICING_FINAL_KEY));
         expect(requestQuote.mock.calls.some((call) => call[1].quantity === 3)).toBe(true);
     });
 

@@ -1,37 +1,36 @@
 <section class="customer-page">
     <header class="page-header">
-        <p class="kicker">BESTELLUNG</p>
-        <h1>Meine Bestellung</h1>
+        <p class="kicker">{{ 'common.kickerOrder' | t }}</p>
+        <h1>{{ 'common.myOrder' | t }}</h1>
     </header>
 
     @if (formVisible()) {
         <section class="card">
             <p class="intro">
-                Gib Bestellnummer und E-Mail-Adresse ein, wie sie in deiner Bestätigungsmail stehen, und du siehst den
-                Stand deiner Bestellung.
+                {{ 'order.intro' | t }}
             </p>
             <form [formGroup]="form" class="customer-form lookup-form" (ngSubmit)="lookup()" novalidate>
                 <label>
-                    Bestellnummer
-                    <input formControlName="orderNumber" type="text" autocomplete="off" placeholder="z.B. POD-1000" />
+                    {{ 'common.orderNumber' | t }}
+                    <input formControlName="orderNumber" type="text" autocomplete="off" [placeholder]="'order.numberPlaceholder' | t" />
                     @if (form.controls.orderNumber.touched && form.controls.orderNumber.invalid) {
-                        <span class="field-error">Bitte gib deine Bestellnummer ein.</span>
+                        <span class="field-error">{{ 'order.numberError' | t }}</span>
                     }
                 </label>
                 <label>
-                    E-Mail
+                    {{ 'common.email' | t }}
                     <input formControlName="email" type="email" autocomplete="email" />
                     @if (form.controls.email.touched && form.controls.email.invalid) {
-                        <span class="field-error">Bitte gib eine gültige E-Mail-Adresse ein.</span>
+                        <span class="field-error">{{ 'common.validEmail' | t }}</span>
                     }
                 </label>
                 <button type="submit" class="order-btn" [disabled]="state() === 'loading'">
-                    @if (state() === 'loading') { Bestellung wird gesucht... } @else { Bestellung anzeigen }
+                    @if (state() === 'loading') { {{ 'order.searching' | t }} } @else { {{ 'order.show' | t }} }
                 </button>
             </form>
             @if (state() === 'not-found') {
                 <p class="error" role="alert">
-                    Keine Bestellung mit dieser Nummer und E-Mail gefunden. Bitte prüfe beides anhand deiner Bestätigungsmail.
+                    {{ 'order.notFound' | t }}
                 </p>
             } @else if (state() === 'error') {
                 <p class="error" role="alert">{{ errorMessage() }}</p>
@@ -49,21 +48,21 @@
 
             @if (paymentUrl(); as url) {
                 <div class="pay-now">
-                    <p class="note">Die Bestellung ist noch nicht bezahlt. Der Preis ist bis {{ o.quoteExpiresAt | date:'dd.MM.yyyy' }} gültig.</p>
-                    <a class="order-btn link-btn" [href]="url">Jetzt bezahlen</a>
+                    <p class="note">{{ 'order.unpaidNote' | t:{ date: (o.quoteExpiresAt | date:'dd.MM.yyyy') } }}</p>
+                    <a class="order-btn link-btn" [href]="url">{{ 'common.payNow' | t }}</a>
                 </div>
             }
 
-            <h3>Positionen</h3>
+            <h3>{{ 'common.positions' | t }}</h3>
             <div class="table-wrap">
                 <table class="items-table">
                     <thead>
                         <tr>
-                            <th scope="col">Pos.</th>
-                            <th scope="col">Modell</th>
-                            <th scope="col">Konfiguration</th>
-                            <th scope="col" class="num">Menge</th>
-                            <th scope="col" class="num">Betrag</th>
+                            <th scope="col">{{ 'order.col.position' | t }}</th>
+                            <th scope="col">{{ 'order.col.model' | t }}</th>
+                            <th scope="col">{{ 'order.col.config' | t }}</th>
+                            <th scope="col" class="num">{{ 'common.quantity' | t }}</th>
+                            <th scope="col" class="num">{{ 'order.col.amount' | t }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -73,7 +72,7 @@
                                 <td class="file-name">{{ line.fileName }}</td>
                                 <td>
                                     <span class="swatch-dot" [style.background]="line.color.hex" aria-hidden="true"></span>
-                                    {{ line.filament }} {{ line.color.label }} · Qualität {{ qualityLabel(line.quality) }}
+                                    {{ line.filament }} {{ line.color.label }} · {{ 'cart.qualityLine' | t:{ quality: qualityLabel(line.quality) } }}
                                 </td>
                                 <td class="num">{{ line.quantity }}</td>
                                 <td class="num">{{ o.totals.currency }} {{ line.lineTotalChf | number:'1.2-2' }}</td>
@@ -84,33 +83,33 @@
             </div>
 
             <dl class="details">
-                <div><dt>Positionen ({{ o.items.length }})</dt><dd>{{ o.totals.currency }} {{ o.totals.itemsTotal | number:'1.2-2' }}</dd></div>
-                <div><dt>Versand</dt><dd>{{ o.totals.currency }} {{ o.totals.shipping | number:'1.2-2' }}</dd></div>
+                <div><dt>{{ 'common.positionsCount' | t:{ count: o.items.length } }}</dt><dd>{{ o.totals.currency }} {{ o.totals.itemsTotal | number:'1.2-2' }}</dd></div>
+                <div><dt>{{ 'common.shipping' | t }}</dt><dd>{{ o.totals.currency }} {{ o.totals.shipping | number:'1.2-2' }}</dd></div>
                 @if (o.totals.vatAmount > 0) {
-                    <div><dt>MWST ({{ o.totals.vatRate * 100 | number:'1.1-1' }} %)</dt><dd>{{ o.totals.currency }} {{ o.totals.vatAmount | number:'1.2-2' }}</dd></div>
+                    <div><dt>{{ 'order.vat' | t:{ rate: (o.totals.vatRate * 100 | number:'1.1-1') } }}</dt><dd>{{ o.totals.currency }} {{ o.totals.vatAmount | number:'1.2-2' }}</dd></div>
                 }
-                <div class="total"><dt>Gesamt</dt><dd>{{ o.totals.currency }} {{ o.totals.total | number:'1.2-2' }}</dd></div>
+                <div class="total"><dt>{{ 'common.total' | t }}</dt><dd>{{ o.totals.currency }} {{ o.totals.total | number:'1.2-2' }}</dd></div>
             </dl>
             @if (o.vatNote) {
-                <p class="note">Keine MWST, da nicht MWST-pflichtig.</p>
+                <p class="note">{{ 'common.noVat' | t }}</p>
             }
 
-            <h3>Daten</h3>
+            <h3>{{ 'order.dataTitle' | t }}</h3>
             <dl class="details">
-                <div><dt>Bestellt am</dt><dd>{{ o.createdAt | date:'dd.MM.yyyy HH:mm' }}</dd></div>
+                <div><dt>{{ 'order.orderedAt' | t }}</dt><dd>{{ o.createdAt | date:'dd.MM.yyyy HH:mm' }}</dd></div>
                 @if (o.paidAt) {
-                    <div><dt>Bezahlt am</dt><dd>{{ o.paidAt | date:'dd.MM.yyyy HH:mm' }}</dd></div>
+                    <div><dt>{{ 'order.paidAt' | t }}</dt><dd>{{ o.paidAt | date:'dd.MM.yyyy HH:mm' }}</dd></div>
                 }
-                <div><dt>Preis gültig bis</dt><dd>{{ o.quoteExpiresAt | date:'dd.MM.yyyy' }}</dd></div>
-                <div><dt>Kunde</dt><dd>{{ o.customerName }}<br />{{ o.customerEmail }}</dd></div>
+                <div><dt>{{ 'order.validUntil' | t }}</dt><dd>{{ o.quoteExpiresAt | date:'dd.MM.yyyy' }}</dd></div>
+                <div><dt>{{ 'order.customer' | t }}</dt><dd>{{ o.customerName }}<br />{{ o.customerEmail }}</dd></div>
             </dl>
 
             <p class="order-links">
                 @if (isOwnOrder()) {
-                    <a routerLink="/konto">Alle Bestellungen in Mein Konto</a>
+                    <a routerLink="/konto">{{ 'order.allOrders' | t }}</a>
                 }
                 @if (!formVisible()) {
-                    <button type="button" class="text-btn" (click)="showForm()">Andere Bestellung anzeigen</button>
+                    <button type="button" class="text-btn" (click)="showForm()">{{ 'order.other' | t }}</button>
                 }
             </p>
         </section>
