@@ -1,4 +1,4 @@
-/* Segmented switch between the two ways to sign in. */
+/* Segmented switch between signing in and registering. */
 .mode-switch {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -36,4 +36,9 @@
 
 .invalid-token {
     margin: 0 0 1rem;
+}
+
+/* "Passwort vergessen?" sits right under the sign-in form, as a quiet text button. */
+.forgot {
+    margin: 0.9rem 0 0;
 }

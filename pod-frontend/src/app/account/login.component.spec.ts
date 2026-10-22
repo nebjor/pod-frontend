@@ -86,101 +86,76 @@ describe('LoginComponent', () => {
         return Array.from(element().querySelectorAll<HTMLButtonElement>('.mode-switch .mode-btn'));
     }
 
-    it('redeems the token from the mail and continues to the account page', async () => {
-        await setup({ token: 'tok-123' });
+    function submitButton() {
+        return element().querySelector<HTMLButtonElement>('button[type="submit"]');
+    }
 
-        expect(redeemToken).toHaveBeenCalledTimes(1);
-        expect(redeemToken).toHaveBeenCalledWith('tok-123');
-        expect(navigateByUrl).toHaveBeenCalledWith('/konto');
-    });
+    function forgotButton() {
+        return element().querySelector<HTMLButtonElement>('.forgot-btn');
+    }
 
-    it('returns to the page that asked for the login, when it is a path of this app', async () => {
-        await setup({ token: 'tok-123', returnTo: '/checkout' });
-        expect(navigateByUrl).toHaveBeenCalledWith('/checkout');
-    });
+    describe('token from the mail', () => {
+        it('redeems the token and continues to the account page', async () => {
+            await setup({ token: 'tok-123' });
 
-    it('follows the next path from the link in the mail after the redeem', async () => {
-        await setup({ token: 'tok-123', next: '/konto/passwort' });
-        expect(navigateByUrl).toHaveBeenCalledWith('/konto/passwort');
-    });
+            expect(redeemToken).toHaveBeenCalledTimes(1);
+            expect(redeemToken).toHaveBeenCalledWith('tok-123');
+            expect(navigateByUrl).toHaveBeenCalledWith('/konto');
+        });
 
-    it('lets an explicit return target win over the next path', async () => {
-        await setup({ token: 'tok-123', returnTo: '/checkout', next: '/konto/passwort' });
-        expect(navigateByUrl).toHaveBeenCalledWith('/checkout');
-    });
+        it('returns to the page that asked for the login, when it is a path of this app', async () => {
+            await setup({ token: 'tok-123', returnTo: '/checkout' });
+            expect(navigateByUrl).toHaveBeenCalledWith('/checkout');
+        });
 
-    it('ignores a next path on another origin', async () => {
-        await setup({ token: 'tok-123', next: 'https://evil.example/' });
-        expect(navigateByUrl).toHaveBeenCalledWith('/konto');
-    });
+        it('follows the next path from the link in the mail after the redeem', async () => {
+            await setup({ token: 'tok-123', next: '/konto/passwort' });
+            expect(navigateByUrl).toHaveBeenCalledWith('/konto/passwort');
+        });
 
-    it('ignores a return target on another origin', async () => {
-        await setup({ token: 'tok-123', returnTo: '//evil.example/' });
-        expect(navigateByUrl).toHaveBeenCalledWith('/konto');
-    });
+        it('lets an explicit return target win over the next path', async () => {
+            await setup({ token: 'tok-123', returnTo: '/checkout', next: '/konto/passwort' });
+            expect(navigateByUrl).toHaveBeenCalledWith('/checkout');
+        });
 
-    it('uses the return path remembered when the link was requested', async () => {
-        localStorage.setItem(LOGIN_RETURN_TO_STORAGE_KEY, '/checkout');
-        await setup({ token: 'tok-123' });
+        it('ignores a next path on another origin', async () => {
+            await setup({ token: 'tok-123', next: 'https://evil.example/' });
+            expect(navigateByUrl).toHaveBeenCalledWith('/konto');
+        });
 
-        expect(navigateByUrl).toHaveBeenCalledWith('/checkout');
-        expect(localStorage.getItem(LOGIN_RETURN_TO_STORAGE_KEY)).toBeNull();
-    });
+        it('ignores a return target on another origin', async () => {
+            await setup({ token: 'tok-123', returnTo: '//evil.example/' });
+            expect(navigateByUrl).toHaveBeenCalledWith('/konto');
+        });
 
-    it('offers a new link when the token is invalid', async () => {
-        redeemToken.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 400, error: { code: 'invalid-token' } })));
-        await setup({ token: 'expired' });
+        it('uses the return path remembered when the mail was requested', async () => {
+            localStorage.setItem(LOGIN_RETURN_TO_STORAGE_KEY, '/checkout');
+            await setup({ token: 'tok-123' });
 
-        expect(component.state()).toBe('invalid');
-        expect(navigateByUrl).not.toHaveBeenCalled();
-        expect(text()).toContain('ungueltig, abgelaufen oder schon benutzt');
-        expect((fixture.nativeElement as HTMLElement).querySelector('input[type="email"]')).not.toBeNull();
-    });
+            expect(navigateByUrl).toHaveBeenCalledWith('/checkout');
+            expect(localStorage.getItem(LOGIN_RETURN_TO_STORAGE_KEY)).toBeNull();
+        });
 
-    it('sends the login link and says so, without telling whether the address is known', async () => {
-        await setup({});
-        component.form.controls.email.setValue('anna@example.com');
+        it('leaves the remembered path to the password page when the mail link points there', async () => {
+            localStorage.setItem(LOGIN_RETURN_TO_STORAGE_KEY, '/checkout');
+            await setup({ token: 'tok-123', next: '/konto/passwort' });
 
-        component.submit();
-        fixture.detectChanges();
+            expect(navigateByUrl).toHaveBeenCalledWith('/konto/passwort');
+            expect(localStorage.getItem(LOGIN_RETURN_TO_STORAGE_KEY)).toBe('/checkout');
+        });
 
-        expect(requestLoginLink).toHaveBeenCalledWith('anna@example.com');
-        expect(component.state()).toBe('sent');
-        expect(text()).toContain('Dein Anmeldelink ist unterwegs');
-        expect(text()).toContain('anna@example.com');
-        expect(text()).toContain('15 Minuten gueltig');
-        expect(text()).toContain('Spam-Ordner');
-        expect(localStorage.getItem(LOGIN_RETURN_TO_STORAGE_KEY)).toBeNull();
-    });
+        it('offers a new mail in the register mode when the token is invalid', async () => {
+            redeemToken.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 400, error: { code: 'invalid-token' } })));
+            await setup({ token: 'expired' });
 
-    it('remembers where to go back to when the link is requested from the checkout', async () => {
-        await setup({ returnTo: '/checkout' });
-        component.form.controls.email.setValue('anna@example.com');
-
-        component.submit();
-
-        expect(localStorage.getItem(LOGIN_RETURN_TO_STORAGE_KEY)).toBe('/checkout');
-    });
-
-    it('does not send without a valid e-mail address', async () => {
-        await setup({});
-        component.form.controls.email.setValue('not-an-address');
-
-        component.submit();
-
-        expect(requestLoginLink).not.toHaveBeenCalled();
-        expect(component.form.controls.email.touched).toBe(true);
-    });
-
-    it('reports when the link could not be sent', async () => {
-        requestLoginLink.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
-        await setup({});
-        component.form.controls.email.setValue('anna@example.com');
-
-        component.submit();
-
-        expect(component.state()).toBe('form');
-        expect(component.errorMessage()).toContain('nicht erreichbar');
+            expect(component.state()).toBe('invalid');
+            expect(component.mode()).toBe('register');
+            expect(navigateByUrl).not.toHaveBeenCalled();
+            expect(text()).toContain('ungueltig, abgelaufen oder schon benutzt');
+            expect(modeButtons()).toHaveLength(2);
+            expect(element().querySelector('input[type="email"]')).not.toBeNull();
+            expect(element().querySelector('input[type="password"]')).toBeNull();
+        });
     });
 
     it('skips the page for a customer who is signed in already', async () => {
@@ -192,37 +167,25 @@ describe('LoginComponent', () => {
         expect(navigateByUrl).toHaveBeenCalledWith('/checkout');
     });
 
-    describe('password login', () => {
-        it('starts with the mail link and offers the password as the second way', async () => {
+    describe('sign-in with the password (default)', () => {
+        it('opens on the password form with "Registrieren" as the second mode', async () => {
             await setup({});
-
-            const [link, password] = modeButtons();
-            expect(link.textContent?.trim()).toBe('Link per E-Mail');
-            expect(link.getAttribute('aria-pressed')).toBe('true');
-            expect(password.textContent?.trim()).toBe('Passwort');
-            expect(password.getAttribute('aria-pressed')).toBe('false');
-            expect(element().querySelector('input[type="password"]')).toBeNull();
-            expect(element().querySelector('input[type="email"]')).not.toBeNull();
-        });
-
-        it('switches to the password form and keeps the e-mail typed so far', async () => {
-            await setup({});
-            component.form.controls.email.setValue('anna@example.com');
-
-            modeButtons()[1].click();
-            fixture.detectChanges();
 
             expect(component.mode()).toBe('password');
-            expect(component.passwordForm.controls.email.value).toBe('anna@example.com');
-            const password = element().querySelector<HTMLInputElement>('input[type="password"]');
-            expect(password?.getAttribute('autocomplete')).toBe('current-password');
-            expect(element().querySelector<HTMLButtonElement>('button[type="submit"]')?.textContent?.trim()).toBe('Anmelden');
-            expect(modeButtons()[1].getAttribute('aria-pressed')).toBe('true');
+            expect(element().querySelector('h1')?.textContent?.trim()).toBe('Anmelden');
+            const [signIn, register] = modeButtons();
+            expect(signIn.textContent?.trim()).toBe('Anmelden');
+            expect(signIn.getAttribute('aria-pressed')).toBe('true');
+            expect(register.textContent?.trim()).toBe('Registrieren');
+            expect(register.getAttribute('aria-pressed')).toBe('false');
+            expect(element().querySelector('input[type="email"]')).not.toBeNull();
+            expect(element().querySelector<HTMLInputElement>('input[type="password"]')?.getAttribute('autocomplete')).toBe('current-password');
+            expect(submitButton()?.textContent?.trim()).toBe('Anmelden');
+            expect(forgotButton()?.textContent?.trim()).toBe('Passwort vergessen?');
         });
 
         it('signs in with e-mail and password and continues', async () => {
             await setup({ returnTo: '/checkout' });
-            component.switchMode('password');
             component.passwordForm.setValue({ email: 'anna@example.com', password: 'correct horse battery' });
 
             component.submitPassword();
@@ -234,7 +197,6 @@ describe('LoginComponent', () => {
 
         it('lands on the account page by default', async () => {
             await setup({});
-            component.switchMode('password');
             component.passwordForm.setValue({ email: 'anna@example.com', password: 'correct horse battery' });
 
             component.submitPassword();
@@ -244,7 +206,6 @@ describe('LoginComponent', () => {
 
         it('does not sign in without e-mail and password', async () => {
             await setup({});
-            component.switchMode('password');
             component.passwordForm.controls.email.setValue('anna@example.com');
 
             component.submitPassword();
@@ -258,7 +219,6 @@ describe('LoginComponent', () => {
                 throwError(() => new HttpErrorResponse({ status: 401, error: { code: 'invalid-credentials' } }))
             );
             await setup({});
-            component.switchMode('password');
             component.passwordForm.setValue({ email: 'anna@example.com', password: 'wrong' });
 
             component.submitPassword();
@@ -275,40 +235,191 @@ describe('LoginComponent', () => {
         it('reports an unreachable backend on the password form', async () => {
             loginWithPassword.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
             await setup({});
-            component.switchMode('password');
             component.passwordForm.setValue({ email: 'anna@example.com', password: 'correct horse battery' });
 
             component.submitPassword();
 
             expect(component.passwordError()).toContain('nicht erreichbar');
         });
+    });
 
-        it('offers the mail link for a forgotten password and keeps the e-mail', async () => {
+    describe('forgotten password', () => {
+        it('mails the link for the e-mail typed into the sign-in form and says so', async () => {
             await setup({});
-            component.switchMode('password');
             component.passwordForm.controls.email.setValue('anna@example.com');
             component.passwordError.set('E-Mail oder Passwort stimmt nicht.');
             fixture.detectChanges();
 
-            expect(text()).toContain('Passwort vergessen?');
-            const forgot = element().querySelector<HTMLButtonElement>('.note .text-btn');
-            expect(forgot?.textContent?.trim()).toBe('schick dir einen Anmeldelink');
-            forgot?.click();
+            forgotButton()?.click();
             fixture.detectChanges();
 
-            expect(component.mode()).toBe('link');
-            expect(component.form.controls.email.value).toBe('anna@example.com');
+            expect(requestLoginLink).toHaveBeenCalledWith('anna@example.com');
+            expect(component.state()).toBe('resetSent');
             expect(component.passwordError()).toBe('');
+            expect(text()).toContain('Wir haben dir eine E-Mail geschickt.');
+            expect(text()).toContain('Mit dem Link darin legst du ein neues Passwort fest.');
+            expect(text()).toContain('anna@example.com');
+            expect(text()).toContain('15 Minuten gueltig');
+            expect(text()).toContain('Spam-Ordner');
             expect(element().querySelector('input[type="password"]')).toBeNull();
-            expect(element().querySelector<HTMLButtonElement>('button[type="submit"]')?.textContent?.trim()).toBe('Anmeldelink schicken');
         });
 
-        it('shows the link form again when a token turns out invalid', async () => {
-            redeemToken.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 400, error: { code: 'invalid-token' } })));
-            await setup({ token: 'expired' });
+        it('asks for the e-mail first when the field is empty or wrong', async () => {
+            await setup({});
+            component.passwordForm.controls.email.setValue('not-an-address');
 
-            expect(component.mode()).toBe('link');
-            expect(modeButtons()).toHaveLength(2);
+            component.forgotPassword();
+            fixture.detectChanges();
+
+            expect(requestLoginLink).not.toHaveBeenCalled();
+            expect(component.passwordForm.controls.email.touched).toBe(true);
+            expect(component.passwordForm.controls.password.touched).toBe(false);
+            expect(text()).toContain('Bitte gib eine gueltige E-Mail-Adresse ein.');
+        });
+
+        it('remembers where to go back to when asked from the checkout', async () => {
+            await setup({ returnTo: '/checkout' });
+            component.passwordForm.controls.email.setValue('anna@example.com');
+
+            component.forgotPassword();
+
+            expect(localStorage.getItem(LOGIN_RETURN_TO_STORAGE_KEY)).toBe('/checkout');
+        });
+
+        it('comes back to the sign-in form afterwards', async () => {
+            await setup({});
+            component.passwordForm.controls.email.setValue('anna@example.com');
+            component.forgotPassword();
+            fixture.detectChanges();
+
+            element().querySelector<HTMLButtonElement>('.ghost-btn')?.click();
+            fixture.detectChanges();
+
+            expect(component.state()).toBe('form');
+            expect(component.mode()).toBe('password');
+            expect(element().querySelector('input[type="password"]')).not.toBeNull();
+        });
+
+        it('reports when the mail could not be sent', async () => {
+            requestLoginLink.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
+            await setup({});
+            component.passwordForm.controls.email.setValue('anna@example.com');
+
+            component.forgotPassword();
+            fixture.detectChanges();
+
+            expect(component.state()).toBe('form');
+            expect(component.errorMessage()).toContain('nicht erreichbar');
+            expect(element().querySelector('.error[role="alert"]')?.textContent).toContain('nicht erreichbar');
+        });
+    });
+
+    describe('registration', () => {
+        it('switches to the register form and keeps the e-mail typed so far', async () => {
+            await setup({});
+            component.passwordForm.controls.email.setValue('anna@example.com');
+
+            modeButtons()[1].click();
+            fixture.detectChanges();
+
+            expect(component.mode()).toBe('register');
+            expect(element().querySelector('h1')?.textContent?.trim()).toBe('Registrieren');
+            expect(modeButtons()[1].getAttribute('aria-pressed')).toBe('true');
+            expect(modeButtons()[0].getAttribute('aria-pressed')).toBe('false');
+            expect(component.registerForm.controls.email.value).toBe('anna@example.com');
+            expect(element().querySelector('input[type="password"]')).toBeNull();
+            expect(element().querySelectorAll('input[type="email"]')).toHaveLength(1);
+            expect(submitButton()?.textContent?.trim()).toBe('Registrieren');
+            expect(text()).toContain('Du bekommst eine E-Mail mit einem Link. Damit legst du dein Passwort fest und bist angemeldet.');
+            expect(forgotButton()).toBeNull();
+        });
+
+        it('opens in the register mode with ?mode=register', async () => {
+            await setup({ mode: 'register' });
+
+            expect(component.mode()).toBe('register');
+            expect(modeButtons()[1].getAttribute('aria-pressed')).toBe('true');
+            expect(submitButton()?.textContent?.trim()).toBe('Registrieren');
+        });
+
+        it('falls back to the sign-in for any other mode', async () => {
+            await setup({ mode: 'magic' });
+            expect(component.mode()).toBe('password');
+        });
+
+        it('switches back and carries the e-mail along', async () => {
+            await setup({ mode: 'register' });
+            component.registerForm.controls.email.setValue('anna@example.com');
+
+            modeButtons()[0].click();
+            fixture.detectChanges();
+
+            expect(component.mode()).toBe('password');
+            expect(component.passwordForm.controls.email.value).toBe('anna@example.com');
+            expect(element().querySelector('input[type="password"]')).not.toBeNull();
+        });
+
+        it('asks the backend for the mail and tells the customer to check the mailbox', async () => {
+            await setup({ mode: 'register' });
+            component.registerForm.controls.email.setValue('anna@example.com');
+
+            component.submitRegister();
+            fixture.detectChanges();
+
+            expect(requestLoginLink).toHaveBeenCalledWith('anna@example.com');
+            expect(component.state()).toBe('sent');
+            expect(text()).toContain('Schau in dein Postfach');
+            expect(text()).toContain('legst du dein Passwort fest');
+            expect(text()).toContain('anna@example.com');
+            expect(text()).toContain('15 Minuten gueltig');
+            expect(text()).toContain('Spam-Ordner');
+            expect(localStorage.getItem(LOGIN_RETURN_TO_STORAGE_KEY)).toBeNull();
+        });
+
+        it('remembers where to go back to when registering from the checkout', async () => {
+            await setup({ mode: 'register', returnTo: '/checkout' });
+            component.registerForm.controls.email.setValue('anna@example.com');
+
+            component.submitRegister();
+
+            expect(localStorage.getItem(LOGIN_RETURN_TO_STORAGE_KEY)).toBe('/checkout');
+        });
+
+        it('does not send without a valid e-mail address', async () => {
+            await setup({ mode: 'register' });
+            component.registerForm.controls.email.setValue('not-an-address');
+
+            component.submitRegister();
+
+            expect(requestLoginLink).not.toHaveBeenCalled();
+            expect(component.registerForm.controls.email.touched).toBe(true);
+        });
+
+        it('reports when the mail could not be sent', async () => {
+            requestLoginLink.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
+            await setup({ mode: 'register' });
+            component.registerForm.controls.email.setValue('anna@example.com');
+
+            component.submitRegister();
+
+            expect(component.state()).toBe('form');
+            expect(component.errorMessage()).toContain('nicht erreichbar');
+        });
+
+        it('offers another mail from the mailbox hint', async () => {
+            await setup({ mode: 'register' });
+            component.registerForm.controls.email.setValue('anna@example.com');
+            component.submitRegister();
+            fixture.detectChanges();
+
+            const again = element().querySelector<HTMLButtonElement>('.ghost-btn');
+            expect(again?.textContent?.trim()).toBe('Neue E-Mail anfordern');
+            again?.click();
+            fixture.detectChanges();
+
+            expect(component.state()).toBe('form');
+            expect(component.mode()).toBe('register');
+            expect(component.registerForm.controls.email.value).toBe('anna@example.com');
         });
     });
 });

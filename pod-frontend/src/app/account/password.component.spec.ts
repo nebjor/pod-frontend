@@ -3,7 +3,8 @@ import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
-import { AccountResponse, AccountState } from './account.models';
+import { CartService } from '../cart/cart.service';
+import { AccountResponse, AccountState, LOGIN_RETURN_TO_STORAGE_KEY } from './account.models';
 import { AccountService } from './account.service';
 import { PasswordComponent } from './password.component';
 
@@ -24,13 +25,16 @@ describe('PasswordComponent', () => {
     let component: PasswordComponent;
     let state: ReturnType<typeof signal<AccountState>>;
     let account: ReturnType<typeof signal<AccountResponse | null>>;
+    let cartEmpty: ReturnType<typeof signal<boolean>>;
     let setPassword: ReturnType<typeof vi.fn>;
     let removePassword: ReturnType<typeof vi.fn>;
     let navigate: ReturnType<typeof vi.spyOn>;
+    let navigateByUrl: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {
         state = signal<AccountState>('signedIn');
         account = signal<AccountResponse | null>(anna);
+        cartEmpty = signal(true);
         setPassword = vi.fn(() => {
             account.update((current) => (current ? { ...current, hasPassword: true } : current));
             return of(undefined);
@@ -56,10 +60,12 @@ describe('PasswordComponent', () => {
                         setPassword,
                         removePassword
                     }
-                }
+                },
+                { provide: CartService, useValue: { isEmpty: cartEmpty } }
             ]
         }).compileComponents();
         navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+        navigateByUrl = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
         fixture = TestBed.createComponent(PasswordComponent);
         component = fixture.componentInstance;
         fixture.detectChanges();
@@ -84,11 +90,13 @@ describe('PasswordComponent', () => {
         expect(component.pageState()).toBe('loading');
     });
 
-    it('explains that the password is optional and asks for it twice', async () => {
+    afterEach(() => localStorage.clear());
+
+    it('reads as "Passwort festlegen" for a fresh registration and asks for the password twice', async () => {
         await setup();
 
         expect(element().querySelector('h1')?.textContent?.trim()).toBe('Passwort festlegen');
-        expect(text()).toContain('Ein Passwort ist optional');
+        expect(text()).toContain('Mit dem Passwort meldest du dich kuenftig an');
         expect(text()).toContain('Mindestens 10 Zeichen');
         const inputs = element().querySelectorAll<HTMLInputElement>('input[type="password"]');
         expect(inputs).toHaveLength(2);
@@ -122,21 +130,51 @@ describe('PasswordComponent', () => {
         expect(text()).toContain('stimmen nicht ueberein');
     });
 
-    it('saves the password and links back to the account', async () => {
-        await setup();
-        component.form.setValue({ password: 'correct horse battery', confirm: 'correct horse battery' });
+    describe('after the first password is saved', () => {
+        it('goes to the landing page when the cart is empty', async () => {
+            await setup();
+            component.form.setValue({ password: 'correct horse battery', confirm: 'correct horse battery' });
 
-        component.save();
-        fixture.detectChanges();
+            component.save();
+            fixture.detectChanges();
 
-        expect(setPassword).toHaveBeenCalledWith('correct horse battery');
-        expect(component.saved()).toBe(true);
-        expect(text()).toContain('Passwort gespeichert.');
-        expect(element().querySelector('.success a[href="/konto"]')).not.toBeNull();
-        expect(component.form.getRawValue()).toEqual({ password: '', confirm: '' });
-        // The account now has a password, so the page turns into the change page.
-        expect(element().querySelector('h1')?.textContent?.trim()).toBe('Passwort aendern');
-        expect(text()).toContain('Passwort entfernen');
+            expect(setPassword).toHaveBeenCalledWith('correct horse battery');
+            expect(navigateByUrl).toHaveBeenCalledWith('/');
+            expect(component.saved()).toBe(false);
+            expect(component.form.getRawValue()).toEqual({ password: '', confirm: '' });
+        });
+
+        it('goes to the cart when it has items', async () => {
+            cartEmpty.set(false);
+            await setup();
+            component.form.setValue({ password: 'correct horse battery', confirm: 'correct horse battery' });
+
+            component.save();
+
+            expect(navigateByUrl).toHaveBeenCalledWith('/warenkorb');
+        });
+
+        it('goes back to the page that asked for the registration, before anything else', async () => {
+            cartEmpty.set(false);
+            localStorage.setItem(LOGIN_RETURN_TO_STORAGE_KEY, '/checkout');
+            await setup();
+            component.form.setValue({ password: 'correct horse battery', confirm: 'correct horse battery' });
+
+            component.save();
+
+            expect(navigateByUrl).toHaveBeenCalledWith('/checkout');
+            expect(localStorage.getItem(LOGIN_RETURN_TO_STORAGE_KEY)).toBeNull();
+        });
+
+        it('ignores a remembered path on another origin', async () => {
+            localStorage.setItem(LOGIN_RETURN_TO_STORAGE_KEY, 'https://evil.example/');
+            await setup();
+            component.form.setValue({ password: 'correct horse battery', confirm: 'correct horse battery' });
+
+            component.save();
+
+            expect(navigateByUrl).toHaveBeenCalledWith('/');
+        });
     });
 
     it('shows the backend message when it rejects the password', async () => {
@@ -180,6 +218,33 @@ describe('PasswordComponent', () => {
             expect(element().querySelector('.danger-zone')).toBeNull();
         });
 
+        it('saves the new password, stays on the page and links back to the account', async () => {
+            await setup();
+            component.form.setValue({ password: 'correct horse battery', confirm: 'correct horse battery' });
+
+            component.save();
+            fixture.detectChanges();
+
+            expect(setPassword).toHaveBeenCalledWith('correct horse battery');
+            expect(navigateByUrl).not.toHaveBeenCalled();
+            expect(component.saved()).toBe(true);
+            expect(text()).toContain('Passwort gespeichert.');
+            expect(element().querySelector('.success a[href="/konto"]')).not.toBeNull();
+            expect(component.form.getRawValue()).toEqual({ password: '', confirm: '' });
+            expect(element().querySelector('h1')?.textContent?.trim()).toBe('Passwort aendern');
+        });
+
+        it('goes back to the checkout after a forgotten password was replaced from there', async () => {
+            localStorage.setItem(LOGIN_RETURN_TO_STORAGE_KEY, '/checkout');
+            await setup();
+            component.form.setValue({ password: 'correct horse battery', confirm: 'correct horse battery' });
+
+            component.save();
+
+            expect(navigateByUrl).toHaveBeenCalledWith('/checkout');
+            expect(component.saved()).toBe(false);
+        });
+
         it('removes the password only after the confirmation step', async () => {
             await setup();
 
@@ -199,7 +264,7 @@ describe('PasswordComponent', () => {
             expect(removePassword).toHaveBeenCalledTimes(1);
             expect(component.removed()).toBe(true);
             expect(text()).toContain('Passwort entfernt');
-            expect(text()).toContain('weiter per E-Mail-Link');
+            expect(text()).toContain('ab jetzt per E-Mail-Link');
             expect(element().querySelector('.danger-zone')).toBeNull();
             expect(element().querySelector('h1')?.textContent?.trim()).toBe('Passwort festlegen');
             expect(text()).not.toContain('Passwort entfernen');

@@ -11,9 +11,13 @@ import {
     takeLoginReturnPath
 } from './account.service';
 
-type LoginState = 'form' | 'sending' | 'sent' | 'signingIn' | 'redeeming' | 'invalid';
-/** The two ways in: the mail link (default) and the optional password. */
-export type LoginMode = 'link' | 'password';
+/**
+ * `sent` is the mailbox hint after a registration, `resetSent` the one after "Passwort
+ * vergessen?"; both mails carry the same kind of link.
+ */
+type LoginState = 'form' | 'sending' | 'sent' | 'resetSent' | 'signingIn' | 'redeeming' | 'invalid';
+/** The two faces of the page: sign in with the password (default) or register by e-mail. */
+export type LoginMode = 'password' | 'register';
 
 /**
  * How long a login link stays valid, as the page tells the customer. Mirrors the backend's
@@ -24,10 +28,11 @@ export const LOGIN_LINK_MINUTES = 15;
 const EMAIL_VALIDATORS = [Validators.required, Validators.email, Validators.maxLength(254)];
 
 /**
- * Login page. By default the page asks for the e-mail and the backend mails a link back here
- * with `?token=`; opening that link signs the customer in. A customer who set a password can
- * switch to e-mail and password instead. `?returnTo=` (a path of this app) says where to go
- * afterwards, as does `?next=` on the links in the mail; the account page otherwise.
+ * Login page. By default it asks for e-mail and password. "Registrieren" (also reached with
+ * `?mode=register`) and "Passwort vergessen?" both ask the backend for a mail whose link comes
+ * back here with `?token=` and `?next=/konto/passwort`: opening it signs the customer in and
+ * lands on the password page. `?returnTo=` (a path of this app) says where to go afterwards;
+ * the account page otherwise.
  */
 @Component({
     selector: 'app-login',
@@ -46,21 +51,22 @@ export class LoginComponent {
         this.route.queryParamMap.pipe(
             map((params) => ({
                 token: params.get('token') ?? '',
+                mode: (params.get('mode') === 'register' ? 'register' : 'password') as LoginMode,
                 returnTo: safeReturnPath(params.get('returnTo')),
                 next: safeReturnPath(params.get('next'))
             }))
         ),
-        { initialValue: { token: '', returnTo: null, next: null } }
+        { initialValue: { token: '', mode: 'password' as LoginMode, returnTo: null, next: null } }
     );
 
-    readonly form = new FormGroup({
-        email: new FormControl('', { nonNullable: true, validators: EMAIL_VALIDATORS })
-    });
     readonly passwordForm = new FormGroup({
         email: new FormControl('', { nonNullable: true, validators: EMAIL_VALIDATORS }),
         password: new FormControl('', { nonNullable: true, validators: [Validators.required] })
     });
-    readonly mode = signal<LoginMode>('link');
+    readonly registerForm = new FormGroup({
+        email: new FormControl('', { nonNullable: true, validators: EMAIL_VALIDATORS })
+    });
+    readonly mode = signal<LoginMode>('password');
     readonly state = signal<LoginState>('form');
     readonly errorMessage = signal('');
     readonly passwordError = signal('');
@@ -69,17 +75,18 @@ export class LoginComponent {
     readonly returnTo = computed(() => this.query().returnTo);
 
     constructor() {
-        // Cookies and the token in the URL exist in the browser only; the route is prerendered too.
+        // Cookies and the query exist in the browser only; the route is prerendered too.
         afterNextRender(() => this.start());
     }
 
     /** Redeems the token from the mail, or skips the page for a customer who is signed in already. */
     start() {
-        const { token } = this.query();
+        const { token, mode } = this.query();
         if (token) {
             this.redeem(token);
             return;
         }
+        this.mode.set(mode);
         void this.account.load().then(() => {
             if (this.account.isSignedIn()) {
                 this.continueAfterLogin();
@@ -87,53 +94,19 @@ export class LoginComponent {
         });
     }
 
-    /** Switches between link and password; the e-mail typed so far moves along. */
+    /** Switches between sign-in and registration; the e-mail typed so far moves along. */
     switchMode(mode: LoginMode) {
         if (mode === this.mode()) {
             return;
         }
-        const from = mode === 'password' ? this.form : this.passwordForm;
-        const to = mode === 'password' ? this.passwordForm : this.form;
+        const from = mode === 'register' ? this.passwordForm : this.registerForm;
+        const to = mode === 'register' ? this.registerForm : this.passwordForm;
         if (from.controls.email.value) {
             to.controls.email.setValue(from.controls.email.value);
         }
         this.mode.set(mode);
         this.errorMessage.set('');
         this.passwordError.set('');
-    }
-
-    submit() {
-        if (this.state() === 'sending') {
-            return;
-        }
-        if (this.form.invalid) {
-            this.form.markAllAsTouched();
-            return;
-        }
-
-        const email = this.form.controls.email.value.trim();
-        this.state.set('sending');
-        this.errorMessage.set('');
-        // The mail link carries the token only; keep the way back for when it is opened.
-        rememberLoginReturnPath(this.returnTo());
-        this.account
-            .requestLoginLink(email)
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe({
-                next: () => {
-                    this.sentTo.set(email);
-                    this.state.set('sent');
-                },
-                error: (error: unknown) => {
-                    const failure = describeAccountError(error);
-                    this.errorMessage.set(
-                        failure.kind === 'error'
-                            ? failure.message
-                            : 'Der Link konnte nicht verschickt werden. Bitte versuche es noch einmal.'
-                    );
-                    this.state.set('form');
-                }
-            });
     }
 
     submitPassword() {
@@ -168,10 +141,59 @@ export class LoginComponent {
             });
     }
 
-    /** Back to the form, to ask for another link. */
+    /** "Registrieren": mails the link that sets the password; needs only the e-mail. */
+    submitRegister() {
+        if (this.registerForm.invalid) {
+            this.registerForm.markAllAsTouched();
+            return;
+        }
+        this.sendLink(this.registerForm.controls.email, 'sent');
+    }
+
+    /** "Passwort vergessen?": the same mail, for the e-mail typed into the sign-in form. */
+    forgotPassword() {
+        const email = this.passwordForm.controls.email;
+        if (email.invalid) {
+            email.markAsTouched();
+            return;
+        }
+        this.passwordError.set('');
+        this.sendLink(email, 'resetSent');
+    }
+
+    /** Back to the form, to ask for another mail. */
     reset() {
         this.state.set('form');
         this.errorMessage.set('');
+    }
+
+    private sendLink(control: FormControl<string>, sentState: 'sent' | 'resetSent') {
+        if (this.state() === 'sending') {
+            return;
+        }
+        const email = control.value.trim();
+        this.state.set('sending');
+        this.errorMessage.set('');
+        // The mail link carries the token only; keep the way back for when it is opened.
+        rememberLoginReturnPath(this.returnTo());
+        this.account
+            .requestLoginLink(email)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: () => {
+                    this.sentTo.set(email);
+                    this.state.set(sentState);
+                },
+                error: (error: unknown) => {
+                    const failure = describeAccountError(error);
+                    this.errorMessage.set(
+                        failure.kind === 'error'
+                            ? failure.message
+                            : 'Die E-Mail konnte nicht verschickt werden. Bitte versuche es noch einmal.'
+                    );
+                    this.state.set('form');
+                }
+            });
     }
 
     private redeem(token: string) {
@@ -186,9 +208,9 @@ export class LoginComponent {
                     this.errorMessage.set(
                         failure.kind === 'error'
                             ? failure.message
-                            : 'Dieser Anmeldelink ist ungueltig, abgelaufen oder schon benutzt. Fordere unten einen neuen an.'
+                            : 'Dieser Link ist ungueltig, abgelaufen oder schon benutzt. Fordere unten einen neuen an.'
                     );
-                    this.mode.set('link');
+                    this.mode.set('register');
                     this.state.set('invalid');
                 }
             });
@@ -196,11 +218,16 @@ export class LoginComponent {
 
     /**
      * `returnTo` on the page wins, then `next` from the link in the mail, then the path the
-     * checkout left behind when the link was requested.
+     * checkout left behind when the mail was requested. When `next` wins, the remembered path
+     * stays put: the password page the mail links to picks it up once the password is saved.
      */
     private continueAfterLogin() {
         const { returnTo, next } = this.query();
-        const remembered = takeLoginReturnPath();
-        void this.router.navigateByUrl(returnTo ?? next ?? remembered ?? '/konto');
+        if (returnTo) {
+            takeLoginReturnPath();
+            void this.router.navigateByUrl(returnTo);
+            return;
+        }
+        void this.router.navigateByUrl(next ?? takeLoginReturnPath() ?? '/konto');
     }
 }
