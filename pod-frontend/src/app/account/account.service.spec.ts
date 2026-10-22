@@ -94,6 +94,74 @@ describe('AccountService', () => {
         expect(service.account()?.email).toBe('anna@example.com');
     });
 
+    it('signs in with e-mail and password', () => {
+        const received = vi.fn();
+        service.loginWithPassword('anna@example.com', 'correct horse battery').subscribe(received);
+
+        const request = http.expectOne(`${ACCOUNT_API_URL}/sessions/password`);
+        expect(request.request.method).toBe('POST');
+        expect(request.request.body).toEqual({ email: 'anna@example.com', password: 'correct horse battery' });
+        request.flush({ ...anna, hasPassword: true });
+
+        expect(received).toHaveBeenCalledWith({ ...anna, hasPassword: true });
+        expect(service.state()).toBe('signedIn');
+        expect(service.account()?.hasPassword).toBe(true);
+    });
+
+    it('stays anonymous when e-mail or password is wrong', () => {
+        const failed = vi.fn();
+        service.loginWithPassword('anna@example.com', 'wrong').subscribe({ error: failed });
+
+        http.expectOne(`${ACCOUNT_API_URL}/sessions/password`).flush({ code: 'invalid-credentials' }, { status: 401, statusText: 'Unauthorized' });
+
+        expect(failed).toHaveBeenCalled();
+        expect(describeAccountError(failed.mock.calls[0][0])).toEqual({ kind: 'invalid-credentials' });
+        expect(service.state()).toBe('unknown');
+        expect(service.account()).toBeNull();
+    });
+
+    it('sets the password and notes it on the account', () => {
+        service.redeemToken('tok-123').subscribe();
+        http.expectOne(`${ACCOUNT_API_URL}/sessions`).flush({ ...anna, hasPassword: false });
+        const done = vi.fn();
+
+        service.setPassword('correct horse battery').subscribe({ complete: done });
+        const request = http.expectOne(`${ACCOUNT_API_URL}/password`);
+        expect(request.request.method).toBe('PUT');
+        expect(request.request.body).toEqual({ password: 'correct horse battery' });
+        request.flush(null, { status: 204, statusText: 'No Content' });
+
+        expect(done).toHaveBeenCalled();
+        expect(service.account()?.hasPassword).toBe(true);
+        expect(service.state()).toBe('signedIn');
+    });
+
+    it('removes the password and notes it on the account', () => {
+        service.redeemToken('tok-123').subscribe();
+        http.expectOne(`${ACCOUNT_API_URL}/sessions`).flush({ ...anna, hasPassword: true });
+
+        service.removePassword().subscribe();
+        const request = http.expectOne(`${ACCOUNT_API_URL}/password`);
+        expect(request.request.method).toBe('DELETE');
+        request.flush(null, { status: 204, statusText: 'No Content' });
+
+        expect(service.account()?.hasPassword).toBe(false);
+        expect(service.state()).toBe('signedIn');
+    });
+
+    it('forgets the account when setting the password finds the session expired', () => {
+        service.redeemToken('tok-123').subscribe();
+        http.expectOne(`${ACCOUNT_API_URL}/sessions`).flush(anna);
+        const failed = vi.fn();
+
+        service.setPassword('correct horse battery').subscribe({ error: failed });
+        http.expectOne(`${ACCOUNT_API_URL}/password`).flush({ code: 'not-logged-in' }, { status: 401, statusText: 'Unauthorized' });
+
+        expect(failed).toHaveBeenCalled();
+        expect(service.state()).toBe('anonymous');
+        expect(service.account()).toBeNull();
+    });
+
     it('saves the address and takes over what the backend answers', () => {
         const address = { name: 'Anna Muster', street: 'Seestrasse 2', postalCode: '8002', city: 'Zuerich', country: 'CH' };
         service.update(address).subscribe();
@@ -161,6 +229,11 @@ describe('describeAccountError', () => {
     it('recognises an invalid login token', () => {
         const error = new HttpErrorResponse({ status: 400, error: { code: 'invalid-token' } });
         expect(describeAccountError(error)).toEqual({ kind: 'invalid-token' });
+    });
+
+    it('recognises wrong credentials and keeps the other 401 generic', () => {
+        expect(describeAccountError(new HttpErrorResponse({ status: 401, error: { code: 'invalid-credentials' } }))).toEqual({ kind: 'invalid-credentials' });
+        expect(describeAccountError(new HttpErrorResponse({ status: 401, error: { code: 'not-logged-in' } }))).toMatchObject({ kind: 'error', message: expect.stringContaining('nicht mehr angemeldet') });
     });
 
     it('hands field errors on', () => {
