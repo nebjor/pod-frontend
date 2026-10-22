@@ -6,17 +6,16 @@ import { Router, RouterLink } from '@angular/router';
 import { orderStatusLabel } from '../order/order-status-labels';
 import { FALLBACK_ORDER_SETTINGS, OrderResponse, OrderSettings } from '../order/order.models';
 import { OrderService } from '../order/order.service';
-import { AccountResponse } from './account.models';
+import { AccountResponse, LOGIN_PATH, PASSWORD_PATH } from './account.models';
 import { AccountService, describeAccountError } from './account.service';
 
 type PageState = 'loading' | 'ready' | 'deleted';
 type OrdersState = 'loading' | 'ready' | 'error';
 
-export const LOGIN_PATH = '/konto/anmelden';
-
 /**
- * "Mein Konto": the customer's orders, the saved delivery address, logout and deletion. Only
- * for a signed-in customer; anyone else is sent to the login page once the session is known.
+ * "Mein Konto": the customer's orders, the saved delivery address, how the login works, logout
+ * and deletion. Only for a signed-in customer; anyone else is sent to the login page once the
+ * session is known.
  */
 @Component({
     selector: 'app-account',
@@ -32,6 +31,8 @@ export class AccountComponent {
     private readonly destroyRef = inject(DestroyRef);
 
     readonly customer = this.account.account;
+    readonly hasPassword = computed(() => this.customer()?.hasPassword === true);
+    readonly passwordPath = PASSWORD_PATH;
     readonly pageState = signal<PageState>('loading');
     readonly ordersState = signal<OrdersState>('loading');
     readonly settings = signal<OrderSettings>(FALLBACK_ORDER_SETTINGS);

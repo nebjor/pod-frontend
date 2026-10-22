@@ -1,0 +1,221 @@
+import { HttpErrorResponse } from '@angular/common/http';
+import { computed, signal } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Router, provideRouter } from '@angular/router';
+import { of, throwError } from 'rxjs';
+import { AccountResponse, AccountState } from './account.models';
+import { AccountService } from './account.service';
+import { PasswordComponent } from './password.component';
+
+const anna: AccountResponse = {
+    email: 'anna@example.com',
+    name: 'Anna Muster',
+    street: 'Bahnhofstrasse 1',
+    postalCode: '8001',
+    city: 'Zuerich',
+    country: 'CH',
+    createdAt: '2026-10-01T09:00:00Z',
+    lastLoginAt: '2026-10-20T09:00:00Z',
+    hasPassword: false
+};
+
+describe('PasswordComponent', () => {
+    let fixture: ComponentFixture<PasswordComponent>;
+    let component: PasswordComponent;
+    let state: ReturnType<typeof signal<AccountState>>;
+    let account: ReturnType<typeof signal<AccountResponse | null>>;
+    let setPassword: ReturnType<typeof vi.fn>;
+    let removePassword: ReturnType<typeof vi.fn>;
+    let navigate: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+        state = signal<AccountState>('signedIn');
+        account = signal<AccountResponse | null>(anna);
+        setPassword = vi.fn(() => {
+            account.update((current) => (current ? { ...current, hasPassword: true } : current));
+            return of(undefined);
+        });
+        removePassword = vi.fn(() => {
+            account.update((current) => (current ? { ...current, hasPassword: false } : current));
+            return of(undefined);
+        });
+    });
+
+    async function setup() {
+        await TestBed.configureTestingModule({
+            imports: [PasswordComponent],
+            providers: [
+                provideRouter([]),
+                {
+                    provide: AccountService,
+                    useValue: {
+                        state,
+                        account,
+                        isSignedIn: computed(() => state() === 'signedIn'),
+                        load: vi.fn(() => Promise.resolve()),
+                        setPassword,
+                        removePassword
+                    }
+                }
+            ]
+        }).compileComponents();
+        navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+        fixture = TestBed.createComponent(PasswordComponent);
+        component = fixture.componentInstance;
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+    }
+
+    function element() {
+        return fixture.nativeElement as HTMLElement;
+    }
+
+    function text() {
+        return element().textContent ?? '';
+    }
+
+    it('sends an anonymous visitor to the login page and brings them back afterwards', async () => {
+        state.set('anonymous');
+        account.set(null);
+        await setup();
+
+        expect(navigate).toHaveBeenCalledWith(['/konto/anmelden'], { queryParams: { returnTo: '/konto/passwort' } });
+        expect(component.pageState()).toBe('loading');
+    });
+
+    it('explains that the password is optional and asks for it twice', async () => {
+        await setup();
+
+        expect(element().querySelector('h1')?.textContent?.trim()).toBe('Passwort festlegen');
+        expect(text()).toContain('Ein Passwort ist optional');
+        expect(text()).toContain('Mindestens 10 Zeichen');
+        const inputs = element().querySelectorAll<HTMLInputElement>('input[type="password"]');
+        expect(inputs).toHaveLength(2);
+        expect(inputs[0].getAttribute('autocomplete')).toBe('new-password');
+        expect(inputs[1].getAttribute('autocomplete')).toBe('new-password');
+        expect(element().querySelector<HTMLButtonElement>('button[type="submit"]')?.textContent?.trim()).toBe('Passwort speichern');
+        expect(text()).not.toContain('Passwort entfernen');
+        expect(element().querySelector('.page-footer a[href="/konto"]')).not.toBeNull();
+    });
+
+    it('refuses a password shorter than ten characters', async () => {
+        await setup();
+        component.form.setValue({ password: 'short', confirm: 'short' });
+
+        component.save();
+        fixture.detectChanges();
+
+        expect(setPassword).not.toHaveBeenCalled();
+        expect(text()).toContain('mindestens 10 Zeichen');
+    });
+
+    it('refuses two passwords that differ', async () => {
+        await setup();
+        component.form.setValue({ password: 'correct horse battery', confirm: 'correct horse batterie' });
+
+        component.save();
+        fixture.detectChanges();
+
+        expect(setPassword).not.toHaveBeenCalled();
+        expect(component.form.hasError('mismatch')).toBe(true);
+        expect(text()).toContain('stimmen nicht ueberein');
+    });
+
+    it('saves the password and links back to the account', async () => {
+        await setup();
+        component.form.setValue({ password: 'correct horse battery', confirm: 'correct horse battery' });
+
+        component.save();
+        fixture.detectChanges();
+
+        expect(setPassword).toHaveBeenCalledWith('correct horse battery');
+        expect(component.saved()).toBe(true);
+        expect(text()).toContain('Passwort gespeichert.');
+        expect(element().querySelector('.success a[href="/konto"]')).not.toBeNull();
+        expect(component.form.getRawValue()).toEqual({ password: '', confirm: '' });
+        // The account now has a password, so the page turns into the change page.
+        expect(element().querySelector('h1')?.textContent?.trim()).toBe('Passwort aendern');
+        expect(text()).toContain('Passwort entfernen');
+    });
+
+    it('shows the backend message when it rejects the password', async () => {
+        setPassword.mockReturnValue(
+            throwError(() => new HttpErrorResponse({ status: 400, error: { errors: { password: 'must be at most 128 characters' } } }))
+        );
+        await setup();
+        component.form.setValue({ password: 'correct horse battery', confirm: 'correct horse battery' });
+
+        component.save();
+        fixture.detectChanges();
+
+        expect(component.fieldError()).toBe('must be at most 128 characters');
+        expect(text()).toContain('must be at most 128 characters');
+        expect(component.saved()).toBe(false);
+    });
+
+    it('goes to the login when the session has expired meanwhile', async () => {
+        setPassword.mockImplementation(() => {
+            account.set(null);
+            state.set('anonymous');
+            return throwError(() => new HttpErrorResponse({ status: 401, error: { code: 'not-logged-in' } }));
+        });
+        await setup();
+        component.form.setValue({ password: 'correct horse battery', confirm: 'correct horse battery' });
+
+        component.save();
+
+        expect(navigate).toHaveBeenCalledWith(['/konto/anmelden'], { queryParams: { returnTo: '/konto/passwort' } });
+    });
+
+    describe('with a password set', () => {
+        beforeEach(() => account.set({ ...anna, hasPassword: true }));
+
+        it('reads as the change page and offers to remove the password', async () => {
+            await setup();
+
+            expect(element().querySelector('h1')?.textContent?.trim()).toBe('Passwort aendern');
+            const trigger = element().querySelector<HTMLButtonElement>('.page-footer .text-btn');
+            expect(trigger?.textContent?.trim()).toBe('Passwort entfernen');
+            expect(element().querySelector('.danger-zone')).toBeNull();
+        });
+
+        it('removes the password only after the confirmation step', async () => {
+            await setup();
+
+            component.askRemove();
+            fixture.detectChanges();
+            expect(removePassword).not.toHaveBeenCalled();
+            const confirmation = element().querySelector('.danger-zone')?.textContent ?? '';
+            expect(confirmation).toContain('nur noch mit dem Link per E-Mail');
+
+            component.cancelRemove();
+            expect(component.confirmingRemove()).toBe(false);
+
+            component.askRemove();
+            component.confirmRemove();
+            fixture.detectChanges();
+
+            expect(removePassword).toHaveBeenCalledTimes(1);
+            expect(component.removed()).toBe(true);
+            expect(text()).toContain('Passwort entfernt');
+            expect(text()).toContain('weiter per E-Mail-Link');
+            expect(element().querySelector('.danger-zone')).toBeNull();
+            expect(element().querySelector('h1')?.textContent?.trim()).toBe('Passwort festlegen');
+            expect(text()).not.toContain('Passwort entfernen');
+        });
+
+        it('reports when removing did not work and keeps the password', async () => {
+            removePassword.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 503, error: { detail: 'Kurz nicht verfuegbar' } })));
+            await setup();
+
+            component.askRemove();
+            component.confirmRemove();
+            fixture.detectChanges();
+
+            expect(component.removeError()).toBe('Kurz nicht verfuegbar');
+            expect(component.hasPassword()).toBe(true);
+            expect(element().querySelector('.danger-zone .error')?.textContent).toContain('Kurz nicht verfuegbar');
+        });
+    });
+});

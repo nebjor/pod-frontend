@@ -201,6 +201,27 @@ describe('AccountComponent', () => {
         expect(element().textContent).toContain('must be a Swiss postal code');
     });
 
+    it('shows the mail link as the way in and offers to set a password', async () => {
+        await setup();
+
+        const section = element().querySelector('.login-method');
+        expect(section?.querySelector('h2')?.textContent?.trim()).toBe('Anmeldung');
+        expect(section?.textContent).toContain('Anmeldung per E-Mail-Link');
+        expect(section?.textContent).not.toContain('Passwort gesetzt');
+        const link = section?.querySelector<HTMLAnchorElement>('a[href="/konto/passwort"]');
+        expect(link?.textContent?.trim()).toBe('Passwort festlegen');
+    });
+
+    it('shows that a password is set and offers to change it', async () => {
+        account.set({ ...anna, hasPassword: true });
+        await setup();
+
+        const section = element().querySelector('.login-method');
+        expect(section?.textContent).toContain('Passwort gesetzt');
+        expect(section?.textContent).toContain('Anmeldelink per E-Mail funktioniert weiterhin');
+        expect(section?.querySelector<HTMLAnchorElement>('a[href="/konto/passwort"]')?.textContent?.trim()).toBe('Passwort aendern');
+    });
+
     it('logs out and goes to the start page', async () => {
         await setup();
 
