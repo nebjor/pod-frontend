@@ -8,7 +8,7 @@ import { AccountService } from '../account/account.service';
 import { CartItem, CartService } from '../cart/cart.service';
 import { I18nService } from '../i18n/i18n.service';
 import { BUSINESS } from '../legal/business';
-import { FALLBACK_ORDER_SETTINGS, OrderFailure, OrderRequest, OrderResponse, OrderSettings } from '../order/order.models';
+import { FALLBACK_ORDER_SETTINGS, OrderFailure, OrderRequest, OrderResponse, OrderSettings, setupFeeFor } from '../order/order.models';
 import { OrderService, describeOrderError, rememberLastOrder } from '../order/order.service';
 import { formatPrintDuration } from '../quote/print-duration';
 import { TranslatePipe } from '../i18n/translate.pipe';
@@ -62,7 +62,8 @@ export class CheckoutComponent {
     readonly itemsTotal = this.cart.itemsTotal;
     readonly currency = this.cart.currency;
     readonly shipping = computed(() => this.settings().shippingFlatChf);
-    readonly total = computed(() => Math.round((this.itemsTotal() + this.shipping()) * 100) / 100);
+    readonly setupFee = computed(() => setupFeeFor(this.settings(), this.account.isSignedIn()));
+    readonly total = computed(() => Math.round((this.itemsTotal() + this.setupFee() + this.shipping()) * 100) / 100);
     /** Calendar day until which the placed order keeps its price, as dd.mm.yyyy (timezone-neutral). */
     readonly priceValidUntil = computed(() => {
         const iso = this.order()?.quoteExpiresAt;

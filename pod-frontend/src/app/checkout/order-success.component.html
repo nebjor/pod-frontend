@@ -78,6 +78,7 @@
             </ul>
             <dl class="details">
                 <div><dt>{{ 'common.positionsCount' | t:{ count: items().length } }}</dt><dd>{{ o.totals.currency }} {{ o.totals.itemsTotal | number:'1.2-2' }}</dd></div>
+                <div><dt>{{ 'common.setupFee' | t }}</dt><dd>{{ o.totals.currency }} {{ o.totals.setupFee | number:'1.2-2' }}</dd></div>
                 <div><dt>{{ 'common.shipping' | t }}</dt><dd>{{ o.totals.currency }} {{ o.totals.shipping | number:'1.2-2' }}</dd></div>
                 <div class="total"><dt>{{ 'common.total' | t }}</dt><dd>{{ o.totals.currency }} {{ o.totals.total | number:'1.2-2' }}</dd></div>
                 <div class="status-row"><dt>{{ 'success.status' | t }}</dt><dd>{{ statusLabel() }}</dd></div>

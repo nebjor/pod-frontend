@@ -30,7 +30,7 @@ const older: OrderResponse = {
     customerName: 'Anna Muster',
     customerEmail: 'anna@example.com',
     items: [],
-    totals: { itemsTotal: 17.85, shipping: 9, vatRate: 0, vatAmount: 0, total: 26.85, currency: 'CHF' },
+    totals: { itemsTotal: 7.85, setupFee: 5, shipping: 9, vatRate: 0, vatAmount: 0, total: 21.85, currency: 'CHF' },
     vatNote: null
 };
 
@@ -39,7 +39,7 @@ const newer: OrderResponse = {
     orderNumber: 'POD-1001',
     status: 'PAID',
     createdAt: '2026-10-19T09:00:00Z',
-    totals: { ...older.totals, itemsTotal: 11, total: 20 }
+    totals: { ...older.totals, itemsTotal: 6, total: 20 }
 };
 
 describe('AccountComponent', () => {

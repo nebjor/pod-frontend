@@ -500,7 +500,6 @@ export interface components {
             quality: string;
             /** Format: int32 */
             quantity: number;
-            setupFeeChf: number;
             unitPriceChf: number;
             /** @description Slicer warnings about the model, as the slicer printed them */
             warnings: string[];
@@ -719,7 +718,7 @@ export interface components {
             /** @description Material of the whole line, all copies of this item */
             filamentGrams: number;
             fileName: string;
-            /** @description setupFeeChf + unitPriceChf x quantity */
+            /** @description unitPriceChf x quantity */
             lineTotalChf: number;
             /**
              * Format: int32
@@ -734,13 +733,11 @@ export interface components {
             quality: string;
             /** Format: int32 */
             quantity: number;
-            /** @description Charged once per item */
-            setupFeeChf: number;
             unitPriceChf: number;
         };
         OrderRequest: {
             customer: components["schemas"]["CustomerDetails"];
-            /** @description The items total the customer saw: the sum of the item quotes' totalPriceChf, shipping excluded. Optional; when present and different from the recomputed items total the order is refused with 409 price-changed. */
+            /** @description The items total the customer saw: the sum of the item quotes' totalPriceChf (unit price x quantity), setup fee and shipping excluded. Optional; when present and different from the recomputed items total the order is refused with 409 price-changed. */
             expectedTotalChf?: number | null;
             items: components["schemas"]["OrderItemRequest"][];
         };
@@ -765,6 +762,8 @@ export interface components {
             currency: string;
             /** Format: int32 */
             quoteValidityDays: number;
+            setupFeeAccountChf: number;
+            setupFeeChf: number;
             shippingFlatChf: number;
             shipToCountries: string[];
             vatEnabled: boolean;
@@ -773,6 +772,7 @@ export interface components {
         OrderTotals: {
             currency: string;
             itemsTotal: number;
+            setupFee: number;
             shipping: number;
             total: number;
             vatAmount: number;
@@ -835,8 +835,6 @@ export interface components {
             quality: string;
             /** Format: int32 */
             quantity: number;
-            /** Format: double */
-            setupFeeChf: number;
             /** Format: double */
             totalFilamentGrams: number;
             /** Format: double */

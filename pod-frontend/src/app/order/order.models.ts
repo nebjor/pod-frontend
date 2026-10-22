@@ -20,11 +20,18 @@ export type OrderResponse = Schemas['OrderResponse'];
 export const FALLBACK_ORDER_SETTINGS: OrderSettings = {
     currency: 'CHF',
     shippingFlatChf: 9,
+    setupFeeChf: 5,
+    setupFeeAccountChf: 3,
     vatEnabled: false,
     vatRate: 0.081,
     quoteValidityDays: 14,
     shipToCountries: ['CH']
 };
+
+/** The setup fee is charged once per order; a signed-in customer pays the reduced one. */
+export function setupFeeFor(settings: OrderSettings, signedIn: boolean): number {
+    return signedIn ? settings.setupFeeAccountChf : settings.setupFeeChf;
+}
 
 /** Remembered in sessionStorage between checkout, payment page and success page. */
 export interface LastOrderReference {

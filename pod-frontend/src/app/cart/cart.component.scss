@@ -297,3 +297,8 @@
     color: var(--text-100);
     font-weight: 700;
 }
+
+.account-hint a {
+    color: inherit;
+    text-decoration: underline;
+}

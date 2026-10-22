@@ -34,8 +34,7 @@
                             </p>
                             <p class="meta">
                                 {{ 'cart.printTime' | t:{ time: printTimeLabel(item) } }} ·
-                                <strong class="lead-time">{{ 'cart.leadTime' | t:{ days: item.quote.leadTimeDays } }}</strong> ·
-                                {{ 'cart.setup' | t:{ fee: item.quote.currency + ' ' + (item.quote.setupFeeChf | number:'1.2-2') } }}
+                                <strong class="lead-time">{{ 'cart.leadTime' | t:{ days: item.quote.leadTimeDays } }}</strong>
                             </p>
                         </div>
 
@@ -70,9 +69,15 @@
                 <h2>{{ 'cart.summary' | t }}</h2>
                 <dl class="details">
                     <div><dt>{{ 'common.positionsCount' | t:{ count: items().length } }}</dt><dd>{{ currency() }} {{ itemsTotal() | number:'1.2-2' }}</dd></div>
+                    <div><dt>{{ 'common.setupFee' | t }}</dt><dd>{{ currency() }} {{ setupFee() | number:'1.2-2' }}</dd></div>
                     <div><dt>{{ 'common.shippingFlat' | t }}</dt><dd>{{ currency() }} {{ shipping() | number:'1.2-2' }}</dd></div>
                     <div class="total"><dt>{{ 'common.total' | t }}</dt><dd>{{ currency() }} {{ total() | number:'1.2-2' }}</dd></div>
                 </dl>
+                @if (!isSignedIn()) {
+                    <p class="note account-hint">
+                        <a routerLink="/konto/anmelden">{{ 'cart.accountFeeHint' | t:{ fee: currency() + ' ' + (accountSetupFee() | number:'1.2-2') } }}</a>
+                    </p>
+                }
                 @if (!settings().vatEnabled) {
                     <p class="note">{{ 'common.noVat' | t }}</p>
                 }

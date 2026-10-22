@@ -28,9 +28,8 @@ const quote: QuoteResponse = {
     triangleCount: 225154,
     machineCostChf: 5,
     materialCostChf: 0.8,
-    setupFeeChf: 5,
     unitPriceChf: 3,
-    totalPriceChf: 11,
+    totalPriceChf: 6,
     currency: 'CHF',
     leadTimeDays: 3,
     warnings: [],
@@ -101,7 +100,7 @@ describe('HeaderComponent', () => {
 
     it('shows pieces and total once something is in the cart, linking to the cart page', async () => {
         cart.add(item('benchy.stl', 2, 11));
-        cart.add(item('cube.stl', 1, 6.85));
+        cart.add(item('cube.stl', 1, 1.85));
         await fixture.whenStable();
 
         const link = cartLink();
@@ -109,8 +108,8 @@ describe('HeaderComponent', () => {
         expect(link?.getAttribute('href')).toBe('/warenkorb');
         expect(link?.querySelector('.cart-count')?.textContent?.trim()).toBe('3');
         expect(link?.querySelector('.cart-count')?.classList.contains('empty')).toBe(false);
-        expect(link?.querySelector('.cart-total')?.textContent).toContain('CHF 17.85');
-        expect(link?.getAttribute('aria-label')).toBe('Warenkorb: 3 Stück, CHF 17.85');
+        expect(link?.querySelector('.cart-total')?.textContent).toContain('CHF 12.85');
+        expect(link?.getAttribute('aria-label')).toBe('Warenkorb: 3 Stück, CHF 12.85');
     });
 
     it('puts the language switcher left of the account link, ahead of the cart and the upload button', async () => {
@@ -271,7 +270,7 @@ describe('HeaderComponent', () => {
             expect((rows[0].querySelector('.swatch-dot') as HTMLElement).style.background).toContain('rgb(31, 31, 31)');
             expect(open?.querySelector('.preview-more')).toBeNull();
             expect(open?.querySelector('.preview-subtotal')?.textContent).toContain('Zwischensumme');
-            expect(open?.querySelector('.preview-subtotal')?.textContent).toContain('zzgl. Versand');
+            expect(open?.querySelector('.preview-subtotal')?.textContent).toContain('zzgl. Einrichtung und Versand');
             expect(open?.querySelector('.preview-subtotal strong')?.textContent).toContain('CHF 30.00');
 
             const buttons = open?.querySelectorAll<HTMLAnchorElement>('.preview-btn') ?? [];

@@ -26,7 +26,6 @@ const quote: QuoteResponse = {
     triangleCount: 225154,
     machineCostChf: 2.5,
     materialCostChf: 0.4,
-    setupFeeChf: 5,
     unitPriceChf: 3,
     totalPriceChf: 8,
     currency: 'CHF',
