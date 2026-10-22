@@ -19,6 +19,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/account/cart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["cart"];
+        put: operations["replace"];
+        post?: never;
+        delete: operations["clear"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/account/cart/{id}/model": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["registerModel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/account/login-links": {
         parameters: {
             query?: never;
@@ -51,6 +83,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/account/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["setPassword"];
+        post?: never;
+        delete: operations["removePassword"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/account/sessions": {
         parameters: {
             query?: never;
@@ -62,6 +110,22 @@ export interface paths {
         put?: never;
         post: operations["openSession"];
         delete: operations["logout"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/account/sessions/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["openSessionWithPassword"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -397,6 +461,7 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             email: string;
+            hasPassword: boolean;
             /** Format: date-time */
             lastLoginAt: string;
             name: string | null;
@@ -562,6 +627,47 @@ export interface components {
             /** Format: int32 */
             n: number;
         };
+        CartItemRequest: {
+            colorId: string;
+            filament: string;
+            fileName: string;
+            /** Format: uuid */
+            id?: string | null;
+            modelId?: string | null;
+            quality: string;
+            /** Format: int32 */
+            quantity?: number;
+            /** @description Opaque quote JSON of the line */
+            quote: {
+                [key: string]: unknown;
+            };
+        };
+        CartItemResponse: {
+            colorId: string;
+            filament: string;
+            fileName: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: int32 */
+            position: number;
+            quality: string;
+            /** Format: int32 */
+            quantity: number;
+            /** @description The quote JSON the client saved with the line */
+            quote: {
+                [key: string]: unknown;
+            };
+            /** Format: int64 */
+            sizeBytes: number;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CartRequest: {
+            items: components["schemas"]["CartItemRequest"][];
+        };
+        CartResponse: {
+            items: components["schemas"]["CartItemResponse"][];
+        };
         ColorOption: {
             code: string;
             hex: string;
@@ -671,6 +777,14 @@ export interface components {
             total: number;
             vatAmount: number;
             vatRate: number;
+        };
+        PasswordLoginRequest: {
+            /** Format: email */
+            email: string;
+            password: string;
+        };
+        PasswordRequest: {
+            password: string;
         };
         QualityOption: {
             /** Format: int32 */
@@ -855,6 +969,90 @@ export interface operations {
             };
         };
     };
+    cart: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CartResponse"];
+                };
+            };
+        };
+    };
+    replace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CartRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CartResponse"];
+                };
+            };
+        };
+    };
+    clear: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    registerModel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UploadedModel"];
+                };
+            };
+        };
+    };
     requestLoginLink: {
         parameters: {
             query?: never;
@@ -897,6 +1095,46 @@ export interface operations {
             };
         };
     };
+    setPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    removePassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     openSession: {
         parameters: {
             query?: never;
@@ -936,6 +1174,30 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    openSessionWithPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordLoginRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AccountResponse"];
+                };
             };
         };
     };

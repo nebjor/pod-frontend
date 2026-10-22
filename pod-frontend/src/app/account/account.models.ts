@@ -11,7 +11,7 @@ type Schemas = components['schemas'];
  * The account as `GET /api/account`, `POST /api/account/sessions`, `POST /api/account/sessions/password`
  * and `PUT /api/account` return it.
  */
-export type AccountResponse = Schemas['AccountResponse'] & AccountPasswordFields;
+export type AccountResponse = Omit<Schemas['AccountResponse'], 'hasPassword'> & AccountPasswordFields;
 /** Body of `PUT /api/account`. */
 export type AccountAddressRequest = Schemas['AccountUpdateRequest'];
 
