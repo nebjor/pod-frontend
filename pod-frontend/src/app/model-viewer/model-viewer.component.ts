@@ -31,6 +31,8 @@ export class ModelViewerComponent implements AfterViewInit, OnChanges, OnDestroy
    * offered, because a dragged-away model looks broken and has no use for a quote.
    */
   @Input() interactive = true;
+  /** Lens zoom: above 1 the model fills more of the frame without moving the camera closer. */
+  @Input() zoom = 1;
   @Input() sourceUpAxis: 'x' | 'y' | 'z' = 'z';
   @Output() loadStateChange = new EventEmitter<ModelLoadState>();
   @Output() loadProgress = new EventEmitter<number>();
@@ -280,6 +282,8 @@ export class ModelViewerComponent implements AfterViewInit, OnChanges, OnDestroy
     this.controls.maxDistance = Math.max(this.controls.minDistance * 2, maxDim * 4);
 
     this.camera.position.set(center.x + maxDim * 1.5, center.y + maxDim * 1.5, center.z + maxDim * 1.5);
+    this.camera.zoom = this.zoom;
+    this.camera.updateProjectionMatrix();
     this.controls.target.copy(center);
     this.controls.update();
   }
