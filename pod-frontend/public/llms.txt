@@ -1,20 +1,30 @@
 # 3DBurg
 
-> 3D-Druck auf Bestellung aus Winterthur, Schweiz. Kundinnen und Kunden laden ein STL- oder 3MF-Modell hoch, sehen sofort einen verbindlichen Preis aus einem echten Slicer-Durchlauf und bestellen online. Gedruckt auf Bambu Lab A1 in PLA, PETG und PCTG, Versand in der ganzen Schweiz.
+> 3D-Druck auf Bestellung, in der Schweiz produziert. Kundinnen und Kunden laden ein STL- oder 3MF-Modell hoch, sehen in Sekunden einen Festpreis aus einem echten Slicer-Durchlauf und bestellen online. Gedruckt in Winterthur auf Bambu Lab A1 in PLA, PETG und PCTG, geprueft von Hand, Versand in der ganzen Schweiz.
 
 3DBurg ist ein Einzelunternehmen von Joris Neber, Unterwegli 1, 8404 Winterthur. Kontakt: info@3dburg.ch.
+
+## Warum 3DBurg
+
+- In der Schweiz produziert: jedes Teil wird in Winterthur gedruckt, kontrolliert und verpackt. Kein Sammelversand aus dem Ausland, keine Zollgebuehren, keine Wochen Wartezeit.
+- Von Studenten der ZHAW lanciert: entstanden aus einem Projekt an der Zuercher Hochschule fuer Angewandte Wissenschaften in Winterthur, gebaut von Leuten, die selbst Prototypen drucken.
+- Sofortpreis statt Offerte: der Preis wird aus Druckzeit und Materialverbrauch des hochgeladenen Modells berechnet, nicht geschaetzt. Was angezeigt wird, wird verrechnet.
+- Kleine Mengen willkommen: ein einzelnes Ersatzteil, ein Prototyp oder eine Kleinserie bis 100 Stueck, ohne Mindestbestellwert.
+- Typische Auftraege: Ersatzteile fuer Haushalt und Velo, Gehaeuse fuer Elektronik und Raspberry Pi, Halterungen, Prototypen fuer Studienarbeiten und Start-ups, Miniaturen, Geschenke.
 
 ## So funktioniert es
 
 - Modell hochladen (STL oder 3MF, bis 50 MB) auf https://3dburg.ch/upload
 - Filament, Farbe, Qualitaet (Schichthoehe 0.12 bis 0.24 mm) und Menge waehlen; der Preis wird aus Druckzeit und Materialverbrauch berechnet und sofort angezeigt
-- Bestellen und online bezahlen (Karte, weitere Methoden ueber Stripe); Versandpauschale CHF 9 innerhalb der Schweiz
+- Mehrere Modelle in den Warenkorb legen, bestellen und online bezahlen (Karte, weitere Methoden ueber Stripe); Versandpauschale CHF 9 innerhalb der Schweiz
 - Lieferzeit in der Regel 3 bis 5 Werktage, abhaengig von Druckzeit und Qualitaet
+- Bestellstatus jederzeit unter https://3dburg.ch/bestellung, optional mit Kundenkonto
 
 ## Seiten
 
 - [Startseite](https://3dburg.ch/): Angebot und Ablauf
 - [Modell hochladen](https://3dburg.ch/upload): Upload, Konfiguration und Sofortpreis
+- [Ueber uns](https://3dburg.ch/ueber-uns): Produktion in Winterthur, Herkunft aus der ZHAW
 - [Impressum](https://3dburg.ch/impressum)
 - [AGB](https://3dburg.ch/agb)
 - [Datenschutz](https://3dburg.ch/datenschutz)
@@ -23,5 +33,7 @@
 
 - Materialien: PLA (matt, Basic, Silk), PETG, PCTG transparent
 - Drucker: Bambu Lab A1, Duese 0.4 mm, automatische Stuetzstrukturen
+- Bauraum: 256 x 256 x 256 mm pro Teil
 - Preise in CHF inklusive Material und Maschinenzeit; keine Mehrwertsteuer (nicht MWST-pflichtig)
 - Liefergebiet: Schweiz
+- Standort: Winterthur, Kanton Zuerich, Schweiz
