@@ -1,8 +1,19 @@
-<section class="upload-page">
+<section class="upload-page" [attr.inert]="overlayOpen() ? '' : null">
     <header class="upload-header">
         <p class="kicker">UPLOAD</p>
         <h1>Modell hochladen</h1>
-        <p class="subtext">Zieh deine STL- oder 3MF-Datei in das Feld oder klick hinein, um eine Datei auszuwaehlen.</p>
+        <ol class="steps" aria-label="Schritte">
+            <li [class.active]="currentStep() === 1" [class.done]="currentStep() > 1"
+                [attr.aria-current]="currentStep() === 1 ? 'step' : null">Upload</li>
+            <li [class.active]="currentStep() === 2" [class.done]="currentStep() > 2"
+                [attr.aria-current]="currentStep() === 2 ? 'step' : null">Konfiguration</li>
+            <li [class.active]="currentStep() === 3" [attr.aria-current]="currentStep() === 3 ? 'step' : null">Preis</li>
+        </ol>
+        @if (!modelUrl()) {
+            <p class="subtext">Zieh deine STL- oder 3MF-Datei in das Feld oder klick hinein, um eine Datei auszuwaehlen.</p>
+        } @else {
+            <p class="subtext">Waehle Material, Farbe, Qualitaet und Menge. Der Preis wird erst berechnet, wenn du ihn anforderst.</p>
+        }
     </header>
 
     @if (!modelUrl()) {
@@ -58,6 +69,7 @@
                     <span>{{ selectedFileName() }}</span>
                     <span>{{ selectedFileSizeMb() }} MB</span>
                 </div>
+                <button type="button" class="text-btn" (click)="onUploadAnother()">Andere Datei waehlen</button>
             </section>
 
             <section class="order-card order-card-animated">
@@ -65,20 +77,21 @@
 
                 @switch (catalogState()) {
                     @case ('loading') {
-                        <p class="estimate-line estimate-status" aria-live="polite">
+                        <p class="status-line" aria-live="polite">
                             <span class="spinner" aria-hidden="true"></span>
                             Materialien werden geladen...
                         </p>
                     }
                     @case ('error') {
-                        <p class="estimate-line estimate-error" role="alert">
+                        <p class="status-line status-error" role="alert">
                             Die Materialliste konnte nicht geladen werden.
                         </p>
                         <button type="button" class="retry-btn" (click)="loadCatalog()">Erneut laden</button>
                     }
                 }
 
-                <form [formGroup]="orderForm" class="order-form" [hidden]="catalogState() !== 'ready'">
+                <form [formGroup]="orderForm" class="order-form" [hidden]="catalogState() !== 'ready'"
+                    (ngSubmit)="onCalculatePrice()">
                     <label>
                         Material
                         <select formControlName="filament">
@@ -126,197 +139,36 @@
                             }
                         </div>
                     </fieldset>
+
+                    <div class="quote-cta" aria-live="polite">
+                        @if (quotePhase() === 'error') {
+                            <p class="status-line status-error" role="alert">{{ quoteError() }}</p>
+                        } @else if (quoteCurrent() && quote(); as q) {
+                            <p class="status-line quote-hint">
+                                Preis fuer diese Konfiguration:
+                                <strong>{{ q.currency }} {{ q.totalPriceChf | number:'1.2-2' }}</strong>
+                            </p>
+                        } @else {
+                            <p class="status-line quote-hint">
+                                Die Datei wird dafuer einmal fuer die Bambu Lab A1 gesliced; das dauert ein paar Sekunden.
+                            </p>
+                        }
+                        <button type="submit" class="order-btn calculate-btn" #calculateButton>
+                            Preis berechnen
+                        </button>
+                    </div>
                 </form>
 
-                <div class="estimate" [class.inactive]="quoteState() !== 'ready'" aria-live="polite">
-                    @if (quoteInProgress() || quoteDoneFlash()) {
-                        <!-- One bar for all pending phases: it keeps its width transition when the
-                             upload hands over to the slicer, and only the label fades. -->
-                        <div class="quote-phase" [attr.data-phase]="quoteDoneFlash() ? 'done' : quotePhase()">
-                            <p class="estimate-line estimate-status">
-                                @if (quoteDoneFlash()) {
-                                    <span class="check" aria-hidden="true"></span>
-                                } @else {
-                                    <span class="spinner" aria-hidden="true"></span>
-                                }
-                                @if (quotePhase() === 'uploading') {
-                                    Modell wird hochgeladen... {{ uploadProgress() }}%
-                                } @else {
-                                    <!-- Keyed by its text: every stage is a fresh node, so the fade replays. -->
-                                    @for (text of [quoteStatusText()]; track text) {
-                                        <span class="phase-text">{{ text }}</span>
-                                    }
-                                }
-                            </p>
-                            <div class="loading-track" [class.indeterminate]="quoteBarPercent() === null" role="progressbar"
-                                aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="quoteBarPercent()">
-                                <div class="loading-fill" [style.width.%]="quoteBarPercent()"></div>
-                            </div>
-                        </div>
-                    } @else {
-                        @switch (quotePhase()) {
-                            @case ('error') {
-                                <p class="estimate-line estimate-error">{{ quoteError() }}</p>
-                                <button type="button" class="retry-btn" (click)="requestQuote(true)">Erneut berechnen</button>
-                            }
-                            @case ('idle') {
-                                <p class="estimate-line">Lade ein Modell hoch, um den Preis zu sehen.</p>
-                            }
-                        }
-                    }
-
-                    <!-- The last quote stays visible, dimmed, while a new one is computed. -->
-                    @if (quote(); as q) {
-                        <div class="quote-body" [class.stale]="quoteIsStale()">
-                        @if (!quoteMatchesForm()) {
-                            <p class="estimate-line quote-stale-note">
-                                Preis gilt fuer {{ q.quantity }} x {{ q.filament }}, {{ quoteQualityLabel() }}.
-                                @if (orderForm.invalid) {
-                                    <strong>Menge korrigieren.</strong>
-                                }
-                            </p>
-                        }
-                        <p class="estimate-line estimate-total">
-                            Preis gesamt: <strong>{{ q.currency }} {{ q.totalPriceChf | number:'1.2-2' }}</strong>
-                        </p>
-
-                        <dl class="quote-details">
-                            <div>
-                                <dt>Stueckpreis</dt>
-                                <dd>{{ q.currency }} {{ q.unitPriceChf | number:'1.2-2' }}</dd>
-                            </div>
-                            <div>
-                                <dt>Einrichtung (einmalig)</dt>
-                                <dd>{{ q.currency }} {{ q.setupFeeChf | number:'1.2-2' }}</dd>
-                            </div>
-                            <div>
-                                <dt>Druckzeit gesamt</dt>
-                                <dd>{{ totalPrintTimeLabel() }}</dd>
-                            </div>
-                            <div>
-                                <dt>Druckzeit je Stueck</dt>
-                                <dd>{{ unitPrintTimeLabel() }}</dd>
-                            </div>
-                            <div>
-                                <dt>Druckplatten</dt>
-                                <dd>ca. {{ q.plateCount }}</dd>
-                            </div>
-                            <div>
-                                <dt>Material gesamt</dt>
-                                <dd>{{ q.totalFilamentGrams | number:'1.0-1' }} g {{ q.filament }}</dd>
-                            </div>
-                            <div>
-                                <dt>Materialkosten</dt>
-                                <dd>{{ q.currency }} {{ q.materialCostChf | number:'1.2-2' }}</dd>
-                            </div>
-                            <div>
-                                <dt>Maschinenzeit</dt>
-                                <dd>{{ q.currency }} {{ q.machineCostChf | number:'1.2-2' }}</dd>
-                            </div>
-                            <div>
-                                <dt>Farbe</dt>
-                                <dd class="color-value">
-                                    <span class="swatch-dot small" [style.background]="selectedColor()?.hex" aria-hidden="true"></span>
-                                    {{ selectedColor()?.label }}
-                                </dd>
-                            </div>
-                            <div>
-                                <dt>Abmessungen</dt>
-                                <dd>
-                                    {{ q.boundingBoxMm.widthMm | number:'1.0-1' }} x
-                                    {{ q.boundingBoxMm.depthMm | number:'1.0-1' }} x
-                                    {{ q.boundingBoxMm.heightMm | number:'1.0-1' }} mm
-                                </dd>
-                            </div>
-                            <div>
-                                <dt>Lieferzeit</dt>
-                                <dd>ca. {{ q.leadTimeDays }} Tage</dd>
-                            </div>
-                        </dl>
-
-                        <p class="estimate-note">
-                            Der Preis stammt aus einem echten Slicer-Durchlauf deiner Datei fuer die Bambu Lab A1
-                            ({{ q.layerHeightMm }} mm Schichthoehe).
-                            @if (q.quantity > 1) {
-                                Die {{ q.quantity }} Stueck drucken wir zusammen, voraussichtlich auf {{ q.plateCount }} Druckplatte(n).
-                            }
-                        </p>
-                        @if (q.manifold === false) {
-                            <p class="manifold-note" role="note">
-                                Das Modell ist nicht wasserdicht (nicht manifold). Wir pruefen es vor dem Druck; es kann zu
-                                Rueckfragen kommen.
-                            </p>
-                        }
-                        @if (q.warnings.length > 0) {
-                            <div class="slicer-warnings">
-                                <button type="button" class="warnings-toggle" (click)="toggleWarnings()"
-                                    [attr.aria-expanded]="warningsOpen()">
-                                    Hinweise vom Slicer ({{ q.warnings.length }})
-                                </button>
-                                @if (warningsOpen()) {
-                                    <ul class="warnings-list">
-                                        @for (warning of q.warnings; track $index) {
-                                            <li>{{ warning }}</li>
-                                        }
-                                    </ul>
-                                }
-                            </div>
-                        }
-                        </div>
-                    }
-                </div>
-
-                <section class="checkout-overview" [class.inactive]="!canSubmitOrder()">
-                    <h3>Zusammenfassung</h3>
-                    <p>
-                        Datei: <strong>{{ selectedFileName() || 'Noch keine Datei' }}</strong>
+                @if (cartIsFull()) {
+                    <p class="cart-note">
+                        Der Warenkorb ist voll: maximal {{ maxCartItems }} Modelle pro Bestellung.
+                        <a routerLink="/warenkorb">Zum Warenkorb</a>
                     </p>
-                    <p>
-                        Material: <strong>{{ selectedFilamentOption()?.label }}</strong> · Farbe:
-                        <strong>{{ selectedColor()?.label }}</strong> · Qualitaet:
-                        <strong>{{ selectedQualityLabel() }}</strong> · Menge:
-                        <strong>{{ orderForm.controls.quantity.value }}</strong>
+                } @else if (cartItemCount() > 0) {
+                    <p class="cart-note">
+                        {{ cartModelsLabel() }} im Warenkorb. <a routerLink="/warenkorb">Zum Warenkorb</a>
                     </p>
-
-                    @if (addedItem(); as added) {
-                        <div class="cart-added" role="status">
-                            <p class="cart-note">
-                                <strong>{{ added.fileName }}</strong> liegt im Warenkorb. Darin jetzt:
-                                {{ cartModelsLabel() }}, {{ cartCount() }} Stueck,
-                                {{ cartCurrency() }} {{ cartTotal() | number:'1.2-2' }} zzgl. Versand.
-                            </p>
-                            <div class="checkout-actions">
-                                <button type="button" class="order-btn ghost-btn" (click)="onUploadAnother()">
-                                    Weiteres Modell hochladen
-                                </button>
-                                <a class="order-btn ghost-btn link-btn" routerLink="/warenkorb">Zum Warenkorb</a>
-                                <a class="order-btn link-btn" routerLink="/checkout">Zur Kasse</a>
-                            </div>
-                        </div>
-                    } @else {
-                        <div class="checkout-actions">
-                            <button type="button" class="order-btn ghost-btn" [disabled]="!canAddToCart()"
-                                (click)="onAddToCart()">
-                                In den Warenkorb
-                            </button>
-                            <button type="button" class="order-btn" [disabled]="!canAddToCart()"
-                                (click)="onDirectCheckout()">
-                                Direkt zur Kasse
-                            </button>
-                        </div>
-                    }
-
-                    @if (cartIsFull()) {
-                        <p class="cart-note">
-                            Der Warenkorb ist voll: maximal {{ maxCartItems }} Modelle pro Bestellung.
-                            <a routerLink="/warenkorb">Zum Warenkorb</a>
-                        </p>
-                    } @else if (!addedItem() && cartItemCount() > 0) {
-                        <p class="cart-note">
-                            {{ cartModelsLabel() }} im Warenkorb. <a routerLink="/warenkorb">Zum Warenkorb</a>
-                        </p>
-                    }
-                </section>
+                }
             </section>
         </section>
     }
@@ -325,3 +177,50 @@
         <p class="error" role="alert">{{ errorMessage() }}</p>
     }
 </section>
+
+<!-- Both overlays hang on quoteRequested(), which is false on the server and before the click. -->
+@if (loadingOverlayOpen()) {
+    <div class="overlay" role="dialog" aria-modal="true" aria-labelledby="quote-loading-title" tabindex="-1"
+        #loadingOverlay>
+        <section class="loading-panel" aria-live="polite" aria-busy="true">
+            <p class="kicker">PREIS</p>
+            <h2 id="quote-loading-title">Preis wird berechnet</h2>
+            <p class="loading-file">{{ selectedFileName() }}</p>
+
+            <!-- One bar for all pending phases: it keeps its width transition when the
+                 upload hands over to the slicer, and only the label fades. -->
+            <div class="quote-phase" [attr.data-phase]="quoteDoneFlash() ? 'done' : quotePhase()">
+                <p class="status-line">
+                    @if (quoteDoneFlash()) {
+                        <span class="check" aria-hidden="true"></span>
+                    } @else {
+                        <span class="spinner" aria-hidden="true"></span>
+                    }
+                    @if (quotePhase() === 'uploading') {
+                        Modell wird hochgeladen... {{ uploadProgress() }}%
+                    } @else {
+                        <!-- Keyed by its text: every stage is a fresh node, so the fade replays. -->
+                        @for (text of [quoteStatusText()]; track text) {
+                            <span class="phase-text">{{ text }}</span>
+                        }
+                    }
+                </p>
+                <div class="loading-track" [class.indeterminate]="quoteBarPercent() === null" role="progressbar"
+                    aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="quoteBarPercent()">
+                    <div class="loading-fill" [style.width.%]="quoteBarPercent()"></div>
+                </div>
+            </div>
+
+            <p class="loading-reassurance">
+                Wir slicen deine Datei wirklich, so wie sie spaeter gedruckt wird. Das dauert meist nur
+                ein paar Sekunden.
+            </p>
+        </section>
+    </div>
+}
+
+@if (quoteOnScreen(); as q) {
+    <app-quote-overlay [quote]="q" [fileName]="selectedFileName()" [color]="selectedColor()"
+        [qualityLabel]="selectedQualityLabel()" [addedItem]="addedItem()" [canAddToCart]="canAddToCart()"
+        (addToCart)="onAddToCart()" (adjust)="onAdjust()" (uploadAnother)="onUploadAnother()" />
+}

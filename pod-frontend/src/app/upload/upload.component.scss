@@ -2,6 +2,8 @@
     max-width: 980px;
     margin: 0 auto;
     padding: 2rem 1rem 4rem;
+    color: var(--text-200);
+    font-family: 'Courier New', 'Lucida Console', monospace;
 
     .post-upload-layout {
         display: grid;
@@ -12,11 +14,6 @@
             align-items: start;
         }
     }
-
-    color: var(--text-200);
-    font-family: 'Courier New',
-    'Lucida Console',
-    monospace;
 }
 
 .upload-header {
@@ -25,12 +22,6 @@
     .kicker {
         color: var(--accent-300);
         letter-spacing: 0.2rem;
-
-        .post-upload-layout .preview-card,
-        .post-upload-layout .order-card {
-            margin-top: 0;
-        }
-
         font-size: 0.75rem;
         margin: 0 0 0.5rem;
     }
@@ -47,6 +38,60 @@
         color: var(--text-300);
         line-height: 1.5;
         max-width: 60ch;
+    }
+}
+
+// 1 Upload, 2 Konfiguration, 3 Preis: the current one is lit, the ones behind are ticked.
+.steps {
+    margin: 1rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    list-style: none;
+    counter-reset: step;
+    font-size: 0.8rem;
+    letter-spacing: 0.08rem;
+    text-transform: uppercase;
+    color: var(--text-300);
+
+    li {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        counter-increment: step;
+
+        &::before {
+            content: counter(step);
+            display: inline-grid;
+            place-items: center;
+            width: 1.5rem;
+            height: 1.5rem;
+            border-radius: 50%;
+            border: 1px solid var(--border-650);
+            font-size: 0.75rem;
+        }
+
+        &.active {
+            color: var(--text-100);
+
+            &::before {
+                border-color: var(--accent-450);
+                background: rgba(62, 163, 127, 0.18);
+                color: var(--accent-300);
+            }
+        }
+
+        &.done::before {
+            content: '';
+            width: 0.4rem;
+            height: 0.75rem;
+            margin: 0 0.55rem 0.2rem;
+            border: solid var(--accent-300);
+            border-width: 0 2px 2px 0;
+            border-radius: 0;
+            transform: rotate(45deg);
+        }
     }
 }
 
@@ -145,7 +190,7 @@
 
 .preview-card,
 .order-card {
-    margin-top: 1.25rem;
+    margin: 0;
     padding: 1rem;
     border-radius: 14px;
     border: 1px solid var(--border-700);
@@ -246,6 +291,23 @@
     font-size: 0.9rem;
 }
 
+.text-btn {
+    margin-top: 0.5rem;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--text-300);
+    font: inherit;
+    font-size: 0.82rem;
+    text-decoration: underline;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+        color: var(--text-100);
+    }
+}
+
 .order-card h2 {
     margin: 0;
     color: var(--text-100);
@@ -254,71 +316,10 @@
     letter-spacing: 0.08rem;
 }
 
-.checkout-overview {
-    margin-top: 1.1rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border-700);
-
-    h3 {
-        margin: 0 0 0.6rem;
-        color: var(--text-100);
-        font-size: 1.05rem;
-        letter-spacing: 0.04rem;
-    }
-
-    p {
-        margin: 0.35rem 0;
-        color: var(--text-300);
-    }
-}
-
-.checkout-overview.inactive {
-    opacity: 0.6;
-}
-
-.checkout-actions {
-    margin-top: 0.9rem;
-    display: grid;
-    gap: 0.65rem;
-}
-
-.ghost-btn {
-    background: transparent;
-    border-color: var(--border-650);
-    color: var(--text-100);
-}
-
 .cart-note {
-    margin-top: 0.6rem;
+    margin: 0.9rem 0 0;
     color: var(--accent-300);
     font-size: 0.88rem;
-
-    strong {
-        color: var(--text-100);
-    }
-}
-
-.cart-added {
-    margin-top: 0.9rem;
-    padding: 0.9rem;
-    border-radius: 10px;
-    border: 1px solid var(--accent-300);
-    background: rgba(12, 28, 42, 0.75);
-
-    .cart-note {
-        margin-top: 0;
-    }
-
-    .checkout-actions {
-        margin-top: 0.75rem;
-    }
-}
-
-.link-btn {
-    display: block;
-    box-sizing: border-box;
-    text-decoration: none;
-    text-align: center;
 }
 
 .order-form {
@@ -428,91 +429,34 @@
     border: 1px solid rgba(255, 255, 255, 0.35);
     box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
     flex: none;
-
-    &.small {
-        width: 12px;
-        height: 12px;
-        vertical-align: -1px;
-        margin-right: 0.3rem;
-    }
 }
 
-.estimate {
-    margin-top: 1rem;
-    padding: 0.9rem;
-    border-radius: 10px;
-    border: 1px solid var(--border-650);
-    background: rgba(12, 28, 42, 0.75);
+// The step's call to action: a line of context above the button that starts the quote.
+.quote-cta {
+    grid-column: 1 / -1;
+    margin-top: 0.25rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--border-700);
 
-    .estimate-line {
-        margin: 0.15rem 0;
-    }
-
-    .estimate-note {
-        margin: 0.65rem 0 0;
+    .quote-hint {
         color: var(--text-300);
-        font-size: 0.82rem;
-    }
-
-    .manifold-note {
-        margin: 0.75rem 0 0;
-        padding: 0.6rem 0.75rem;
-        border-radius: 8px;
-        border: 1px solid rgba(224, 180, 87, 0.6);
-        background: rgba(224, 180, 87, 0.1);
-        color: #e8c77a;
         font-size: 0.84rem;
-        line-height: 1.45;
-    }
 
-    .warnings-toggle {
-        margin-top: 0.6rem;
-        border: 0;
-        padding: 0;
-        background: transparent;
-        color: var(--text-300);
-        font: inherit;
-        font-size: 0.8rem;
-        text-decoration: underline;
-        cursor: pointer;
-    }
-
-    .warnings-list {
-        margin: 0.4rem 0 0;
-        padding-left: 1.1rem;
-        color: var(--text-300);
-        font-size: 0.78rem;
-        overflow-wrap: anywhere;
+        strong {
+            color: var(--accent-300);
+        }
     }
 }
 
-.estimate .quote-body.stale {
-    opacity: 0.5;
-    transition: opacity 0.2s ease;
-}
-
-.quote-stale-note {
-    color: #e8c77a;
-    font-size: 0.84rem;
-}
-
-.estimate-total {
-    font-size: 1.05rem;
-    color: var(--text-100);
-
-    strong {
-        color: var(--accent-300);
-    }
-}
-
-.estimate-status {
+.status-line {
     display: flex;
     align-items: center;
     gap: 0.6rem;
+    margin: 0.15rem 0;
     color: var(--text-200);
 }
 
-.estimate-error {
+.status-error {
     color: #d99898;
 }
 
@@ -523,64 +467,12 @@
     border: 2px solid rgba(140, 200, 179, 0.25);
     border-top-color: var(--accent-300);
     animation: spinnerTurn 800ms linear infinite;
+    flex: none;
 }
 
 @keyframes spinnerTurn {
     to {
         transform: rotate(360deg);
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .spinner {
-        animation-duration: 2s;
-    }
-
-    // No sweeping segment: the full track pulses gently instead.
-    .loading-track.indeterminate .loading-fill {
-        width: 100%;
-        animation: loadingPulse 2s ease-in-out infinite alternate;
-    }
-
-    .quote-phase .phase-text {
-        animation: none;
-    }
-}
-
-@keyframes loadingPulse {
-    from {
-        opacity: 0.35;
-    }
-
-    to {
-        opacity: 0.8;
-    }
-}
-
-.quote-details {
-    margin: 0.75rem 0 0;
-    display: grid;
-    gap: 0.35rem 1rem;
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-
-    div {
-        display: flex;
-        justify-content: space-between;
-        gap: 0.5rem;
-        padding: 0.3rem 0;
-        border-bottom: 1px dashed rgba(53, 84, 107, 0.6);
-    }
-
-    dt {
-        color: var(--text-300);
-        font-size: 0.85rem;
-    }
-
-    dd {
-        margin: 0;
-        color: var(--text-100);
-        text-align: right;
-        font-size: 0.9rem;
     }
 }
 
@@ -602,7 +494,7 @@
 }
 
 .order-btn {
-    margin-top: 1rem;
+    margin-top: 0.75rem;
     width: 100%;
     border: 1px solid #47755f;
     border-radius: 10px;
@@ -613,11 +505,16 @@
     letter-spacing: 0.08rem;
     font: inherit;
     cursor: pointer;
-}
 
-.order-btn:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
+    &:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--accent-300);
+        outline-offset: 2px;
+    }
 }
 
 .viewer-placeholder {
@@ -639,5 +536,99 @@
 
     p {
         margin: 0;
+    }
+}
+
+// The loading screen: the whole viewport, nothing to click, the staged progress in the middle.
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: rgba(7, 18, 27, 0.92);
+    backdrop-filter: blur(6px);
+    color: var(--text-200);
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    animation: overlayIn 180ms ease both;
+
+    &:focus {
+        outline: none;
+    }
+}
+
+@keyframes overlayIn {
+    from {
+        opacity: 0;
+    }
+}
+
+.loading-panel {
+    box-sizing: border-box;
+    width: min(100%, 480px);
+    padding: 1.5rem;
+    border-radius: 16px;
+    border: 1px solid var(--border-700);
+    background: linear-gradient(180deg, rgba(19, 39, 58, 0.98), rgba(11, 24, 36, 0.99));
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+
+    .kicker {
+        margin: 0 0 0.35rem;
+        color: var(--accent-300);
+        letter-spacing: 0.2rem;
+        font-size: 0.75rem;
+    }
+
+    h2 {
+        margin: 0;
+        color: var(--text-100);
+        font-size: 1.4rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06rem;
+    }
+
+    .loading-file {
+        margin: 0.35rem 0 1.25rem;
+        color: var(--text-300);
+        font-size: 0.9rem;
+        overflow-wrap: anywhere;
+    }
+
+    .loading-reassurance {
+        margin: 1rem 0 0;
+        color: var(--text-300);
+        font-size: 0.82rem;
+        line-height: 1.5;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .spinner {
+        animation-duration: 2s;
+    }
+
+    // No sweeping segment: the full track pulses gently instead.
+    .loading-track.indeterminate .loading-fill {
+        width: 100%;
+        animation: loadingPulse 2s ease-in-out infinite alternate;
+    }
+
+    .quote-phase .phase-text,
+    .overlay,
+    .order-card-animated {
+        animation: none;
+    }
+}
+
+@keyframes loadingPulse {
+    from {
+        opacity: 0.35;
+    }
+
+    to {
+        opacity: 0.8;
     }
 }

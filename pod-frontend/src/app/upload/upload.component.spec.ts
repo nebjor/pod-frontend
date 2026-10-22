@@ -1,15 +1,13 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Router, provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { provideRouter } from '@angular/router';
+import { Subject, of, throwError } from 'rxjs';
 import { CART_MAX_ITEMS, CartService } from '../cart/cart.service';
 import { formatPrintDuration } from '../quote/print-duration';
 import { QuoteOptions, QuoteRequestParams, QuoteResponse } from '../quote/quote.models';
 import { QuoteService, UploadEvent } from '../quote/quote.service';
 import {
-    PREFETCH_DELAY_MS,
     PREVIEW_LIMIT_BYTES_3MF,
-    QUOTE_DEBOUNCE_MS,
     QUOTE_DONE_FLASH_MS,
     REPRICING_FINAL_TEXT,
     SLICING_STEPS,
@@ -75,7 +73,7 @@ const backendOptions: QuoteOptions = {
     maxQuantity: 20
 };
 
-/** The backend echoes the configuration it priced; the stale marker compares the form with it. */
+/** The backend echoes the configuration it priced; the result screen compares the form with it. */
 function quoteFor(params: QuoteRequestParams): QuoteResponse {
     const filament = backendOptions.filaments.find((option) => option.code === params.filament);
     const color = filament?.colors.find((option) => option.code === params.color) ?? sampleQuote.color;
@@ -93,14 +91,10 @@ function dropEvent(file: File): DragEvent {
     } as unknown as DragEvent;
 }
 
-/** The app is zoneless, so the debounce is driven with Vitest fake timers instead of fakeAsync. */
-function settle() {
-    vi.advanceTimersByTime(QUOTE_DEBOUNCE_MS);
-}
-
 describe('UploadComponent', () => {
     let fixture: ComponentFixture<UploadComponent>;
     let component: UploadComponent;
+    let host: HTMLElement;
     let cart: CartService;
     let requestQuote: ReturnType<typeof vi.fn>;
     let loadOptions: ReturnType<typeof vi.fn>;
@@ -126,20 +120,38 @@ describe('UploadComponent', () => {
         cart = TestBed.inject(CartService);
         fixture = TestBed.createComponent(UploadComponent);
         component = fixture.componentInstance;
+        host = fixture.nativeElement as HTMLElement;
         fixture.detectChanges();
     });
 
     afterEach(() => {
         vi.useRealTimers();
         sessionStorage.clear();
+        localStorage.clear();
     });
 
-    /** Parameters of every quote request for one filament and quality, prefetches included. */
+    /** Parameters of every quote request for one filament and quality. */
     function requestsFor(filament: string, quality: string) {
         return requestQuote.mock.calls
             .map((call) => call[1] as { filament: string; color: string; quality: string })
             .filter((params) => params.filament === filament && params.quality === quality);
     }
+
+    /** "Preis berechnen" as the customer presses it, with the template in sync afterwards. */
+    function calculate() {
+        fixture.detectChanges();
+        host.querySelector<HTMLButtonElement>('.calculate-btn')!.click();
+        fixture.detectChanges();
+    }
+
+    /** Lets "Fertig." pass so the result screen replaces the loading screen. */
+    function finishFlash() {
+        vi.advanceTimersByTime(QUOTE_DONE_FLASH_MS);
+        fixture.detectChanges();
+    }
+
+    const loadingOverlay = () => host.querySelector<HTMLElement>('.overlay[aria-labelledby="quote-loading-title"]');
+    const quoteScreen = () => host.querySelector<HTMLElement>('app-quote-overlay');
 
     it('takes filaments, qualities and the quantity limit from the backend', () => {
         expect(component.catalogState()).toBe('ready');
@@ -151,20 +163,30 @@ describe('UploadComponent', () => {
         expect(component.orderForm.controls.quantity.invalid).toBe(true);
     });
 
-    it('waits for the catalogue before quoting a file dropped early', async () => {
-        const { Subject } = await import('rxjs');
+    it('shows the dropzone without any overlay on first render', () => {
+        expect(host.querySelector('.dropzone')).not.toBeNull();
+        expect(loadingOverlay()).toBeNull();
+        expect(quoteScreen()).toBeNull();
+        expect(component.currentStep()).toBe(1);
+        expect(host.querySelector('.steps [aria-current="step"]')?.textContent?.trim()).toBe('Upload');
+    });
+
+    it('needs the catalogue before the price of an early dropped file can be requested', () => {
         const options = new Subject<QuoteOptions>();
         loadOptions.mockReturnValue(options);
         const early = TestBed.createComponent(UploadComponent);
         early.detectChanges();
 
         early.componentInstance.onDrop(dropEvent(benchy));
-        settle();
+        early.componentInstance.onCalculatePrice();
         expect(early.componentInstance.catalogState()).toBe('loading');
+        expect(early.componentInstance.quoteRequested()).toBe(false);
         expect(requestQuote).not.toHaveBeenCalled();
 
+        // The catalogue arriving does not slice by itself; the click does.
         options.next(backendOptions);
-        settle();
+        expect(requestQuote).not.toHaveBeenCalled();
+        early.componentInstance.onCalculatePrice();
         expect(requestQuote).toHaveBeenCalledTimes(1);
         expect(requestQuote.mock.calls[0][1]).toMatchObject({ filament: 'PLA', color: 'black', quality: 'medium' });
     });
@@ -179,135 +201,287 @@ describe('UploadComponent', () => {
         expect(failing.componentInstance.catalogState()).toBe('ready');
     });
 
-    it('uploads the model once and quotes it by id with the current configuration', () => {
+    it('uploads the model on drop but sends no quote request until the price is asked for', () => {
         component.onDrop(dropEvent(benchy));
-        settle();
+        fixture.detectChanges();
 
         expect(uploadModel).toHaveBeenCalledTimes(1);
         expect(uploadModel.mock.calls[0][0]).toBe(benchy);
         expect(component.uploadState()).toBe('done');
+        expect(component.modelId()).toBe(MODEL_ID);
+        expect(requestQuote).not.toHaveBeenCalled();
+        expect(component.quoteState()).toBe('idle');
+        expect(component.currentStep()).toBe(2);
+        expect(host.querySelector('.order-form')).not.toBeNull();
+        expect(host.querySelector('.calculate-btn')?.textContent?.trim()).toBe('Preis berechnen');
+        expect(loadingOverlay()).toBeNull();
+        expect(quoteScreen()).toBeNull();
+
+        // Changing the configuration slices nothing either.
+        component.orderForm.controls.quantity.setValue(2);
+        component.orderForm.controls.filament.setValue('PETG');
+        component.orderForm.controls.quality.setValue('high');
+        component.orderForm.controls.color.setValue('white');
+        fixture.detectChanges();
+        expect(requestQuote).not.toHaveBeenCalled();
+        expect(component.quoteState()).toBe('idle');
+
+        calculate();
         expect(requestQuote).toHaveBeenCalledTimes(1);
         expect(requestQuote.mock.calls[0][0]).toBe(MODEL_ID);
-        expect(requestQuote.mock.calls[0][1]).toEqual({
-            filament: 'PLA',
-            color: 'black',
-            quality: 'medium',
-            quantity: 1
-        });
+        expect(requestQuote.mock.calls[0][1]).toEqual({ filament: 'PETG', color: 'white', quality: 'high', quantity: 2 });
         expect(component.quoteState()).toBe('ready');
-        expect(component.quote()?.totalPriceChf).toBe(8);
         expect(component.canSubmitOrder()).toBe(true);
     });
 
-    it('warns about a model that is not watertight and keeps the slicer warnings behind a toggle', () => {
-        requestQuote.mockReturnValue(of({ ...sampleQuote, manifold: false, warnings: ['Open edges: 12', 'Non-manifold edges: 4'] }));
+    it('shows the loading screen with the staged progress while the quote runs, then the result', () => {
+        const pending = new Subject<QuoteResponse>();
+        requestQuote.mockImplementation(() => pending);
         component.onDrop(dropEvent(benchy));
-        settle();
-        fixture.detectChanges();
 
-        const host = fixture.nativeElement as HTMLElement;
-        expect(host.querySelector('.manifold-note')?.textContent).toContain('nicht wasserdicht');
-        const toggle = host.querySelector<HTMLButtonElement>('.warnings-toggle');
-        expect(toggle?.textContent?.trim()).toBe('Hinweise vom Slicer (2)');
-        expect(toggle?.getAttribute('aria-expanded')).toBe('false');
-        expect(host.querySelector('.warnings-list')).toBeNull();
+        calculate();
+        expect(component.quoteState()).toBe('loading');
+        expect(component.quotePhase()).toBe('slicing');
+        expect(component.currentStep()).toBe(3);
+        const overlay = loadingOverlay()!;
+        expect(overlay).not.toBeNull();
+        expect(overlay.getAttribute('role')).toBe('dialog');
+        expect(overlay.getAttribute('aria-modal')).toBe('true');
+        expect(overlay.textContent).toContain('benchy.stl');
+        expect(overlay.textContent).toContain(SLICING_STEPS[0].text);
+        expect(overlay.textContent).toContain('Wir slicen deine Datei wirklich');
+        expect(overlay.querySelector('[aria-live="polite"]')).not.toBeNull();
+        expect(overlay.querySelector('.loading-track')?.classList.contains('indeterminate')).toBe(true);
+        expect(overlay.querySelector('button, a, input')).toBeNull();
+        expect(quoteScreen()).toBeNull();
+        // The page behind is inert and the focus is in the overlay.
+        expect(host.querySelector('.upload-page')?.hasAttribute('inert')).toBe(true);
+        expect(document.activeElement).toBe(overlay);
 
-        toggle?.click();
+        pending.next(quoteFor({ filament: 'PLA', color: 'black', quality: 'medium', quantity: 1 }));
+        pending.complete();
         fixture.detectChanges();
-        const items = host.querySelectorAll('.warnings-list li');
-        expect(Array.from(items).map((li) => li.textContent)).toEqual(['Open edges: 12', 'Non-manifold edges: 4']);
-        expect(toggle?.getAttribute('aria-expanded')).toBe('true');
+        expect(component.quoteState()).toBe('ready');
+        expect(component.quoteDoneFlash()).toBe(true);
+        expect(loadingOverlay()?.textContent).toContain('Fertig.');
+        expect(quoteScreen()).toBeNull();
+
+        finishFlash();
+        expect(loadingOverlay()).toBeNull();
+        const screen = quoteScreen()!;
+        expect(screen).not.toBeNull();
+        expect(screen.querySelector('.price-value')?.textContent?.trim()).toBe('CHF 8.00');
+        expect(screen.textContent).toContain(formatPrintDuration(2239));
+        expect(screen.textContent).toContain('11.6 g PLA');
+        expect(screen.textContent).toContain('Standard 0.20 mm');
+        expect(screen.textContent).toContain('1 Stueck');
+        expect(screen.querySelector('.add-btn')?.textContent?.trim()).toBe('In den Warenkorb');
+        expect(screen.querySelector('.adjust-btn')?.textContent?.trim()).toBe('Anpassen');
+        expect(host.querySelector('.upload-page')?.hasAttribute('inert')).toBe(true);
+        expect(document.activeElement).toBe(screen.querySelector('[role="dialog"]'));
     });
 
-    it('says nothing about the mesh when it is fine or was not checked', () => {
+    it('returns to the configuration on "Anpassen" and keeps the model and the choices', () => {
         component.onDrop(dropEvent(benchy));
-        settle();
-        fixture.detectChanges();
-        const host = fixture.nativeElement as HTMLElement;
-        expect(host.querySelector('.manifold-note')).toBeNull();
-        expect(host.querySelector('.slicer-warnings')).toBeNull();
-
-        requestQuote.mockReturnValue(of({ ...sampleQuote, manifold: null }));
-        component.orderForm.controls.quantity.setValue(2);
-        settle();
-        fixture.detectChanges();
-        expect(host.querySelector('.manifold-note')).toBeNull();
-    });
-
-    it('collapses rapid changes into a single request', () => {
-        component.onDrop(dropEvent(benchy));
-        component.orderForm.controls.quantity.setValue(2);
         component.orderForm.controls.quantity.setValue(3);
-        settle();
+        calculate();
+        finishFlash();
+        expect(quoteScreen()).not.toBeNull();
 
+        quoteScreen()!.querySelector<HTMLButtonElement>('.adjust-btn')!.click();
+        fixture.detectChanges();
+
+        expect(quoteScreen()).toBeNull();
+        expect(loadingOverlay()).toBeNull();
+        expect(component.currentStep()).toBe(2);
+        expect(component.selectedFile()).toBe(benchy);
+        expect(component.modelId()).toBe(MODEL_ID);
+        expect(component.orderForm.controls.quantity.value).toBe(3);
+        expect(host.querySelector('.upload-page')?.hasAttribute('inert')).toBe(false);
+        expect(host.querySelector('.quote-hint')?.textContent).toContain('CHF 8.00');
+        expect(document.activeElement).toBe(host.querySelector('.calculate-btn'));
+    });
+
+    it('closes the result screen on Escape', () => {
+        component.onDrop(dropEvent(benchy));
+        calculate();
+        finishFlash();
+        expect(quoteScreen()).not.toBeNull();
+
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        fixture.detectChanges();
+
+        expect(quoteScreen()).toBeNull();
+        expect(component.quoteRequested()).toBe(false);
+        expect(component.selectedFile()).toBe(benchy);
+    });
+
+    it('reuses the cached quote when the price is asked for again without a change', () => {
+        component.onDrop(dropEvent(benchy));
+        calculate();
+        finishFlash();
         expect(requestQuote).toHaveBeenCalledTimes(1);
-        expect(requestQuote.mock.calls[0][1].quantity).toBe(3);
+
+        component.onAdjust();
+        fixture.detectChanges();
+        calculate();
+        expect(requestQuote).toHaveBeenCalledTimes(1);
+        // No slice, no waiting: the result is back at once.
+        expect(loadingOverlay()).toBeNull();
+        expect(quoteScreen()?.querySelector('.price-value')?.textContent?.trim()).toBe('CHF 8.00');
+
+        // Another quality is a new slice; back to the first one it is the cached quote again.
+        component.onAdjust();
+        component.orderForm.controls.quality.setValue('high');
+        calculate();
+        expect(requestQuote).toHaveBeenCalledTimes(2);
+        expect(component.quote()?.quality).toBe('high');
+        finishFlash();
+
+        component.onAdjust();
+        component.orderForm.controls.quality.setValue('medium');
+        calculate();
+        expect(requestQuote).toHaveBeenCalledTimes(2);
+        expect(component.quote()?.quality).toBe('medium');
+        expect(quoteScreen()).not.toBeNull();
+    });
+
+    it('forgets the cache with the file', () => {
+        component.onDrop(dropEvent(benchy));
+        calculate();
+        finishFlash();
+        expect(requestQuote).toHaveBeenCalledTimes(1);
+
+        component.onDrop(dropEvent(new File(['solid other endsolid other'], 'other.stl')));
+        fixture.detectChanges();
+        expect(uploadModel).toHaveBeenCalledTimes(2);
+        expect(quoteScreen()).toBeNull();
+        expect(component.quoteState()).toBe('idle');
+
+        calculate();
+        expect(requestQuote).toHaveBeenCalledTimes(2);
     });
 
     it('does not request again when the new colour costs the same', () => {
         component.onDrop(dropEvent(benchy));
-        settle();
+        calculate();
+        finishFlash();
 
+        component.onAdjust();
         component.orderForm.controls.color.setValue('white');
-        settle();
+        expect(component.quoteMatchesForm()).toBe(true);
+        calculate();
 
-        // Prefetches of other price tiers aside, the 36 CHF/kg quote was requested exactly once.
-        expect(requestsFor('PLA', 'medium').filter((params) => params.color !== 'red')).toHaveLength(1);
+        expect(requestsFor('PLA', 'medium')).toHaveLength(1);
         expect(component.selectedColor()?.code).toBe('white');
-        expect(component.quoteState()).toBe('ready');
+        expect(quoteScreen()?.textContent).toContain('Cotton White (matt)');
     });
 
-    it('re-prices when the new colour has another material price, without a second slice of the same tier', () => {
-        requestQuote.mockImplementation((_id: string, params: { color: string }) =>
-            of({ ...sampleQuote, materialCostChf: params.color === 'red' ? 0.5 : 0.4 })
+    it('re-prices when the new colour has another material price', () => {
+        requestQuote.mockImplementation((_id: string, params: QuoteRequestParams) =>
+            of({ ...quoteFor(params), materialCostChf: params.color === 'red' ? 0.5 : 0.4 })
         );
         component.onDrop(dropEvent(benchy));
-        settle();
+        calculate();
+        finishFlash();
+        expect(component.quoteMatchesForm()).toBe(true);
 
+        // Same filament and quality, but red costs more per kilogram than black.
+        component.onAdjust();
         component.orderForm.controls.color.setValue('red');
-        settle();
+        expect(component.quoteMatchesForm()).toBe(false);
+        calculate();
 
-        expect(requestsFor('PLA', 'medium').filter((params) => params.color === 'red')).toHaveLength(1);
+        expect(requestsFor('PLA', 'medium').map((params) => params.color)).toEqual(['black', 'red']);
         expect(component.quote()?.materialCostChf).toBe(0.5);
-        expect(component.quoteState()).toBe('ready');
+        expect(component.quote()?.color.pricePerKgChf).toBe(45);
+        expect(component.quoteMatchesForm()).toBe(true);
     });
 
     it('falls back to a stocked colour when the filament changes', () => {
         component.onDrop(dropEvent(benchy));
-        settle();
         component.orderForm.controls.color.setValue('red');
 
         component.orderForm.controls.filament.setValue('PETG');
         fixture.detectChanges();
-        settle();
 
         expect(component.availableColors().map((color) => color.code)).toEqual(['black', 'white']);
         expect(component.orderForm.controls.color.value).toBe('black');
+        calculate();
         expect(requestsFor('PETG', 'medium')).toEqual([{ filament: 'PETG', color: 'black', quality: 'medium', quantity: 1 }]);
     });
 
-    it('shows the upload progress and keeps the last price visible while recalculating', async () => {
-        const { Subject } = await import('rxjs');
+    it('waits for the transfer when the price is asked for during the upload', () => {
         const upload = new Subject<UploadEvent>();
         uploadModel.mockReturnValueOnce(upload);
 
         component.onDrop(dropEvent(benchy));
         upload.next({ kind: 'progress', percent: 40 });
+        fixture.detectChanges();
         expect(component.uploadState()).toBe('uploading');
         expect(component.uploadProgress()).toBe(40);
+        // Nothing is asked for yet: the configuration step shows no progress of the transfer.
+        expect(component.quotePhase()).toBe('idle');
+        expect(loadingOverlay()).toBeNull();
+
+        calculate();
+        expect(loadingOverlay()).not.toBeNull();
         expect(requestQuote).not.toHaveBeenCalled();
 
         upload.next(uploaded);
         upload.complete();
-        settle();
+        fixture.detectChanges();
+        expect(requestQuote).toHaveBeenCalledTimes(1);
         expect(component.quoteState()).toBe('ready');
+        finishFlash();
+        expect(quoteScreen()).not.toBeNull();
+    });
 
-        // A form change recalculates, but the previous quote stays on screen meanwhile.
-        component.orderForm.controls.quantity.setValue(2);
-        expect(component.quoteState()).toBe('loading');
-        expect(component.quote()?.totalPriceChf).toBe(8);
-        settle();
-        expect(component.quoteState()).toBe('ready');
+    it('shows the transfer bar for a large file only and hands over to an indeterminate slicer phase', () => {
+        const upload = new Subject<UploadEvent>();
+        uploadModel.mockReturnValueOnce(upload);
+        const large = new File([new Uint8Array(UPLOAD_PROGRESS_MIN_BYTES + 1)], 'large.stl');
+
+        component.onDrop(dropEvent(large));
+        calculate();
+        upload.next({ kind: 'progress', percent: 40 });
+        fixture.detectChanges();
+        expect(component.quotePhase()).toBe('uploading');
+        expect(loadingOverlay()?.textContent).toContain('Modell wird hochgeladen... 40%');
+        const track = loadingOverlay()!.querySelector<HTMLElement>('.loading-track')!;
+        expect(track.classList.contains('indeterminate')).toBe(false);
+        expect(track.getAttribute('aria-valuenow')).toBe('40');
+        expect(loadingOverlay()!.querySelector<HTMLElement>('.loading-fill')?.style.width).toBe('40%');
+
+        // The upload is done and the slicer runs: the same bar turns indeterminate.
+        const pending = new Subject<QuoteResponse>();
+        requestQuote.mockReturnValueOnce(pending);
+        upload.next({ kind: 'done', model: { modelId: MODEL_ID, fileName: 'large.stl', sizeBytes: large.size } });
+        upload.complete();
+        fixture.detectChanges();
+        expect(component.uploadState()).toBe('done');
+        expect(component.quotePhase()).toBe('slicing');
+        expect(loadingOverlay()?.textContent).toContain(SLICING_STEPS[0].text);
+        expect(loadingOverlay()!.querySelector('.loading-track')?.classList.contains('indeterminate')).toBe(true);
+        expect(loadingOverlay()!.querySelector('.loading-track')?.hasAttribute('aria-valuenow')).toBe(false);
+
+        pending.next(quoteFor({ filament: 'PLA', color: 'black', quality: 'medium', quantity: 1 }));
+        finishFlash();
+        expect(component.quotePhase()).toBe('ready');
+        expect(loadingOverlay()).toBeNull();
+
+        // A small file is transferred within one progress event; a bar would only flash at 100 %.
+        const second = new Subject<UploadEvent>();
+        uploadModel.mockReturnValueOnce(second);
+        component.onDrop(dropEvent(benchy));
+        calculate();
+        second.next({ kind: 'progress', percent: 100 });
+        fixture.detectChanges();
+        expect(component.uploadState()).toBe('uploading');
+        expect(component.quotePhase()).toBe('slicing');
+        expect(loadingOverlay()?.textContent).toContain(SLICING_STEPS[0].text);
+        expect(loadingOverlay()?.textContent).not.toContain('hochgeladen');
+        expect(loadingOverlay()!.querySelector('.loading-track')?.classList.contains('indeterminate')).toBe(true);
     });
 
     it('uploads again once when the backend has dropped the model, then retries the quote', () => {
@@ -316,120 +490,91 @@ describe('UploadComponent', () => {
         );
 
         component.onDrop(dropEvent(benchy));
-        settle();
+        calculate();
 
         expect(uploadModel).toHaveBeenCalledTimes(2);
         expect(requestQuote).toHaveBeenCalledTimes(2);
         expect(component.quoteState()).toBe('ready');
         expect(component.quote()?.totalPriceChf).toBe(8);
+        finishFlash();
+        expect(quoteScreen()).not.toBeNull();
     });
 
-    it('prefetches the other filaments and qualities after a quote so that switching is instant', () => {
-        requestQuote.mockImplementation((_file: File, params: { filament: string }) =>
-            of({ ...sampleQuote, filament: params.filament, totalPriceChf: params.filament === 'PETG' ? 9 : 8 })
-        );
+    it('repeats a failed upload when the price is asked for', () => {
+        uploadModel.mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 503 })));
 
         component.onDrop(dropEvent(benchy));
-        settle();
-        expect(requestQuote).toHaveBeenCalledTimes(1);
-
-        vi.advanceTimersByTime(PREFETCH_DELAY_MS);
-        expect(requestQuote).toHaveBeenCalledTimes(5);
-        expect(requestQuote.mock.calls.slice(1).map((call) => call[1])).toEqual([
-            { filament: 'PETG', color: 'black', quality: 'medium', quantity: 1 },
-            { filament: 'PLA', color: 'black', quality: 'coarse', quantity: 1 },
-            { filament: 'PLA', color: 'black', quality: 'high', quantity: 1 },
-            { filament: 'PLA', color: 'red', quality: 'medium', quantity: 1 }
-        ]);
-        expect(component.quote()?.filament).toBe('PLA');
-
-        component.orderForm.controls.filament.setValue('PETG');
         fixture.detectChanges();
-        settle();
+        expect(component.uploadState()).toBe('error');
+        expect(component.quotePhase()).toBe('error');
+        expect(host.querySelector('.quote-cta .status-error')).not.toBeNull();
+        expect(loadingOverlay()).toBeNull();
 
-        expect(requestQuote).toHaveBeenCalledTimes(5);
-        expect(component.quoteState()).toBe('ready');
-        expect(component.quoteDoneFlash()).toBe(false);
-        expect(component.quote()?.totalPriceChf).toBe(9);
-
-        component.orderForm.controls.filament.setValue('PLA');
-        component.orderForm.controls.quality.setValue('high');
-        fixture.detectChanges();
-        settle();
-        expect(requestQuote).toHaveBeenCalledTimes(5);
-        expect(component.quote()?.totalPriceChf).toBe(8);
-    });
-
-    it('slices on demand when a prefetch failed, and forgets the cache with the file', () => {
-        requestQuote.mockImplementation((_file: File, params: { filament: string }) =>
-            params.filament === 'PETG' && requestQuote.mock.calls.length === 2
-                ? throwError(() => new HttpErrorResponse({ status: 503 }))
-                : of({ ...sampleQuote, filament: params.filament })
-        );
-
-        component.onDrop(dropEvent(benchy));
-        settle();
-        vi.advanceTimersByTime(PREFETCH_DELAY_MS);
-        expect(requestQuote).toHaveBeenCalledTimes(5);
-        expect(component.quoteState()).toBe('ready');
-
-        component.orderForm.controls.filament.setValue('PETG');
-        fixture.detectChanges();
-        settle();
-        expect(requestQuote).toHaveBeenCalledTimes(6);
-        expect(component.quote()?.filament).toBe('PETG');
-
-        component.onDrop(dropEvent(new File(['solid other endsolid other'], 'other.stl')));
-        settle();
+        calculate();
         expect(uploadModel).toHaveBeenCalledTimes(2);
-        expect(requestQuote).toHaveBeenCalledTimes(7);
-        expect(requestQuote.mock.calls[6][1].filament).toBe('PETG');
+        expect(requestQuote).toHaveBeenCalledTimes(1);
+        expect(component.quoteState()).toBe('ready');
     });
 
-    it('does not request while the quantity is invalid', () => {
+    it('shows the backend message on failure in the configuration step and retries on the next click', () => {
+        const pending = new Subject<QuoteResponse>();
+        requestQuote.mockReturnValueOnce(pending);
+
         component.onDrop(dropEvent(benchy));
-        settle();
+        calculate();
+        expect(document.activeElement).toBe(loadingOverlay());
 
-        component.orderForm.controls.quantity.setValue(99);
-        settle();
-
-        expect(requestQuote.mock.calls.some((call) => call[1].quantity === 99)).toBe(false);
-        expect(component.canSubmitOrder()).toBe(false);
-    });
-
-    it('explains an invalid quantity and marks the shown quote as stale instead of freezing', () => {
-        component.onDrop(dropEvent(benchy));
-        settle();
+        pending.error(new HttpErrorResponse({ status: 429, error: { retryAfterSeconds: 30 } }));
         fixture.detectChanges();
-        const host = fixture.nativeElement as HTMLElement;
+        expect(component.quoteState()).toBe('error');
+        expect(component.quoteError()).toContain('Limit erreicht');
+        expect(component.canSubmitOrder()).toBe(false);
+        expect(loadingOverlay()).toBeNull();
+        expect(quoteScreen()).toBeNull();
+        expect(host.querySelector('.quote-cta .status-error')?.textContent).toContain('Limit erreicht');
+        expect(document.activeElement).toBe(host.querySelector('.calculate-btn'));
+
+        calculate();
+        expect(requestQuote).toHaveBeenCalledTimes(2);
+        expect(component.quoteState()).toBe('ready');
+        finishFlash();
+        expect(quoteScreen()).not.toBeNull();
+        expect(host.querySelector('.quote-cta .status-error')).toBeNull();
+    });
+
+    it('does not request while the quantity is invalid and points at the field instead', () => {
+        component.onDrop(dropEvent(benchy));
+        component.orderForm.controls.quantity.setValue(99);
+        fixture.detectChanges();
+        expect(host.querySelector('.field-error')).toBeNull();
+
+        calculate();
+
+        expect(requestQuote).not.toHaveBeenCalled();
+        expect(component.quoteRequested()).toBe(false);
+        expect(loadingOverlay()).toBeNull();
+        expect(component.canSubmitOrder()).toBe(false);
+        expect(host.querySelector('.field-error')?.textContent?.trim()).toBe('Bitte 1 bis 20 Stueck');
+    });
+
+    it('explains an invalid quantity once the field has been touched', () => {
+        component.onDrop(dropEvent(benchy));
+        fixture.detectChanges();
         const input = host.querySelector<HTMLInputElement>('input[formControlName="quantity"]')!;
         expect(host.querySelector('.field-error')).toBeNull();
-        expect(host.querySelector('.quote-stale-note')).toBeNull();
-        expect(component.quoteMatchesForm()).toBe(true);
 
-        // Typed above the catalogue limit: no request goes out, but the customer is told why.
+        // Typed above the catalogue limit: the customer is told why the button will not slice.
         const quantity = component.orderForm.controls.quantity;
         quantity.setValue(100);
         quantity.markAsDirty();
-        settle();
         fixture.detectChanges();
 
-        expect(requestQuote.mock.calls.some((call) => call[1].quantity === 100)).toBe(false);
         expect(host.querySelector('.field-error')?.textContent?.trim()).toBe('Bitte 1 bis 20 Stueck');
         expect(input.classList.contains('invalid')).toBe(true);
         expect(input.getAttribute('aria-invalid')).toBe('true');
         expect(input.getAttribute('aria-describedby')).toBe('quantity-error');
         expect(host.querySelector('#quantity-error')).not.toBeNull();
-
-        // The previous price stays visible, dimmed, and says what it is for.
-        expect(component.quote()?.totalPriceChf).toBe(8);
         expect(component.quoteMatchesForm()).toBe(false);
-        expect(component.quoteIsStale()).toBe(true);
-        expect(component.canSubmitOrder()).toBe(false);
-        const note = host.querySelector('.quote-stale-note');
-        expect(note?.textContent).toContain('Preis gilt fuer 1 x PLA, Standard 0.20 mm');
-        expect(note?.textContent).toContain('Menge korrigieren');
-        expect(host.querySelector('.quote-body.stale')).not.toBeNull();
 
         // Cleared through the keyboard: the number accessor reports null, the message changes.
         input.value = '';
@@ -438,74 +583,46 @@ describe('UploadComponent', () => {
         expect(host.querySelector('.field-error')?.textContent?.trim()).toBe('Bitte eine Menge eingeben');
 
         quantity.setValue(1);
-        settle();
         fixture.detectChanges();
         expect(host.querySelector('.field-error')).toBeNull();
         expect(input.getAttribute('aria-invalid')).toBe('false');
         expect(input.hasAttribute('aria-describedby')).toBe(false);
-        expect(host.querySelector('.quote-stale-note')).toBeNull();
-        expect(component.quoteMatchesForm()).toBe(true);
-        expect(component.canSubmitOrder()).toBe(true);
     });
 
     it('keeps the quantity message quiet until the field has been touched', () => {
         component.onDrop(dropEvent(benchy));
-        settle();
         component.orderForm.controls.quantity.setValue(0);
         fixture.detectChanges();
-        const host = fixture.nativeElement as HTMLElement;
-
         expect(host.querySelector('.field-error')).toBeNull();
-        expect(host.querySelector('.quote-stale-note')?.textContent).toContain('Menge korrigieren');
 
         component.orderForm.controls.quantity.markAsTouched();
         fixture.detectChanges();
         expect(host.querySelector('.field-error')?.textContent?.trim()).toBe('Bitte 1 bis 20 Stueck');
     });
 
-    it('marks the previous quote as stale while the new one is computed, without a correction hint', async () => {
-        const { Subject } = await import('rxjs');
+    it('treats a quote in hand as current only while the form still matches it', () => {
         component.onDrop(dropEvent(benchy));
-        settle();
-        // Prefetches of the neighbours are answered at once; only the quantity change hangs.
-        const pending = new Subject<QuoteResponse>();
-        requestQuote.mockImplementation((_id: string, params: QuoteRequestParams) =>
-            params.quantity === 2 ? pending : of(quoteFor(params))
-        );
-
-        component.orderForm.controls.quantity.setValue(2);
-        settle();
-        fixture.detectChanges();
-        const host = fixture.nativeElement as HTMLElement;
-        expect(component.quoteState()).toBe('loading');
-        expect(component.quotePhase()).toBe('repricing');
-        expect(component.quoteMatchesForm()).toBe(false);
-        expect(host.querySelector('.quote-phase')?.textContent).toContain(SLICING_STEPS[2].text);
-        expect(host.querySelector('.quote-stale-note')?.textContent).toContain('Preis gilt fuer 1 x PLA, Standard 0.20 mm');
-        expect(host.querySelector('.quote-stale-note')?.textContent).not.toContain('Menge korrigieren');
-        expect(host.querySelector('.quote-body.stale')).not.toBeNull();
-        expect(host.querySelector('.field-error')).toBeNull();
-
-        pending.next(quoteFor({ filament: 'PLA', color: 'black', quality: 'medium', quantity: 2 }));
-        pending.complete();
+        calculate();
+        finishFlash();
+        component.onAdjust();
         fixture.detectChanges();
         expect(component.quoteMatchesForm()).toBe(true);
         expect(component.canSubmitOrder()).toBe(true);
-        expect(host.querySelector('.quote-stale-note')).toBeNull();
+        expect(host.querySelector('.quote-hint')?.textContent).toContain('Preis fuer diese Konfiguration');
 
-        // "Fertig." lingers for a moment; the body brightens once it is gone.
-        expect(component.quoteIsStale()).toBe(true);
-        vi.advanceTimersByTime(QUOTE_DONE_FLASH_MS);
+        component.orderForm.controls.quantity.setValue(2);
         fixture.detectChanges();
-        expect(component.quoteIsStale()).toBe(false);
-        expect(host.querySelector('.quote-body.stale')).toBeNull();
+        expect(component.quoteMatchesForm()).toBe(false);
+        expect(component.canSubmitOrder()).toBe(false);
+        expect(host.querySelector('.quote-hint')?.textContent).not.toContain('CHF');
+
+        component.orderForm.controls.quantity.setValue(1);
+        expect(component.quoteMatchesForm()).toBe(true);
     });
 
-    it('cycles through the staged slicer texts while the quote is pending, then flashes "Fertig."', async () => {
-        const { Subject } = await import('rxjs');
+    it('cycles through the staged slicer texts while the quote is pending, then flashes "Fertig."', () => {
         const pending = new Subject<QuoteResponse>();
         requestQuote.mockImplementation(() => pending);
-        const host = fixture.nativeElement as HTMLElement;
         const text = () => host.querySelector('.quote-phase .phase-text')?.textContent;
         const showAfter = (ms: number) => {
             vi.advanceTimersByTime(ms);
@@ -514,7 +631,7 @@ describe('UploadComponent', () => {
         };
 
         component.onDrop(dropEvent(benchy));
-        fixture.detectChanges();
+        calculate();
         expect(component.quotePhase()).toBe('slicing');
         expect(text()).toBe(SLICING_STEPS[0].text);
 
@@ -536,31 +653,32 @@ describe('UploadComponent', () => {
         expect(host.querySelector('.quote-phase .spinner')).toBeNull();
         expect(host.querySelector('.quote-phase .loading-track')?.classList.contains('indeterminate')).toBe(false);
         expect(host.querySelector<HTMLElement>('.quote-phase .loading-fill')?.style.width).toBe('100%');
-        expect(host.querySelector('.quote-body.stale')).not.toBeNull();
+        expect(quoteScreen()).toBeNull();
 
         expect(showAfter(QUOTE_DONE_FLASH_MS - 1)).toBe('Fertig.');
         expect(showAfter(1)).toBeUndefined();
         expect(component.quoteDoneFlash()).toBe(false);
-        expect(host.querySelector('.quote-phase')).toBeNull();
-        expect(host.querySelector('.quote-body.stale')).toBeNull();
+        expect(loadingOverlay()).toBeNull();
+        expect(quoteScreen()).not.toBeNull();
     });
 
-    it('starts a re-price at the layer stage and ends with its own text', async () => {
-        const { Subject } = await import('rxjs');
+    it('starts a re-price of a known model at the layer stage and ends with its own text', () => {
         component.onDrop(dropEvent(benchy));
-        settle();
+        calculate();
+        finishFlash();
         const pending = new Subject<QuoteResponse>();
         requestQuote.mockImplementation((_id: string, params: QuoteRequestParams) =>
             params.quantity === 3 ? pending : of(quoteFor(params))
         );
-        const host = fixture.nativeElement as HTMLElement;
         const text = () => host.querySelector('.quote-phase .phase-text')?.textContent;
 
+        component.onAdjust();
         component.orderForm.controls.quantity.setValue(3);
-        fixture.detectChanges();
+        calculate();
         expect(component.quotePhase()).toBe('repricing');
+        expect(loadingOverlay()).not.toBeNull();
+        expect(quoteScreen()).toBeNull();
         expect(text()).toBe(SLICING_STEPS[2].text);
-        expect(component.quote()?.totalPriceChf).toBe(8);
 
         vi.advanceTimersByTime(4499);
         fixture.detectChanges();
@@ -571,62 +689,39 @@ describe('UploadComponent', () => {
         expect(requestQuote.mock.calls.some((call) => call[1].quantity === 3)).toBe(true);
     });
 
-    it('treats a quote for another material price as stale until the form matches again', () => {
+    it('warns about a model that is not watertight and keeps the slicer warnings behind a toggle', () => {
+        requestQuote.mockReturnValue(of({ ...sampleQuote, manifold: false, warnings: ['Open edges: 12', 'Non-manifold edges: 4'] }));
         component.onDrop(dropEvent(benchy));
-        settle();
-        expect(component.quoteMatchesForm()).toBe(true);
+        calculate();
+        finishFlash();
 
-        // Same filament and quality, but red costs more per kilogram than black.
-        component.orderForm.controls.color.setValue('red');
-        expect(component.quoteMatchesForm()).toBe(false);
-        settle();
-        expect(component.quote()?.color.pricePerKgChf).toBe(45);
-        expect(component.quoteMatchesForm()).toBe(true);
+        const screen = quoteScreen()!;
+        expect(screen.querySelector('.manifold-note')?.textContent).toContain('nicht wasserdicht');
+        const toggle = screen.querySelector<HTMLButtonElement>('.warnings-toggle');
+        expect(toggle?.textContent?.trim()).toBe('Hinweise vom Slicer (2)');
+        expect(toggle?.getAttribute('aria-expanded')).toBe('false');
+        expect(screen.querySelector('.warnings-list')).toBeNull();
+
+        toggle?.click();
+        fixture.detectChanges();
+        const items = screen.querySelectorAll('.warnings-list li');
+        expect(Array.from(items).map((li) => li.textContent)).toEqual(['Open edges: 12', 'Non-manifold edges: 4']);
+        expect(toggle?.getAttribute('aria-expanded')).toBe('true');
     });
 
-    it('shows the transfer bar for a large file only and hands over to an indeterminate slicer phase', async () => {
-        const { Subject } = await import('rxjs');
-        const host = fixture.nativeElement as HTMLElement;
-        const upload = new Subject<UploadEvent>();
-        uploadModel.mockReturnValueOnce(upload);
-        const large = new File([new Uint8Array(UPLOAD_PROGRESS_MIN_BYTES + 1)], 'large.stl');
-
-        component.onDrop(dropEvent(large));
-        upload.next({ kind: 'progress', percent: 40 });
-        fixture.detectChanges();
-        expect(component.quotePhase()).toBe('uploading');
-        expect(host.querySelector('.quote-phase')?.textContent).toContain('Modell wird hochgeladen... 40%');
-        const track = host.querySelector<HTMLElement>('.quote-phase .loading-track')!;
-        expect(track.classList.contains('indeterminate')).toBe(false);
-        expect(track.getAttribute('aria-valuenow')).toBe('40');
-        expect(host.querySelector<HTMLElement>('.quote-phase .loading-fill')?.style.width).toBe('40%');
-
-        // The upload is done and the slicer runs: the same bar turns indeterminate.
-        upload.next(uploaded);
-        upload.complete();
-        fixture.detectChanges();
-        expect(component.uploadState()).toBe('done');
-        expect(component.quotePhase()).toBe('slicing');
-        expect(host.querySelector('.quote-phase')?.textContent).toContain(SLICING_STEPS[0].text);
-        expect(host.querySelector('.quote-phase .loading-track')?.classList.contains('indeterminate')).toBe(true);
-        expect(host.querySelector('.quote-phase .loading-track')?.hasAttribute('aria-valuenow')).toBe(false);
-
-        settle();
-        fixture.detectChanges();
-        expect(component.quotePhase()).toBe('ready');
-        expect(host.querySelector('.quote-phase')).toBeNull();
-
-        // A small file is transferred within one progress event; a bar would only flash at 100 %.
-        const second = new Subject<UploadEvent>();
-        uploadModel.mockReturnValueOnce(second);
+    it('says nothing about the mesh when it is fine or was not checked', () => {
         component.onDrop(dropEvent(benchy));
-        second.next({ kind: 'progress', percent: 100 });
-        fixture.detectChanges();
-        expect(component.uploadState()).toBe('uploading');
-        expect(component.quotePhase()).toBe('slicing');
-        expect(host.querySelector('.quote-phase')?.textContent).toContain(SLICING_STEPS[0].text);
-        expect(host.querySelector('.quote-phase')?.textContent).not.toContain('hochgeladen');
-        expect(host.querySelector('.quote-phase .loading-track')?.classList.contains('indeterminate')).toBe(true);
+        calculate();
+        finishFlash();
+        expect(quoteScreen()!.querySelector('.manifold-note')).toBeNull();
+        expect(quoteScreen()!.querySelector('.slicer-warnings')).toBeNull();
+
+        requestQuote.mockReturnValue(of({ ...sampleQuote, quantity: 2, manifold: null }));
+        component.onAdjust();
+        component.orderForm.controls.quantity.setValue(2);
+        calculate();
+        finishFlash();
+        expect(quoteScreen()!.querySelector('.manifold-note')).toBeNull();
     });
 
     it('says the model is being prepared once its bytes are in but the viewer has not finished', () => {
@@ -634,7 +729,6 @@ describe('UploadComponent', () => {
         // jsdom has no WebGL, so the viewer reports an error on first render; the events below
         // replay what a real browser sends: loading, byte progress, then loaded after parsing.
         fixture.detectChanges();
-        const host = fixture.nativeElement as HTMLElement;
 
         component.onModelLoadStateChange('loading');
         component.onModelLoadProgress(45);
@@ -654,55 +748,55 @@ describe('UploadComponent', () => {
         expect(host.querySelector('.viewer-loading')).toBeNull();
     });
 
-    it('shows the backend message on failure and allows a forced retry', () => {
-        requestQuote.mockReturnValueOnce(
-            throwError(() => new HttpErrorResponse({ status: 429, error: { retryAfterSeconds: 30 } }))
-        );
-
+    it('keeps the preview on screen while configuring', () => {
         component.onDrop(dropEvent(benchy));
-        settle();
-        expect(component.quoteState()).toBe('error');
-        expect(component.quoteError()).toContain('Limit erreicht');
-        expect(component.canSubmitOrder()).toBe(false);
+        fixture.detectChanges();
+        expect(host.querySelector('app-model-viewer')).not.toBeNull();
+        expect(host.querySelector('.file-meta')?.textContent).toContain('benchy.stl');
 
-        component.requestQuote(true);
-        settle();
-        expect(requestQuote).toHaveBeenCalledTimes(2);
-        expect(component.quoteState()).toBe('ready');
+        // The preview stays behind the loading screen and the result; the viewer is not rebuilt.
+        const viewer = host.querySelector('app-model-viewer');
+        calculate();
+        expect(host.querySelector('app-model-viewer')).toBe(viewer);
+        finishFlash();
+        expect(host.querySelector('app-model-viewer')).toBe(viewer);
     });
 
     it('skips the browser preview for a 3MF above the size limit but still quotes it', () => {
         const heavy = new File([new Uint8Array(PREVIEW_LIMIT_BYTES_3MF + 1)], 'spider.3mf');
 
         component.onDrop(dropEvent(heavy));
-        settle();
-
+        fixture.detectChanges();
         expect(component.previewDisabled()).toBe(true);
         expect(component.isModelLoading()).toBe(false);
-        expect(fixture.nativeElement.querySelector('.viewer-placeholder')).not.toBeNull();
-        expect(fixture.nativeElement.querySelector('app-model-viewer')).toBeNull();
+        expect(host.querySelector('.viewer-placeholder')).not.toBeNull();
+        expect(host.querySelector('app-model-viewer')).toBeNull();
+
+        calculate();
         expect(requestQuote).toHaveBeenCalledTimes(1);
+        expect(component.quoteState()).toBe('ready');
 
         component.onDrop(dropEvent(benchy));
-        settle();
         expect(component.previewDisabled()).toBe(false);
     });
 
     it('rejects files that are not STL or 3MF without contacting the backend', () => {
         component.onDrop(dropEvent(new File(['x'], 'model.glb')));
-        settle();
 
         expect(component.errorMessage()).toContain('STL oder 3MF');
+        expect(uploadModel).not.toHaveBeenCalled();
         expect(requestQuote).not.toHaveBeenCalled();
     });
 
     it('puts the configured model into the cart as a line with its model id and quote', () => {
         component.onDrop(dropEvent(benchy));
         component.orderForm.controls.quantity.setValue(2);
-        settle();
+        calculate();
+        finishFlash();
         expect(cart.isEmpty()).toBe(true);
 
-        component.onAddToCart();
+        quoteScreen()!.querySelector<HTMLButtonElement>('.add-btn')!.click();
+        fixture.detectChanges();
 
         expect(cart.items()).toHaveLength(1);
         expect(cart.items()[0]).toMatchObject({
@@ -717,35 +811,42 @@ describe('UploadComponent', () => {
         });
         expect(cart.items()[0].file).toBe(benchy);
         expect(component.addedItem()?.id).toBe(cart.items()[0].id);
-        // The model stays on screen for the next steps; another click would add a second line.
+        // The result stays on screen with the next steps; the model is kept for another line.
         expect(component.selectedFile()).toBe(benchy);
-        fixture.detectChanges();
-        const host = fixture.nativeElement as HTMLElement;
-        expect(host.querySelector('.cart-added')?.textContent).toContain('liegt im Warenkorb');
-        expect(host.querySelector('.cart-added a[href="/warenkorb"]')).not.toBeNull();
-        expect(host.querySelector('.cart-added a[href="/checkout"]')).not.toBeNull();
+        const screen = quoteScreen()!;
+        expect(screen.querySelector('.cart-added')?.textContent).toContain('liegt im Warenkorb');
+        expect(screen.querySelector('.cart-added a[href="/warenkorb"]')).not.toBeNull();
+        expect(screen.querySelector('.cart-added a[href="/checkout"]')).not.toBeNull();
+        expect(screen.querySelector('.add-btn')).toBeNull();
     });
 
     it('adds a second line for a changed configuration and resets for the next model', () => {
         component.onDrop(dropEvent(benchy));
-        settle();
+        calculate();
+        finishFlash();
         component.onAddToCart();
 
+        component.onAdjust();
         component.orderForm.controls.quality.setValue('high');
         expect(component.addedItem()).toBeNull();
-        settle();
+        calculate();
+        finishFlash();
         component.onAddToCart();
         expect(cart.items().map((item) => item.quality)).toEqual(['medium', 'high']);
 
         component.onUploadAnother();
+        fixture.detectChanges();
         expect(component.selectedFile()).toBeNull();
         expect(component.addedItem()).toBeNull();
+        expect(component.quoteRequested()).toBe(false);
+        expect(quoteScreen()).toBeNull();
+        expect(host.querySelector('.dropzone')).not.toBeNull();
         expect(cart.items()).toHaveLength(2);
     });
 
     it('does not add without a ready quote', () => {
         component.onDrop(dropEvent(benchy));
-        expect(component.quoteState()).toBe('loading');
+        expect(component.quoteState()).toBe('idle');
 
         component.onAddToCart();
 
@@ -753,35 +854,28 @@ describe('UploadComponent', () => {
         expect(component.addedItem()).toBeNull();
     });
 
-    it('adds the model and continues to the checkout on direct order', () => {
-        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-        component.onDrop(dropEvent(benchy));
-        settle();
-
-        component.onDirectCheckout();
-
-        expect(cart.items()).toHaveLength(1);
-        expect(navigate).toHaveBeenCalledWith(['/checkout']);
-    });
-
     it('refuses to add once the cart holds the maximum number of models', () => {
         component.onDrop(dropEvent(benchy));
-        settle();
         for (let index = 0; index < CART_MAX_ITEMS; index++) {
+            component.onAdjust();
             component.orderForm.controls.quantity.setValue(index + 1);
-            settle();
+            calculate();
+            finishFlash();
             component.onAddToCart();
         }
         expect(cart.items()).toHaveLength(CART_MAX_ITEMS);
         expect(component.cartIsFull()).toBe(true);
         expect(component.canAddToCart()).toBe(false);
 
+        component.onAdjust();
         component.orderForm.controls.quantity.setValue(1);
-        settle();
+        calculate();
+        finishFlash();
         component.onAddToCart();
         expect(cart.items()).toHaveLength(CART_MAX_ITEMS);
         fixture.detectChanges();
-        expect((fixture.nativeElement as HTMLElement).textContent).toContain('Warenkorb ist voll');
+        expect(quoteScreen()?.textContent).toContain('Warenkorb ist voll');
+        expect(quoteScreen()?.querySelector<HTMLButtonElement>('.add-btn')?.disabled).toBe(true);
     });
 
     it('formats print durations for people', () => {
