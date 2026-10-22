@@ -81,7 +81,7 @@ describe('CartComponent', () => {
 
     afterEach(() => {
         vi.useRealTimers();
-        sessionStorage.clear();
+        localStorage.clear();
     });
 
     async function create() {
