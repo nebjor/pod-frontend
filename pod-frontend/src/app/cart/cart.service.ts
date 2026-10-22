@@ -1,13 +1,18 @@
 import { isPlatformBrowser } from '@angular/common';
 import { Injectable, PLATFORM_ID, afterNextRender, computed, inject, signal } from '@angular/core';
-import { Observable, catchError, filter, map, switchMap, tap, throwError } from 'rxjs';
+import { Observable, Subject, catchError, filter, forkJoin, map, of, switchMap, tap, throwError } from 'rxjs';
 import { QuoteResponse } from '../quote/quote.models';
 import { QuoteService, UploadEvent, isModelExpired } from '../quote/quote.service';
+import { AccountCartApi } from './account-cart.api';
 import { CartStorage, StoredCartItem } from './cart-storage';
 
-/** One configured model with its quote. The file stays so the model can be uploaded again. */
+/**
+ * One configured model with its quote. The file stays so the model can be uploaded again. Lines
+ * that came from the account cart of another device have no file; the server keeps it and
+ * registers it again on demand (`serverId`). Their `modelId` is empty until that happened.
+ */
 export interface CartItem extends StoredCartItem {
-    file: File;
+    file?: File;
 }
 
 /** What the upload page hands over; the cart assigns the id. */
@@ -37,6 +42,7 @@ function newItemId(): string {
 export class CartService {
     private readonly storage = inject(CartStorage);
     private readonly quoteService = inject(QuoteService);
+    private readonly accountCart = inject(AccountCartApi);
     private readonly state = signal<CartItem[]>([]);
     private readonly restored = signal(false);
     /** Serialises restore and cross-tab sync so two reads never interleave their writes. */
@@ -46,6 +52,8 @@ export class CartService {
         this.resolveReady = resolve;
     });
 
+    /** Emits after every change the customer made on this device; not for restores or foreign tabs. */
+    readonly changes = new Subject<void>();
     readonly items = this.state.asReadonly();
     /** False until the persisted cart has been read; pages show a loading state meanwhile. */
     readonly ready = this.restored.asReadonly();
@@ -86,7 +94,9 @@ export class CartService {
             return null;
         }
         const item: CartItem = { ...input, id: newItemId() };
-        void this.storage.putFile(item.id, item.file);
+        if (item.file) {
+            void this.storage.putFile(item.id, item.file);
+        }
         this.commit([...this.state(), item]);
         return item;
     }
@@ -113,27 +123,48 @@ export class CartService {
         }
         const params = { filament: item.filament, color: item.color.code, quality: item.quality, quantity };
 
-        return this.quoteService.requestQuote(item.modelId, params).pipe(
+        const quote = (modelId: string) => this.quoteService.requestQuote(modelId, params);
+        // Lines from the account cart have no upload id until the server registered their file.
+        const first = item.modelId ? quote(item.modelId) : this.refreshModel(id).pipe(switchMap(quote));
+
+        return first.pipe(
             catchError((error: unknown) =>
-                isModelExpired(error)
-                    ? this.reuploadModel(id).pipe(switchMap((modelId) => this.quoteService.requestQuote(modelId, params)))
-                    : throwError(() => error)
+                isModelExpired(error) ? this.refreshModel(id).pipe(switchMap(quote)) : throwError(() => error)
             ),
-            tap((quote) => this.patch(id, { quantity, quote }))
+            tap((result) => this.patch(id, { quantity, quote: result }))
         );
     }
 
-    /** Uploads the line's file again and remembers the id the backend now keeps it under. */
-    reuploadModel(id: string): Observable<string> {
+    /**
+     * Gives the line a fresh upload id: from the local file when there is one, otherwise from the
+     * server's stored copy of an account cart line. Emits the new id.
+     */
+    refreshModel(id: string): Observable<string> {
         const item = this.find(id);
         if (!item) {
             return throwError(() => new Error(`Cart item ${id} does not exist`));
         }
-        return this.quoteService.uploadModel(item.file).pipe(
-            filter((event): event is Extract<UploadEvent, { kind: 'done' }> => event.kind === 'done'),
-            map((event) => event.model.modelId),
-            tap((modelId) => this.patch(id, { modelId }))
-        );
+        let modelId$: Observable<string>;
+        if (item.file) {
+            modelId$ = this.quoteService.uploadModel(item.file).pipe(
+                filter((event): event is Extract<UploadEvent, { kind: 'done' }> => event.kind === 'done'),
+                map((event) => event.model.modelId)
+            );
+        } else if (item.serverId) {
+            modelId$ = this.accountCart.registerModel(item.serverId).pipe(map((model) => model.modelId));
+        } else {
+            return throwError(() => new Error(`Cart item ${id} has neither a file nor a server copy`));
+        }
+        // The upload id is not part of the cart the customer edited; no push needed.
+        return modelId$.pipe(tap((modelId) => this.patch(id, { modelId }, false)));
+    }
+
+    /** Makes sure every line can be quoted and ordered, i.e. has an upload id. */
+    ensureModelIds(): Observable<void> {
+        const missing = this.state().filter((item) => !item.modelId);
+        return missing.length === 0
+            ? of(undefined)
+            : forkJoin(missing.map((item) => this.refreshModel(item.id))).pipe(map(() => undefined));
     }
 
     /** Replaces a line's quote after the backend reported a changed price. */
@@ -143,7 +174,8 @@ export class CartService {
 
     /**
      * Reads the persisted cart back. Lines whose file is gone are dropped: without the file the
-     * model could not be uploaded again if the backend has expired it.
+     * model could not be uploaded again if the backend has expired it. Lines of the account cart
+     * stay: the server keeps their file.
      */
     restore(): Promise<void> {
         // Read synchronously: a line added in the same tick would overwrite the stored cart
@@ -154,7 +186,7 @@ export class CartService {
             // Lines added while the files were loading stay; persisted ones go in front of them.
             const current = this.state();
             const known = new Set(current.map((item) => item.id));
-            this.commit([...restoredItems.filter((item) => !known.has(item.id)), ...current]);
+            this.commit([...restoredItems.filter((item) => !known.has(item.id)), ...current], false);
             this.restored.set(true);
             this.resolveReady();
             void this.storage.pruneFiles(this.state().map((item) => item.id));
@@ -180,6 +212,8 @@ export class CartService {
             const file = inMemory.get(entry.id) ?? (await this.storage.getFile(entry.id));
             if (file) {
                 items.push({ ...entry, file: file.name === entry.fileName ? file : new File([file], entry.fileName, { type: file.type }) });
+            } else if (entry.serverId) {
+                items.push(entry);
             }
         }
         return items;
@@ -190,12 +224,52 @@ export class CartService {
         return this.pending;
     }
 
-    private patch(id: string, changes: Partial<StoredCartItem>) {
-        this.commit(this.state().map((item) => (item.id === id ? { ...item, ...changes } : item)));
+    /**
+     * Sets the server ids the account cart assigned. Not a customer change, so nothing is
+     * pushed back.
+     */
+    attachServerIds(serverIds: ReadonlyMap<string, string>) {
+        this.commit(
+            this.state().map((item) => (serverIds.has(item.id) ? { ...item, serverId: serverIds.get(item.id) } : item)),
+            false
+        );
     }
 
-    private commit(items: CartItem[]) {
+    /** Takes the merged cart after signing in. Nothing is pushed by this call. */
+    replaceAll(items: CartItem[]) {
+        const keep = new Set(items.map((item) => item.id));
+        for (const old of this.state()) {
+            if (!keep.has(old.id)) {
+                void this.storage.deleteFile(old.id);
+            }
+        }
+        this.commit(items, false);
+    }
+
+    /**
+     * After signing out the device keeps the lines it has the file for; lines that only existed
+     * in the account cart go.
+     */
+    detachFromAccount() {
+        const kept = this.state()
+            .filter((item) => item.file)
+            .map(({ serverId: _serverId, ...item }) => item);
+        this.commit(kept, false);
+        void this.storage.pruneFiles(kept.map((item) => item.id));
+    }
+
+    private patch(id: string, changes: Partial<StoredCartItem>, notify = true) {
+        this.commit(
+            this.state().map((item) => (item.id === id ? { ...item, ...changes } : item)),
+            notify
+        );
+    }
+
+    private commit(items: CartItem[], notify = true) {
         this.state.set(items);
         this.storage.writeItems(items.map(({ file: _file, ...stored }) => stored));
+        if (notify) {
+            this.changes.next();
+        }
     }
 }

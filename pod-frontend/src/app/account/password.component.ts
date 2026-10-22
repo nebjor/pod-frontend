@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signa
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { CartSyncService } from '../cart/cart-sync.service';
 import { CartService } from '../cart/cart.service';
 import { I18nService } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
@@ -35,6 +36,7 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
 export class PasswordComponent {
     private readonly account = inject(AccountService);
     private readonly cart = inject(CartService);
+    private readonly cartSync = inject(CartSyncService);
     private readonly router = inject(Router);
     private readonly i18n = inject(I18nService);
     private readonly destroyRef = inject(DestroyRef);
@@ -90,9 +92,13 @@ export class PasswordComponent {
                     this.saving.set(false);
                     const remembered = takeLoginReturnPath();
                     if (remembered) {
-                        void this.router.navigateByUrl(remembered);
+                        // The checkout the customer came from needs the merged cart as well.
+                        void this.cartSync.ensureSynced().then(() => this.router.navigateByUrl(remembered));
                     } else if (firstPassword) {
-                        void this.router.navigateByUrl(this.cart.isEmpty() ? '/' : '/warenkorb');
+                        // The cart of the account is merged first, so the decision sees all of it.
+                        void this.cartSync
+                            .ensureSynced()
+                            .then(() => this.router.navigateByUrl(this.cart.isEmpty() ? '/' : '/warenkorb'));
                     } else {
                         this.saved.set(true);
                     }

@@ -249,6 +249,8 @@ export const de = {
     'cart.shippingNote':
         'Versand nur innerhalb der Schweiz. Beim Bestellen prüfen wir den Preis noch einmal; danach bleibt er {days} Tage gültig.',
     'cart.maxReached': 'Maximal {max} Modelle pro Bestellung. Entferne eines, um ein weiteres hochzuladen.',
+    'cart.notice.trimmed': 'Dein Warenkorb ist auf {max} Modelle begrenzt. {count} Modelle von diesem Gerät wurden nicht übernommen.',
+    'cart.notice.dismiss': 'Hinweis schliessen',
     'cart.error.quantityRange': 'Bitte eine Menge zwischen 1 und {max} angeben.',
     'cart.error.quantityMin': 'Bitte eine Menge ab 1 angeben.',
 
@@ -283,6 +285,7 @@ export const de = {
     'checkout.error.expiredNamed':
         'Das Modell {name} liegt nicht mehr auf unserem Server und konnte nicht automatisch neu hochgeladen werden. Bitte entferne es aus dem Warenkorb und lade es noch einmal hoch.',
     'checkout.error.expired': 'Eines deiner Modelle liegt nicht mehr auf unserem Server. Bitte lade es noch einmal hoch.',
+    'checkout.error.unavailableNamed': 'Das Modell {name} konnte nicht vom Server bereitgestellt werden. Bitte versuche es später noch einmal oder entferne es aus dem Warenkorb.',
 
     // Order success page
     'success.fallbackTitle': 'Deine Bestellung',

@@ -3,6 +3,7 @@ import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
+import { CartSyncService } from '../cart/cart-sync.service';
 import { CartService } from '../cart/cart.service';
 import { AccountResponse, AccountState, LOGIN_RETURN_TO_STORAGE_KEY } from './account.models';
 import { AccountService } from './account.service';
@@ -31,11 +32,13 @@ describe('PasswordComponent', () => {
     let deleteAccount: ReturnType<typeof vi.fn>;
     let navigate: ReturnType<typeof vi.spyOn>;
     let navigateByUrl: ReturnType<typeof vi.spyOn>;
+    let ensureSynced: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
         state = signal<AccountState>('signedIn');
         account = signal<AccountResponse | null>(anna);
         cartEmpty = signal(true);
+        ensureSynced = vi.fn(() => Promise.resolve());
         setPassword = vi.fn(() => {
             account.update((current) => (current ? { ...current, hasPassword: true } : current));
             return of(undefined);
@@ -46,6 +49,8 @@ describe('PasswordComponent', () => {
             return of(undefined);
         });
     });
+
+    const settled = () => new Promise<void>((resolve) => setTimeout(resolve));
 
     async function setup() {
         await TestBed.configureTestingModule({
@@ -65,7 +70,8 @@ describe('PasswordComponent', () => {
                         deleted: signal(false)
                     }
                 },
-                { provide: CartService, useValue: { isEmpty: cartEmpty } }
+                { provide: CartService, useValue: { isEmpty: cartEmpty } },
+                { provide: CartSyncService, useValue: { ensureSynced } }
             ]
         }).compileComponents();
         navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
@@ -130,6 +136,7 @@ describe('PasswordComponent', () => {
             component.form.setValue({ password: 'correct horse battery', confirm: 'correct horse battery' });
 
             component.save();
+            await settled();
             fixture.detectChanges();
 
             expect(setPassword).toHaveBeenCalledWith('correct horse battery');
@@ -144,6 +151,7 @@ describe('PasswordComponent', () => {
             component.form.setValue({ password: 'correct horse battery', confirm: 'correct horse battery' });
 
             component.save();
+            await settled();
 
             expect(navigateByUrl).toHaveBeenCalledWith('/warenkorb');
         });
@@ -155,6 +163,7 @@ describe('PasswordComponent', () => {
             component.form.setValue({ password: 'correct horse battery', confirm: 'correct horse battery' });
 
             component.save();
+            await settled();
 
             expect(navigateByUrl).toHaveBeenCalledWith('/checkout');
             expect(localStorage.getItem(LOGIN_RETURN_TO_STORAGE_KEY)).toBeNull();
@@ -166,8 +175,27 @@ describe('PasswordComponent', () => {
             component.form.setValue({ password: 'correct horse battery', confirm: 'correct horse battery' });
 
             component.save();
+            await settled();
 
             expect(navigateByUrl).toHaveBeenCalledWith('/');
+        });
+
+        it('decides by the cart only after the account cart has been merged', async () => {
+            let finishSync: () => void = () => undefined;
+            ensureSynced.mockReturnValue(new Promise<void>((resolve) => (finishSync = resolve)));
+            await setup();
+            component.form.setValue({ password: 'correct horse battery', confirm: 'correct horse battery' });
+
+            component.save();
+            await settled();
+            expect(navigateByUrl).not.toHaveBeenCalled();
+
+            // The merge brings the lines of the other device.
+            cartEmpty.set(false);
+            finishSync();
+            await settled();
+
+            expect(navigateByUrl).toHaveBeenCalledWith('/warenkorb');
         });
     });
 
@@ -233,6 +261,7 @@ describe('PasswordComponent', () => {
             component.form.setValue({ password: 'correct horse battery', confirm: 'correct horse battery' });
 
             component.save();
+            await settled();
 
             expect(navigateByUrl).toHaveBeenCalledWith('/checkout');
             expect(component.saved()).toBe(false);

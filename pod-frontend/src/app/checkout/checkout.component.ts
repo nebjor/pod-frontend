@@ -142,6 +142,14 @@ export class CheckoutComponent {
     }
 
     private send() {
+        // Lines from the account cart get their upload id first.
+        this.cart
+            .ensureModelIds()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({ next: () => this.place(), error: () => this.failExpired(this.items().find((item) => !item.modelId)) });
+    }
+
+    private place() {
         const items = this.items();
         const { termsAccepted: _accepted, customerName, ...address } = this.customerForm.getRawValue();
         const request: OrderRequest = {
@@ -184,7 +192,7 @@ export class CheckoutComponent {
                     // The backend dropped this model: upload it once more and send the order again.
                     this.reuploaded.add(item.id);
                     this.cart
-                        .reuploadModel(item.id)
+                        .refreshModel(item.id)
                         .pipe(takeUntilDestroyed(this.destroyRef))
                         .subscribe({ next: () => this.send(), error: () => this.failExpired(item) });
                     return;
@@ -233,10 +241,10 @@ export class CheckoutComponent {
 
     private failExpired(item: CartItem | undefined) {
         this.state.set('idle');
+        // A line without a local file has no upload to repeat; its stored copy is the server's business.
+        const key = item?.file ? 'checkout.error.expiredNamed' : 'checkout.error.unavailableNamed';
         this.errorMessage.set(
-            item
-                ? this.i18n.t('checkout.error.expiredNamed', { name: item.fileName })
-                : this.i18n.t('checkout.error.expired')
+            item ? this.i18n.t(key, { name: item.fileName }) : this.i18n.t('checkout.error.expired')
         );
     }
 
