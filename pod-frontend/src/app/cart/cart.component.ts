@@ -3,9 +3,10 @@ import { ChangeDetectionStrategy, Component, DestroyRef, afterNextRender, comput
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { Subject, catchError, debounceTime, groupBy, map, mergeMap, of, switchMap } from 'rxjs';
+import { AccountService } from '../account/account.service';
 import { I18nService } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
-import { FALLBACK_ORDER_SETTINGS, OrderSettings } from '../order/order.models';
+import { FALLBACK_ORDER_SETTINGS, OrderSettings, setupFeeFor } from '../order/order.models';
 import { OrderService } from '../order/order.service';
 import { formatPrintDuration } from '../quote/print-duration';
 import { qualityLabel } from '../quote/quality-labels';
@@ -39,6 +40,7 @@ export class CartComponent {
     private readonly quoteService = inject(QuoteService);
     private readonly orderService = inject(OrderService);
     private readonly i18n = inject(I18nService);
+    private readonly account = inject(AccountService);
     private readonly destroyRef = inject(DestroyRef);
     private readonly quantityChanges = new Subject<QuantityChange>();
 
@@ -60,7 +62,10 @@ export class CartComponent {
     readonly lineErrors = signal<Record<string, string>>({});
 
     readonly shipping = computed(() => this.settings().shippingFlatChf);
-    readonly total = computed(() => Math.round((this.itemsTotal() + this.shipping()) * 100) / 100);
+    readonly isSignedIn = this.account.isSignedIn;
+    readonly setupFee = computed(() => setupFeeFor(this.settings(), this.isSignedIn()));
+    readonly accountSetupFee = computed(() => this.settings().setupFeeAccountChf);
+    readonly total = computed(() => Math.round((this.itemsTotal() + this.setupFee() + this.shipping()) * 100) / 100);
 
     constructor() {
         this.quantityChanges

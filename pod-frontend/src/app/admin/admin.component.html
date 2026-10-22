@@ -141,6 +141,7 @@
                                 <div><dt>Druckzeit gesamt</dt><dd>{{ selectedPrintTime() }}</dd></div>
                                 <div><dt>Material gesamt</dt><dd>{{ selectedFilamentGrams() | number:'1.0-1' }} g</dd></div>
                                 <div><dt>Positionen</dt><dd>{{ order.totals.currency }} {{ order.totals.itemsTotal | number:'1.2-2' }}</dd></div>
+                                <div><dt>Einrichtung</dt><dd>{{ order.totals.currency }} {{ order.totals.setupFee | number:'1.2-2' }}</dd></div>
                                 <div><dt>Versand</dt><dd>{{ order.totals.currency }} {{ order.totals.shipping | number:'1.2-2' }}</dd></div>
                                 <div class="total"><dt>Gesamt</dt><dd>{{ order.totals.currency }} {{ order.totals.total | number:'1.2-2' }}</dd></div>
                             </dl>

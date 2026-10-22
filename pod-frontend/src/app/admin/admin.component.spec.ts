@@ -21,8 +21,7 @@ const benchy: AdminOrderItem = {
     printTimeSeconds: 3903,
     filamentGrams: 23.1,
     unitPriceChf: 3,
-    setupFeeChf: 5,
-    lineTotalChf: 11,
+    lineTotalChf: 6,
     warnings: [],
     manifold: true
 };
@@ -39,7 +38,7 @@ const holder: AdminOrderItem = {
     printTimeSeconds: 1952,
     filamentGrams: 11.5,
     unitPriceChf: 1.85,
-    lineTotalChf: 6.85
+    lineTotalChf: 1.85
 };
 
 const paidOrder: AdminOrder = {
@@ -59,7 +58,7 @@ const paidOrder: AdminOrder = {
     city: 'Zürich',
     country: 'CH',
     items: [benchy, holder],
-    totals: { itemsTotal: 17.85, shipping: 9, vatRate: 0, vatAmount: 0, total: 26.85, currency: 'CHF' },
+    totals: { itemsTotal: 7.85, setupFee: 5, shipping: 9, vatRate: 0, vatAmount: 0, total: 21.85, currency: 'CHF' },
     paymentProvider: 'mock',
     needsInspection: false,
     accountEmail: null
@@ -69,7 +68,7 @@ const singleOrder: AdminOrder = {
     ...paidOrder,
     orderNumber: 'POD-1001',
     items: [benchy],
-    totals: { ...paidOrder.totals, itemsTotal: 11, total: 20 }
+    totals: { ...paidOrder.totals, itemsTotal: 6, total: 20 }
 };
 
 function stat(median: number, n = 12): CalibrationStat {
@@ -266,7 +265,7 @@ describe('AdminComponent', () => {
         const rows = host().querySelectorAll('table.orders tbody tr');
         expect(rows).toHaveLength(2);
         expect(rows[0].textContent).toContain('2 Positionen: benchy.stl, halter.3mf');
-        expect(rows[0].textContent).toContain('CHF 26.85');
+        expect(rows[0].textContent).toContain('CHF 21.85');
         expect(rows[1].textContent).toContain('benchy.stl');
         expect(rows[1].textContent).not.toContain('Positionen');
         expect(component.itemSummary(singleOrder)).toBe('benchy.stl');
@@ -297,7 +296,8 @@ describe('AdminComponent', () => {
         expect(rows[0].textContent).toContain('10.7 MB');
         expect(rows[0].textContent).toContain('PLA Red');
         expect(rows[0].textContent).toContain('medium (0.2 mm)');
-        expect(rows[0].textContent).toContain('CHF 11.00');
+        expect(host().textContent).toMatch(/Einrichtung\s*CHF 5\.00/);
+        expect(rows[0].textContent).toContain('CHF 6.00');
         expect((rows[0].querySelector('.swatch-dot') as HTMLElement).style.background).toContain('rgb(214, 40, 40)');
         expect(rows[1].textContent).toContain('halter.3mf');
 

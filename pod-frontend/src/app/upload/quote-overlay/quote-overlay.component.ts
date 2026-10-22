@@ -4,6 +4,7 @@ import {
     Component,
     ElementRef,
     afterNextRender,
+    DestroyRef,
     computed,
     inject,
     input,
@@ -11,7 +12,11 @@ import {
     signal,
     viewChild
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
+import { AccountService } from '../../account/account.service';
+import { FALLBACK_ORDER_SETTINGS, OrderSettings } from '../../order/order.models';
+import { OrderService } from '../../order/order.service';
 import { I18nService } from '../../i18n/i18n.service';
 import { TranslatePipe } from '../../i18n/translate.pipe';
 import { CART_MAX_ITEMS, CartItem, CartService } from '../../cart/cart.service';
@@ -49,6 +54,9 @@ export function revealStep(el: HTMLElement) {
 export class QuoteOverlayComponent {
     private readonly cart = inject(CartService);
     private readonly i18n = inject(I18nService);
+    private readonly orderService = inject(OrderService);
+    private readonly destroyRef = inject(DestroyRef);
+    protected readonly account = inject(AccountService);
     private readonly dialog = viewChild.required<ElementRef<HTMLElement>>('dialog');
 
     readonly quote = input.required<QuoteResponse>();
@@ -81,7 +89,20 @@ export class QuoteOverlayComponent {
     /** The slicer's warnings are collapsed by default; most customers do not need them. */
     readonly warningsOpen = signal(false);
 
+    /** The setup fee comes from the shop settings; the fallback shows until they have arrived. */
+    readonly settings = signal<OrderSettings>(FALLBACK_ORDER_SETTINGS);
+
     constructor() {
+        this.orderService
+            .loadSettings()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: (settings) => this.settings.set(settings),
+                error: () => {
+                    // Keep the fallback; the cart and checkout show the authoritative numbers.
+                }
+            });
+
         // The customer clicked "Preis berechnen" at the bottom of the configuration; bring the
         // result into view at the top of the card and move focus there for screen readers.
         afterNextRender(() => {

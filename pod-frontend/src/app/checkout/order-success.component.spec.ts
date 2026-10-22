@@ -27,8 +27,7 @@ const unpaid: OrderResponse = {
             quality: 'medium',
             quantity: 2,
             unitPriceChf: 3,
-            setupFeeChf: 5,
-            lineTotalChf: 11,
+            lineTotalChf: 6,
             printTimeSeconds: 3903,
             filamentGrams: 23.1
         },
@@ -40,13 +39,12 @@ const unpaid: OrderResponse = {
             quality: 'high',
             quantity: 1,
             unitPriceChf: 1.85,
-            setupFeeChf: 5,
-            lineTotalChf: 6.85,
+            lineTotalChf: 1.85,
             printTimeSeconds: 1952,
             filamentGrams: 11.5
         }
     ],
-    totals: { itemsTotal: 17.85, shipping: 9, vatRate: 0, vatAmount: 0, total: 26.85, currency: 'CHF' },
+    totals: { itemsTotal: 7.85, setupFee: 5, shipping: 9, vatRate: 0, vatAmount: 0, total: 21.85, currency: 'CHF' },
     vatNote: 'No VAT charged: the seller is not VAT registered.',
     paymentUrl: '/pay/mock?session=mock_1'
 };
@@ -111,15 +109,16 @@ describe('OrderSuccessComponent', () => {
 
         expect(find).toHaveBeenCalledWith('POD-1000', 'anna@example.com');
         expect(component.state()).toBe('paid');
-        expect(component.order()?.totals.total).toBe(26.85);
+        expect(component.order()?.totals.total).toBe(21.85);
 
         fixture.detectChanges();
         const lines = element().querySelectorAll('.item-list li');
         expect(lines).toHaveLength(2);
         expect(lines[0].textContent).toContain('2 x benchy.stl');
-        expect(lines[0].textContent).toContain('CHF 11.00');
+        expect(lines[0].textContent).toContain('CHF 6.00');
         expect(lines[1].textContent).toContain('PETG White');
-        expect(element().textContent).toContain('CHF 26.85');
+        expect(element().textContent).toContain('CHF 21.85');
+        expect(element().textContent).toMatch(/Einrichtung\s*CHF 5\.00/);
     });
 
     it('shows status and quality as labels, never as codes', async () => {

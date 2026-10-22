@@ -29,8 +29,7 @@ const paid: OrderResponse = {
             quality: 'medium',
             quantity: 2,
             unitPriceChf: 3,
-            setupFeeChf: 5,
-            lineTotalChf: 11,
+            lineTotalChf: 6,
             printTimeSeconds: 3903,
             filamentGrams: 23.1
         },
@@ -42,13 +41,12 @@ const paid: OrderResponse = {
             quality: 'high',
             quantity: 1,
             unitPriceChf: 1.85,
-            setupFeeChf: 5,
-            lineTotalChf: 6.85,
+            lineTotalChf: 1.85,
             printTimeSeconds: 1952,
             filamentGrams: 11.5
         }
     ],
-    totals: { itemsTotal: 17.85, shipping: 9, vatRate: 0, vatAmount: 0, total: 26.85, currency: 'CHF' },
+    totals: { itemsTotal: 7.85, setupFee: 5, shipping: 9, vatRate: 0, vatAmount: 0, total: 21.85, currency: 'CHF' },
     vatNote: 'No VAT charged: the seller is not VAT registered.'
 };
 const unpaid: OrderResponse = { ...paid, status: 'NEW', paidAt: null, paymentUrl: '/pay/mock?session=mock_1' };
@@ -204,11 +202,12 @@ describe('OrderStatusComponent', () => {
         expect(rows).toHaveLength(2);
         expect(rows[0].textContent).toContain('benchy.stl');
         expect(rows[0].textContent).toContain('PLA Red');
-        expect(rows[0].textContent).toContain('CHF 11.00');
+        expect(rows[0].textContent).toContain('CHF 6.00');
         expect(rows[1].textContent).toContain('PETG White');
 
         const text = element().textContent ?? '';
-        expect(text).toContain('CHF 26.85');
+        expect(text).toContain('CHF 21.85');
+        expect(text).toMatch(/Einrichtung\s*CHF 5\.00/);
         expect(text).toContain('19.10.2026');
         expect(text).toContain('Bezahlt am');
         expect(text).toContain('Keine MWST');

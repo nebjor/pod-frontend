@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { signal } from '@angular/core';
+import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
@@ -40,9 +40,8 @@ const quote: QuoteResponse = {
     triangleCount: 225154,
     machineCostChf: 4.35,
     materialCostChf: 0.8,
-    setupFeeChf: 5,
     unitPriceChf: 3,
-    totalPriceChf: 11,
+    totalPriceChf: 6,
     currency: 'CHF',
     leadTimeDays: 3,
     warnings: [],
@@ -58,7 +57,7 @@ const cubeQuote: QuoteResponse = {
     quantity: 1,
     totalPrintTimeSeconds: 1952,
     unitPriceChf: 1.85,
-    totalPriceChf: 6.85
+    totalPriceChf: 1.85
 };
 
 const MODEL_ID = 'a'.repeat(64);
@@ -81,8 +80,7 @@ const placedOrder: OrderResponse = {
             quality: 'medium',
             quantity: 2,
             unitPriceChf: 3,
-            setupFeeChf: 5,
-            lineTotalChf: 11,
+            lineTotalChf: 6,
             printTimeSeconds: 3903,
             filamentGrams: 23.1
         },
@@ -94,16 +92,15 @@ const placedOrder: OrderResponse = {
             quality: 'high',
             quantity: 1,
             unitPriceChf: 1.85,
-            setupFeeChf: 5,
-            lineTotalChf: 6.85,
+            lineTotalChf: 1.85,
             printTimeSeconds: 1952,
             filamentGrams: 11.5
         }
     ],
-    totals: { itemsTotal: 17.85, shipping: 9, vatRate: 0, vatAmount: 0, total: 26.85, currency: 'CHF' },
+    totals: { itemsTotal: 7.85, setupFee: 5, shipping: 9, vatRate: 0, vatAmount: 0, total: 21.85, currency: 'CHF' },
     vatNote: 'No VAT charged: the seller is not VAT registered.',
     paidAt: null,
-    paymentUrl: '/pay/mock?session=mock_1&order=POD-1000&amount=26.85&currency=CHF'
+    paymentUrl: '/pay/mock?session=mock_1&order=POD-1000&amount=21.85&currency=CHF'
 };
 
 const anna: AccountResponse = {
@@ -169,7 +166,7 @@ describe('CheckoutComponent', () => {
                 provideRouter([]),
                 { provide: OrderService, useValue: { placeOrder, loadSettings: () => of(FALLBACK_ORDER_SETTINGS) } },
                 { provide: QuoteService, useValue: { uploadModel, requestQuote: vi.fn(), loadOptions: () => of(options) } },
-                { provide: AccountService, useValue: { state: accountState, account, load: () => Promise.resolve() } }
+                { provide: AccountService, useValue: { state: accountState, isSignedIn: computed(() => accountState() === 'signedIn'), account, load: () => Promise.resolve() } }
             ]
         }).compileComponents();
 
@@ -211,18 +208,31 @@ describe('CheckoutComponent', () => {
         expect((fixture.nativeElement as HTMLElement).textContent).toContain('Warenkorb ist leer');
     });
 
+    it('charges a signed-in customer the reduced setup fee', async () => {
+        accountState.set('signedIn');
+        cart.add(benchy());
+        await create();
+
+        expect(component.setupFee()).toBe(3);
+        expect(component.total()).toBe(18);
+        expect((fixture.nativeElement as HTMLElement).querySelector('.details')?.textContent).toContain('EinrichtungCHF 3.00');
+    });
+
     it('lists every line and sums them with the flat shipping before ordering', async () => {
         cart.add(benchy());
         cart.add(cube());
         await create();
 
-        expect(component.itemsTotal()).toBe(17.85);
+        expect(component.itemsTotal()).toBe(7.85);
         expect(component.shipping()).toBe(9);
-        expect(component.total()).toBe(26.85);
+        expect(component.setupFee()).toBe(5);
+        expect(component.total()).toBe(21.85);
+        const summary = (fixture.nativeElement as HTMLElement).querySelector('.details')?.textContent?.replace(/\s+/g, ' ').replace(/(\D)(CHF)/g, '$1 $2').replace(/(\d)([A-Z])/g, '$1 $2');
+        expect(summary).toContain('Positionen (2) CHF 7.85 Einrichtung CHF 5.00 Versand (Pauschale) CHF 9.00 Gesamt CHF 21.85');
         const lines = (fixture.nativeElement as HTMLElement).querySelectorAll('.item-list li');
         expect(lines).toHaveLength(2);
         expect(lines[0].textContent).toContain('2 x benchy.stl');
-        expect(lines[0].textContent).toContain('CHF 11.00');
+        expect(lines[0].textContent).toContain('CHF 6.00');
         expect(lines[1].textContent).toContain('1 x cube.stl');
         expect(lines[1].textContent).toContain('PETG White');
         // Quality tiers are shown by their catalogue label, never by the code the cart stores.
@@ -338,12 +348,12 @@ describe('CheckoutComponent', () => {
                 { modelId: MODEL_ID, fileName: 'benchy.stl', filament: 'PLA', color: 'red', quality: 'medium', quantity: 2 },
                 { modelId: CUBE_MODEL_ID, fileName: 'cube.stl', filament: 'PETG', color: 'white', quality: 'high', quantity: 1 }
             ],
-            expectedTotalChf: 17.85
+            expectedTotalChf: 7.85
         });
         expect(component.state()).toBe('placed');
         expect(component.order()?.orderNumber).toBe('POD-1000');
         expect(cart.isEmpty()).toBe(true);
-        expect(navigateByUrl).toHaveBeenCalledWith('/pay/mock?session=mock_1&order=POD-1000&amount=26.85&currency=CHF');
+        expect(navigateByUrl).toHaveBeenCalledWith('/pay/mock?session=mock_1&order=POD-1000&amount=21.85&currency=CHF');
         expect(JSON.parse(sessionStorage.getItem(LAST_ORDER_STORAGE_KEY) ?? '{}')).toEqual({
             orderNumber: 'POD-1000',
             email: 'anna@example.com'
@@ -352,7 +362,8 @@ describe('CheckoutComponent', () => {
         fixture.detectChanges();
         const placed = (fixture.nativeElement as HTMLElement).querySelector('.placed');
         expect(placed?.querySelectorAll('.item-list li')).toHaveLength(2);
-        expect(placed?.textContent).toContain('CHF 26.85');
+        expect(placed?.textContent).toContain('CHF 21.85');
+        expect(placed?.textContent).toContain('Einrichtung');
     });
 
     it('shows backend field errors next to the form, nested or flat', async () => {
@@ -385,21 +396,21 @@ describe('CheckoutComponent', () => {
                 status: 409,
                 error: {
                     code: 'price-changed',
-                    currentQuotes: [{ ...quote, totalPriceChf: 12.5 }, cubeQuote],
-                    totals: { itemsTotal: 19.35, shipping: 9, vatRate: 0, vatAmount: 0, total: 28.35, currency: 'CHF' }
+                    currentQuotes: [{ ...quote, totalPriceChf: 7.5 }, cubeQuote],
+                    totals: { itemsTotal: 9.35, setupFee: 5, shipping: 9, vatRate: 0, vatAmount: 0, total: 23.35, currency: 'CHF' }
                 }
             }))
         );
 
         component.submit();
-        expect(component.priceChangedTo()).toBe(28.35);
-        expect(component.itemsTotal()).toBe(19.35);
-        expect(cart.items()[0].quote.totalPriceChf).toBe(12.5);
+        expect(component.priceChangedTo()).toBe(23.35);
+        expect(component.itemsTotal()).toBe(9.35);
+        expect(cart.items()[0].quote.totalPriceChf).toBe(7.5);
         expect(component.state()).toBe('idle');
 
         component.acceptNewPrice();
         expect(placeOrder).toHaveBeenCalledTimes(2);
-        expect(sentRequest(1).expectedTotalChf).toBe(19.35);
+        expect(sentRequest(1).expectedTotalChf).toBe(9.35);
         expect(component.state()).toBe('placed');
     });
 

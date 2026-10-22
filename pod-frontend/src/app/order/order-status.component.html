@@ -84,6 +84,7 @@
 
             <dl class="details">
                 <div><dt>{{ 'common.positionsCount' | t:{ count: o.items.length } }}</dt><dd>{{ o.totals.currency }} {{ o.totals.itemsTotal | number:'1.2-2' }}</dd></div>
+                <div><dt>{{ 'common.setupFee' | t }}</dt><dd>{{ o.totals.currency }} {{ o.totals.setupFee | number:'1.2-2' }}</dd></div>
                 <div><dt>{{ 'common.shipping' | t }}</dt><dd>{{ o.totals.currency }} {{ o.totals.shipping | number:'1.2-2' }}</dd></div>
                 @if (o.totals.vatAmount > 0) {
                     <div><dt>{{ 'order.vat' | t:{ rate: (o.totals.vatRate * 100 | number:'1.1-1') } }}</dt><dd>{{ o.totals.currency }} {{ o.totals.vatAmount | number:'1.2-2' }}</dd></div>
