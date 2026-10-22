@@ -25,25 +25,60 @@
                 @if (state() === 'invalid') {
                     <p class="error invalid-token" role="alert">{{ errorMessage() }}</p>
                 }
-                <p class="intro">
-                    Kein Passwort noetig: Du bekommst einen Link per E-Mail und bist mit einem Klick angemeldet. Danach
-                    siehst du deine Bestellungen und deine gespeicherte Adresse.
-                </p>
-                <form [formGroup]="form" class="customer-form" (ngSubmit)="submit()" novalidate>
-                    <label class="wide">
-                        E-Mail
-                        <input formControlName="email" type="email" autocomplete="email" />
-                        @if (form.controls.email.touched && form.controls.email.invalid) {
-                            <span class="field-error">Bitte gib eine gueltige E-Mail-Adresse ein.</span>
+                <div class="mode-switch" role="group" aria-label="Anmeldeart">
+                    <button type="button" class="mode-btn" [class.active]="mode() === 'link'"
+                        [attr.aria-pressed]="mode() === 'link'" (click)="switchMode('link')">Link per E-Mail</button>
+                    <button type="button" class="mode-btn" [class.active]="mode() === 'password'"
+                        [attr.aria-pressed]="mode() === 'password'" (click)="switchMode('password')">Passwort</button>
+                </div>
+                @if (mode() === 'link') {
+                    <p class="intro">
+                        Kein Passwort noetig: Du bekommst einen Link per E-Mail und bist mit einem Klick angemeldet. Danach
+                        siehst du deine Bestellungen und deine gespeicherte Adresse.
+                    </p>
+                    <form [formGroup]="form" class="customer-form" (ngSubmit)="submit()" novalidate>
+                        <label class="wide">
+                            E-Mail
+                            <input formControlName="email" type="email" autocomplete="email" />
+                            @if (form.controls.email.touched && form.controls.email.invalid) {
+                                <span class="field-error">Bitte gib eine gueltige E-Mail-Adresse ein.</span>
+                            }
+                        </label>
+                        <button type="submit" class="order-btn" [disabled]="state() === 'sending'">
+                            @if (state() === 'sending') { Link wird verschickt... } @else { Anmeldelink schicken }
+                        </button>
+                        @if (errorMessage() && state() === 'form') {
+                            <p class="error" role="alert">{{ errorMessage() }}</p>
                         }
-                    </label>
-                    <button type="submit" class="order-btn" [disabled]="state() === 'sending'">
-                        @if (state() === 'sending') { Link wird verschickt... } @else { Anmeldelink schicken }
-                    </button>
-                    @if (errorMessage() && state() === 'form') {
-                        <p class="error" role="alert">{{ errorMessage() }}</p>
-                    }
-                </form>
+                    </form>
+                } @else {
+                    <form [formGroup]="passwordForm" class="customer-form password-form" (ngSubmit)="submitPassword()" novalidate>
+                        <label class="wide">
+                            E-Mail
+                            <input formControlName="email" type="email" autocomplete="email" />
+                            @if (passwordForm.controls.email.touched && passwordForm.controls.email.invalid) {
+                                <span class="field-error">Bitte gib eine gueltige E-Mail-Adresse ein.</span>
+                            }
+                        </label>
+                        <label class="wide">
+                            Passwort
+                            <input formControlName="password" type="password" autocomplete="current-password" />
+                            @if (passwordForm.controls.password.touched && passwordForm.controls.password.invalid) {
+                                <span class="field-error">Bitte gib dein Passwort ein.</span>
+                            }
+                        </label>
+                        <button type="submit" class="order-btn" [disabled]="state() === 'signingIn'">
+                            @if (state() === 'signingIn') { Wird angemeldet... } @else { Anmelden }
+                        </button>
+                        @if (passwordError()) {
+                            <p class="error" role="alert">{{ passwordError() }}</p>
+                        }
+                    </form>
+                    <p class="note">
+                        Passwort vergessen? Dann
+                        <button type="button" class="text-btn" (click)="switchMode('link')">schick dir einen Anmeldelink</button>.
+                    </p>
+                }
             }
         }
     </section>
