@@ -293,9 +293,30 @@
 }
 
 // The delivery date is what customers look for first; it stands out from the other details.
+// The saving per piece in a batch, next to the line total.
+.discount {
+    margin: 0.2rem 0 0;
+    font-size: 0.82rem;
+    color: var(--accent-300);
+    text-align: right;
+    white-space: nowrap;
+}
+
+// The delivery date gets its own line and a frame: it is what customers look for first and
+// it must never wrap.
+.lead-time-line {
+    margin: 0.5rem 0 0;
+}
+
 .lead-time {
+    display: inline-block;
+    padding: 0.3rem 0.65rem;
+    border: 1px solid var(--accent-450);
+    border-radius: 999px;
     color: var(--text-100);
     font-weight: 700;
+    font-size: 0.85rem;
+    white-space: nowrap;
 }
 
 .account-hint a {

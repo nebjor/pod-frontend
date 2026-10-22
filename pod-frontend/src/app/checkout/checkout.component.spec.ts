@@ -41,6 +41,7 @@ const quote: QuoteResponse = {
     machineCostChf: 4.35,
     materialCostChf: 0.8,
     unitPriceChf: 3,
+    unitPriceSingleChf: 3,
     totalPriceChf: 6,
     currency: 'CHF',
     leadTimeDays: 3,
@@ -57,6 +58,7 @@ const cubeQuote: QuoteResponse = {
     quantity: 1,
     totalPrintTimeSeconds: 1952,
     unitPriceChf: 1.85,
+    unitPriceSingleChf: 1.85,
     totalPriceChf: 1.85
 };
 

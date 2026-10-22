@@ -24,6 +24,7 @@ const sampleQuote: QuoteResponse = {
     machineCostChf: 4.25,
     materialCostChf: 0.45,
     unitPriceChf: 4.7,
+        unitPriceSingleChf: 4.7,
     totalPriceChf: 19.1,
     currency: 'CHF',
     leadTimeDays: 4,
