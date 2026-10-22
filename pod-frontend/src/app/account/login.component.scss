@@ -1,0 +1,39 @@
+/* Segmented switch between the two ways to sign in. */
+.mode-switch {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin: 0 0 1.1rem;
+    padding: 3px;
+    border: 1px solid var(--border-650);
+    border-radius: 10px;
+    background: #0d2232;
+}
+
+.mode-btn {
+    border: 0;
+    border-radius: 8px;
+    padding: 0.55rem 0.75rem;
+    background: transparent;
+    color: var(--text-300);
+    font: inherit;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06rem;
+    cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease;
+
+    &:hover,
+    &:focus-visible {
+        color: var(--text-100);
+    }
+
+    &.active {
+        background: linear-gradient(180deg, rgba(19, 39, 58, 0.95), rgba(29, 56, 79, 0.95));
+        color: var(--text-100);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+}
+
+.invalid-token {
+    margin: 0 0 1rem;
+}

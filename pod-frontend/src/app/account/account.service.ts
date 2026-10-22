@@ -8,7 +8,9 @@ import {
     AccountFailure,
     AccountResponse,
     AccountState,
-    LOGIN_RETURN_TO_STORAGE_KEY
+    LOGIN_RETURN_TO_STORAGE_KEY,
+    PasswordLoginRequest,
+    SetPasswordRequest
 } from './account.models';
 
 export const ACCOUNT_API_URL = '/api/account';
@@ -65,6 +67,31 @@ export class AccountService {
             .pipe(tap((account) => this.signedIn(account)));
     }
 
+    /** The optional second way in; anything wrong answers 401 `invalid-credentials`. */
+    loginWithPassword(email: string, password: string): Observable<AccountResponse> {
+        const body: PasswordLoginRequest = { email, password };
+        return this.http
+            .post<AccountResponse>(`${ACCOUNT_API_URL}/sessions/password`, body)
+            .pipe(tap((account) => this.signedIn(account)));
+    }
+
+    /** Sets or replaces the password; the mail link keeps working either way. */
+    setPassword(password: string): Observable<void> {
+        const body: SetPasswordRequest = { password };
+        return this.http.put<void>(`${ACCOUNT_API_URL}/password`, body).pipe(
+            this.forgetOnUnauthorized(),
+            tap(() => this.patchAccount({ hasPassword: true }))
+        );
+    }
+
+    /** Back to the mail link only. */
+    removePassword(): Observable<void> {
+        return this.http.delete<void>(`${ACCOUNT_API_URL}/password`).pipe(
+            this.forgetOnUnauthorized(),
+            tap(() => this.patchAccount({ hasPassword: false }))
+        );
+    }
+
     update(address: AccountAddressRequest): Observable<AccountResponse> {
         return this.http.put<AccountResponse>(ACCOUNT_API_URL, address).pipe(
             this.forgetOnUnauthorized(),
@@ -88,6 +115,11 @@ export class AccountService {
     private signedIn(account: AccountResponse) {
         this.current.set(account);
         this.loadState.set('signedIn');
+    }
+
+    /** For answers without a body (204): keeps the local account in step with the backend. */
+    private patchAccount(changes: Partial<AccountResponse>) {
+        this.current.update((account) => (account ? { ...account, ...changes } : account));
     }
 
     private anonymous() {
@@ -122,6 +154,9 @@ export function describeAccountError(error: unknown): AccountFailure {
         }
         if (error.status === 400 && problem?.errors && typeof problem.errors === 'object') {
             return { kind: 'field-errors', errors: problem.errors as Record<string, string> };
+        }
+        if (error.status === 401 && problem?.code === 'invalid-credentials') {
+            return { kind: 'invalid-credentials' };
         }
         if (error.status === 401) {
             return { kind: 'error', message: 'Du bist nicht mehr angemeldet. Bitte melde dich neu an.' };

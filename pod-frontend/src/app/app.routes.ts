@@ -56,6 +56,12 @@ export const shopRoutes: Routes = [
         loadComponent: () => import('./account/login.component').then((m) => m.LoginComponent)
     },
     {
+        path: 'konto/passwort',
+        title: 'Passwort | 3DBurg',
+        data: { noindex: true },
+        loadComponent: () => import('./account/password.component').then((m) => m.PasswordComponent)
+    },
+    {
         path: 'konto',
         title: 'Mein Konto | 3DBurg',
         data: { noindex: true },

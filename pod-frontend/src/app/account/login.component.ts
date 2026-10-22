@@ -11,7 +11,9 @@ import {
     takeLoginReturnPath
 } from './account.service';
 
-type LoginState = 'form' | 'sending' | 'sent' | 'redeeming' | 'invalid';
+type LoginState = 'form' | 'sending' | 'sent' | 'signingIn' | 'redeeming' | 'invalid';
+/** The two ways in: the mail link (default) and the optional password. */
+export type LoginMode = 'link' | 'password';
 
 /**
  * How long a login link stays valid, as the page tells the customer. Mirrors the backend's
@@ -19,16 +21,19 @@ type LoginState = 'form' | 'sending' | 'sent' | 'redeeming' | 'invalid';
  */
 export const LOGIN_LINK_MINUTES = 15;
 
+const EMAIL_VALIDATORS = [Validators.required, Validators.email, Validators.maxLength(254)];
+
 /**
- * Passwordless login. The page asks for the e-mail and the backend mails a link back here
- * with `?token=`; opening that link signs the customer in. `?returnTo=` (a path of this app)
- * says where to go afterwards, the account page otherwise.
+ * Login page. By default the page asks for the e-mail and the backend mails a link back here
+ * with `?token=`; opening that link signs the customer in. A customer who set a password can
+ * switch to e-mail and password instead. `?returnTo=` (a path of this app) says where to go
+ * afterwards, as does `?next=` on the links in the mail; the account page otherwise.
  */
 @Component({
     selector: 'app-login',
     imports: [ReactiveFormsModule],
     templateUrl: './login.component.html',
-    styleUrls: ['./customer-page.scss'],
+    styleUrls: ['./customer-page.scss', './login.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LoginComponent {
@@ -39,16 +44,26 @@ export class LoginComponent {
 
     private readonly query = toSignal(
         this.route.queryParamMap.pipe(
-            map((params) => ({ token: params.get('token') ?? '', returnTo: safeReturnPath(params.get('returnTo')) }))
+            map((params) => ({
+                token: params.get('token') ?? '',
+                returnTo: safeReturnPath(params.get('returnTo')),
+                next: safeReturnPath(params.get('next'))
+            }))
         ),
-        { initialValue: { token: '', returnTo: null } }
+        { initialValue: { token: '', returnTo: null, next: null } }
     );
 
     readonly form = new FormGroup({
-        email: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.email, Validators.maxLength(254)] })
+        email: new FormControl('', { nonNullable: true, validators: EMAIL_VALIDATORS })
     });
+    readonly passwordForm = new FormGroup({
+        email: new FormControl('', { nonNullable: true, validators: EMAIL_VALIDATORS }),
+        password: new FormControl('', { nonNullable: true, validators: [Validators.required] })
+    });
+    readonly mode = signal<LoginMode>('link');
     readonly state = signal<LoginState>('form');
     readonly errorMessage = signal('');
+    readonly passwordError = signal('');
     readonly sentTo = signal('');
     readonly linkMinutes = LOGIN_LINK_MINUTES;
     readonly returnTo = computed(() => this.query().returnTo);
@@ -70,6 +85,21 @@ export class LoginComponent {
                 this.continueAfterLogin();
             }
         });
+    }
+
+    /** Switches between link and password; the e-mail typed so far moves along. */
+    switchMode(mode: LoginMode) {
+        if (mode === this.mode()) {
+            return;
+        }
+        const from = mode === 'password' ? this.form : this.passwordForm;
+        const to = mode === 'password' ? this.passwordForm : this.form;
+        if (from.controls.email.value) {
+            to.controls.email.setValue(from.controls.email.value);
+        }
+        this.mode.set(mode);
+        this.errorMessage.set('');
+        this.passwordError.set('');
     }
 
     submit() {
@@ -106,6 +136,38 @@ export class LoginComponent {
             });
     }
 
+    submitPassword() {
+        if (this.state() === 'signingIn') {
+            return;
+        }
+        if (this.passwordForm.invalid) {
+            this.passwordForm.markAllAsTouched();
+            return;
+        }
+
+        const { email, password } = this.passwordForm.getRawValue();
+        this.state.set('signingIn');
+        this.passwordError.set('');
+        this.account
+            .loginWithPassword(email.trim(), password)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: () => this.continueAfterLogin(),
+                error: (error: unknown) => {
+                    const failure = describeAccountError(error);
+                    if (failure.kind === 'invalid-credentials') {
+                        this.passwordError.set('E-Mail oder Passwort stimmt nicht.');
+                    } else if (failure.kind === 'error') {
+                        this.passwordError.set(failure.message);
+                    } else {
+                        this.passwordError.set('Die Anmeldung hat nicht geklappt. Bitte versuche es noch einmal.');
+                    }
+                    this.passwordForm.controls.password.reset();
+                    this.state.set('form');
+                }
+            });
+    }
+
     /** Back to the form, to ask for another link. */
     reset() {
         this.state.set('form');
@@ -126,13 +188,19 @@ export class LoginComponent {
                             ? failure.message
                             : 'Dieser Anmeldelink ist ungueltig, abgelaufen oder schon benutzt. Fordere unten einen neuen an.'
                     );
+                    this.mode.set('link');
                     this.state.set('invalid');
                 }
             });
     }
 
+    /**
+     * `returnTo` on the page wins, then `next` from the link in the mail, then the path the
+     * checkout left behind when the link was requested.
+     */
     private continueAfterLogin() {
+        const { returnTo, next } = this.query();
         const remembered = takeLoginReturnPath();
-        void this.router.navigateByUrl(this.returnTo() ?? remembered ?? '/konto');
+        void this.router.navigateByUrl(returnTo ?? next ?? remembered ?? '/konto');
     }
 }
