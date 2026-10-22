@@ -13,7 +13,7 @@ const anna: AccountResponse = {
     name: 'Anna Muster',
     street: 'Bahnhofstrasse 1',
     postalCode: '8001',
-    city: 'Zuerich',
+    city: 'Zürich',
     country: 'CH',
     createdAt: '2026-10-01T09:00:00Z',
     lastLoginAt: '2026-10-20T09:00:00Z',
@@ -96,7 +96,7 @@ describe('PasswordComponent', () => {
         await setup();
 
         expect(element().querySelector('h1')?.textContent?.trim()).toBe('Passwort festlegen');
-        expect(text()).toContain('Mit dem Passwort meldest du dich kuenftig an');
+        expect(text()).toContain('Mit dem Passwort meldest du dich künftig an');
         expect(text()).toContain('Mindestens 10 Zeichen');
         const inputs = element().querySelectorAll<HTMLInputElement>('input[type="password"]');
         expect(inputs).toHaveLength(2);
@@ -127,7 +127,7 @@ describe('PasswordComponent', () => {
 
         expect(setPassword).not.toHaveBeenCalled();
         expect(component.form.hasError('mismatch')).toBe(true);
-        expect(text()).toContain('stimmen nicht ueberein');
+        expect(text()).toContain('stimmen nicht überein');
     });
 
     describe('after the first password is saved', () => {
@@ -212,7 +212,7 @@ describe('PasswordComponent', () => {
         it('reads as the change page and offers to remove the password', async () => {
             await setup();
 
-            expect(element().querySelector('h1')?.textContent?.trim()).toBe('Passwort aendern');
+            expect(element().querySelector('h1')?.textContent?.trim()).toBe('Passwort ändern');
             const trigger = element().querySelector<HTMLButtonElement>('.page-footer .text-btn');
             expect(trigger?.textContent?.trim()).toBe('Passwort entfernen');
             expect(element().querySelector('.danger-zone')).toBeNull();
@@ -231,7 +231,7 @@ describe('PasswordComponent', () => {
             expect(text()).toContain('Passwort gespeichert.');
             expect(element().querySelector('.success a[href="/konto"]')).not.toBeNull();
             expect(component.form.getRawValue()).toEqual({ password: '', confirm: '' });
-            expect(element().querySelector('h1')?.textContent?.trim()).toBe('Passwort aendern');
+            expect(element().querySelector('h1')?.textContent?.trim()).toBe('Passwort ändern');
         });
 
         it('goes back to the checkout after a forgotten password was replaced from there', async () => {
@@ -271,16 +271,16 @@ describe('PasswordComponent', () => {
         });
 
         it('reports when removing did not work and keeps the password', async () => {
-            removePassword.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 503, error: { detail: 'Kurz nicht verfuegbar' } })));
+            removePassword.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 503, error: { detail: 'Kurz nicht verfügbar' } })));
             await setup();
 
             component.askRemove();
             component.confirmRemove();
             fixture.detectChanges();
 
-            expect(component.removeError()).toBe('Kurz nicht verfuegbar');
+            expect(component.removeError()).toBe('Kurz nicht verfügbar');
             expect(component.hasPassword()).toBe(true);
-            expect(element().querySelector('.danger-zone .error')?.textContent).toContain('Kurz nicht verfuegbar');
+            expect(element().querySelector('.danger-zone .error')?.textContent).toContain('Kurz nicht verfügbar');
         });
     });
 });

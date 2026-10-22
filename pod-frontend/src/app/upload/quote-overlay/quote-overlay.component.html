@@ -19,7 +19,7 @@
         <dl class="facts">
             <div>
                 <dt>Druckzeit</dt>
-                <dd>{{ totalPrintTimeLabel() }}@if (q.quantity > 1) {<span class="muted"> ({{ unitPrintTimeLabel() }} je Stueck)</span>}</dd>
+                <dd>{{ totalPrintTimeLabel() }}@if (q.quantity > 1) {<span class="muted"> ({{ unitPrintTimeLabel() }} je Stück)</span>}</dd>
             </div>
             <div>
                 <dt>Material</dt>
@@ -33,12 +33,12 @@
                 </dd>
             </div>
             <div>
-                <dt>Qualitaet</dt>
+                <dt>Qualität</dt>
                 <dd>{{ qualityLabel() }}</dd>
             </div>
             <div>
                 <dt>Menge</dt>
-                <dd>{{ q.quantity }} Stueck</dd>
+                <dd>{{ q.quantity }} Stück</dd>
             </div>
             <div>
                 <dt>Lieferzeit</dt>
@@ -49,14 +49,14 @@
         <p class="details">
             {{ q.boundingBoxMm.widthMm | number:'1.0-1' }} x {{ q.boundingBoxMm.depthMm | number:'1.0-1' }} x
             {{ q.boundingBoxMm.heightMm | number:'1.0-1' }} mm · ca. {{ q.plateCount }} Druckplatte(n) ·
-            {{ q.layerHeightMm }} mm Schichthoehe auf der Bambu Lab A1. Der Preis stammt aus einem echten
+            {{ q.layerHeightMm }} mm Schichthöhe auf der Bambu Lab A1. Der Preis stammt aus einem echten
             Slicer-Durchlauf deiner Datei.
         </p>
 
         @if (q.manifold === false) {
             <p class="manifold-note" role="note">
-                Das Modell ist nicht wasserdicht (nicht manifold). Wir pruefen es vor dem Druck; es kann zu
-                Rueckfragen kommen.
+                Das Modell ist nicht wasserdicht (nicht manifold). Wir prüfen es vor dem Druck; es kann zu
+                Rückfragen kommen.
             </p>
         }
         @if (q.warnings.length > 0) {
@@ -79,7 +79,7 @@
             <div class="cart-added" role="status">
                 <p class="cart-note">
                     <strong>{{ added.fileName }}</strong> liegt im Warenkorb. Darin jetzt:
-                    {{ cartModelsLabel() }}, {{ cartCount() }} Stueck,
+                    {{ cartModelsLabel() }}, {{ cartCount() }} Stück,
                     {{ cartCurrency() }} {{ cartTotal() | number:'1.2-2' }} zzgl. Versand.
                 </p>
                 <div class="actions">

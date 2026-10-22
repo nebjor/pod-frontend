@@ -108,7 +108,7 @@ describe('HeaderComponent', () => {
         expect(link?.querySelector('.cart-count')?.textContent?.trim()).toBe('3');
         expect(link?.querySelector('.cart-count')?.classList.contains('empty')).toBe(false);
         expect(link?.querySelector('.cart-total')?.textContent).toContain('CHF 17.85');
-        expect(link?.getAttribute('aria-label')).toBe('Warenkorb: 3 Stueck, CHF 17.85');
+        expect(link?.getAttribute('aria-label')).toBe('Warenkorb: 3 Stück, CHF 17.85');
     });
 
     function accountLink() {
@@ -238,7 +238,7 @@ describe('HeaderComponent', () => {
             expect(rows.length).toBe(2);
             expect(rows[0].querySelector('.preview-name')?.textContent).toBe('part-1.stl');
             // The header has no catalogue; the quality still reads as a label, never as the code.
-            expect(rows[0].querySelector('.preview-config')?.textContent?.trim()).toBe('1 Stueck · PLA Black, Standard 0.20 mm');
+            expect(rows[0].querySelector('.preview-config')?.textContent?.trim()).toBe('1 Stück · PLA Black, Standard 0.20 mm');
             expect(rows[0].querySelector('.preview-price')?.textContent).toContain('CHF 10.00');
             expect((rows[0].querySelector('.swatch-dot') as HTMLElement).style.background).toContain('rgb(31, 31, 31)');
             expect(open?.querySelector('.preview-more')).toBeNull();

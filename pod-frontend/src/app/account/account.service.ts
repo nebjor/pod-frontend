@@ -146,7 +146,7 @@ export function describeAccountError(error: unknown): AccountFailure {
         if (error.status === 0) {
             return {
                 kind: 'error',
-                message: 'Der Shop ist gerade nicht erreichbar. Bitte pruefe deine Verbindung und versuche es noch einmal.'
+                message: 'Der Shop ist gerade nicht erreichbar. Bitte prüfe deine Verbindung und versuche es noch einmal.'
             };
         }
         if (error.status === 400 && problem?.code === 'invalid-token') {

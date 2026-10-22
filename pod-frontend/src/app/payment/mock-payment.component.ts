@@ -54,7 +54,7 @@ export class MockPaymentComponent {
                 error: (error: unknown) => {
                     this.paying.set(false);
                     const failure = describeOrderError(error);
-                    this.errorMessage.set(failure.kind === 'error' ? failure.message : 'Die Zahlung konnte nicht bestaetigt werden.');
+                    this.errorMessage.set(failure.kind === 'error' ? failure.message : 'Die Zahlung konnte nicht bestätigt werden.');
                 }
             });
     }

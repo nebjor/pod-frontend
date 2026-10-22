@@ -12,9 +12,9 @@
         }
         @case ('deleted') {
             <section class="card" aria-live="polite">
-                <h2>Dein Konto ist geloescht.</h2>
+                <h2>Dein Konto ist gelöscht.</h2>
                 <p class="note">
-                    Deine Bestellungen bleiben als Geschaeftsunterlagen gespeichert; mit Bestellnummer und E-Mail kannst du
+                    Deine Bestellungen bleiben als Geschäftsunterlagen gespeichert; mit Bestellnummer und E-Mail kannst du
                     sie unter <a routerLink="/bestellung">Meine Bestellung</a> weiterhin einsehen. Wenn du dich wieder
                     anmeldest, entsteht ein neues Konto.
                 </p>
@@ -57,7 +57,7 @@
                                         </li>
                                     }
                                 </ul>
-                                <p class="note">Klick auf eine Bestellung fuer Positionen, Status und Zahlung.</p>
+                                <p class="note">Klick auf eine Bestellung für Positionen, Status und Zahlung.</p>
                             }
                         }
                     }
@@ -65,7 +65,7 @@
 
                 <section class="card">
                     <h2>Lieferadresse</h2>
-                    <p class="note address-note">Wird im Checkout vorausgefuellt.</p>
+                    <p class="note address-note">Wird im Checkout vorausgefüllt.</p>
                     <form [formGroup]="addressForm" class="customer-form" (ngSubmit)="save()" novalidate>
                         <label class="wide">
                             Name
@@ -113,10 +113,10 @@
                     <h2>Anmeldung</h2>
                     @if (hasPassword()) {
                         <p class="note login-status">Du meldest dich mit E-Mail und Passwort an.</p>
-                        <a class="order-btn ghost-btn link-btn" [routerLink]="passwordPath">Passwort aendern</a>
+                        <a class="order-btn ghost-btn link-btn" [routerLink]="passwordPath">Passwort ändern</a>
                     } @else {
                         <p class="note login-status">
-                            Du hast noch kein Passwort. Lege eines fest, um dich kuenftig direkt anzumelden.
+                            Du hast noch kein Passwort. Lege eines fest, um dich künftig direkt anzumelden.
                         </p>
                         <a class="order-btn ghost-btn link-btn" [routerLink]="passwordPath">Passwort festlegen</a>
                     }
@@ -125,20 +125,20 @@
 
             @if (!confirmingDelete()) {
                 <p class="account-footer">
-                    Konto nicht mehr noetig?
-                    <button type="button" class="text-btn" (click)="askDelete()">Konto loeschen</button>
+                    Konto nicht mehr nötig?
+                    <button type="button" class="text-btn" (click)="askDelete()">Konto löschen</button>
                 </p>
             } @else {
                 <section class="card danger-zone" aria-live="polite">
-                    <h2>Konto loeschen</h2>
+                    <h2>Konto löschen</h2>
                     <p class="note confirm-text">
-                        Dein Konto und deine gespeicherte Adresse werden geloescht. Deine Bestellungen bleiben als
-                        Geschaeftsunterlagen gespeichert; mit Bestellnummer und E-Mail kannst du sie unter "Meine Bestellung"
+                        Dein Konto und deine gespeicherte Adresse werden gelöscht. Deine Bestellungen bleiben als
+                        Geschäftsunterlagen gespeichert; mit Bestellnummer und E-Mail kannst du sie unter "Meine Bestellung"
                         weiterhin einsehen.
                     </p>
                     <div class="confirm-actions">
                         <button type="button" class="order-btn danger-btn" (click)="confirmDelete()" [disabled]="deleting()">
-                            @if (deleting()) { Wird geloescht... } @else { Ja, Konto loeschen }
+                            @if (deleting()) { Wird gelöscht... } @else { Ja, Konto löschen }
                         </button>
                         <button type="button" class="order-btn ghost-btn" (click)="cancelDelete()" [disabled]="deleting()">Abbrechen</button>
                     </div>

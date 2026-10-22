@@ -331,7 +331,7 @@ describe('AdminComponent', () => {
         expect(setStatus).toHaveBeenCalledWith('POD-1000', 'IN_REVIEW');
         expect(component.selected()?.status).toBe('IN_REVIEW');
         expect(component.selected()?.allowedTransitions).toEqual(['APPROVED', 'CANCELLED']);
-        expect(component.notice()).toContain('In Pruefung');
+        expect(component.notice()).toContain('In Prüfung');
     });
 
     it('flags an order whose model needs an inspection and lists the slicer warnings', () => {
@@ -346,7 +346,7 @@ describe('AdminComponent', () => {
 
         const row = host().querySelector('table.orders tbody tr');
         expect(row?.classList).toContain('needs-inspection');
-        expect(row?.querySelector('.badge.inspect')?.textContent?.trim()).toBe('Pruefen');
+        expect(row?.querySelector('.badge.inspect')?.textContent?.trim()).toBe('Prüfen');
 
         component.select('POD-1001');
         fixture.detectChanges();
@@ -372,7 +372,7 @@ describe('AdminComponent', () => {
         expect(host().querySelector('.badge.inspect')).toBeNull();
         const rows = host().querySelectorAll('table.items tbody tr');
         expect(rows).toHaveLength(2);
-        expect(rows[0].querySelector('.tag-muted')?.textContent).toBe('Mesh nicht geprueft');
+        expect(rows[0].querySelector('.tag-muted')?.textContent).toBe('Mesh nicht geprüft');
         expect(rows[1].querySelector('.tag')).toBeNull();
         expect(host().querySelector('.warnings')).toBeNull();
         expect(host().querySelector('.detail')?.textContent).not.toContain('Konto');
@@ -448,7 +448,7 @@ describe('AdminComponent', () => {
             expect(list).toHaveLength(3);
             const headers = Array.from(host().querySelectorAll('table.slices thead th')).map((th) => th.textContent?.trim());
             expect(headers).toEqual([
-                'Datum', 'Modell', 'Quelle', 'Filament', 'Qualitaet', 'Stueck', 'Platten', 'Druckzeit',
+                'Datum', 'Modell', 'Quelle', 'Filament', 'Qualität', 'Stück', 'Platten', 'Druckzeit',
                 'Material g', 'Dreiecke', 'Mesh', 'Hinweise', 'Dauer (s)', 'Slicer-Version'
             ]);
 
@@ -474,7 +474,7 @@ describe('AdminComponent', () => {
 
             const manual = list[2];
             expect(manual.querySelectorAll('td')[2].textContent?.trim()).toBe('manuell');
-            expect(manual.querySelector('.tag')?.textContent).toBe('ungeprueft');
+            expect(manual.querySelector('.tag')?.textContent).toBe('ungeprüft');
             expect(manual.querySelector('.tag')?.classList).toContain('mesh-unchecked');
             expect(manual.querySelectorAll('td')[7].textContent?.trim()).toBe('33 min');
         });
@@ -544,7 +544,7 @@ describe('AdminComponent', () => {
             const details = host().querySelector('details.factors-details') as HTMLDetailsElement;
             expect(details).not.toBeNull();
             expect(details.open).toBe(false);
-            expect(details.querySelector('summary')?.textContent?.trim()).toBe('Faktoren pruefen (nur mit manuellen Messreihen)');
+            expect(details.querySelector('summary')?.textContent?.trim()).toBe('Faktoren prüfen (nur mit manuellen Messreihen)');
             expect(details.querySelectorAll('table.factors')).toHaveLength(2);
             expect(details.querySelector('table.quantities')).not.toBeNull();
             expect(details.querySelector('.explain')?.textContent).toContain('application.yml');

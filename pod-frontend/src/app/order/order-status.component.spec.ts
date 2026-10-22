@@ -59,7 +59,7 @@ const anna: AccountResponse = {
     name: 'Anna Muster',
     street: 'Bahnhofstrasse 1',
     postalCode: '8001',
-    city: 'Zuerich',
+    city: 'Zürich',
     country: 'CH',
     createdAt: '2026-10-01T09:00:00Z',
     lastLoginAt: '2026-10-20T09:00:00Z'
@@ -192,7 +192,7 @@ describe('OrderStatusComponent', () => {
 
         const steps = element().querySelectorAll('app-order-status-timeline .step');
         expect(Array.from(steps).map((step) => step.textContent?.trim())).toEqual([
-            'Neu', 'Bezahlt', 'In Pruefung', 'Freigegeben', 'Im Druck', 'Versendet'
+            'Neu', 'Bezahlt', 'In Prüfung', 'Freigegeben', 'Im Druck', 'Versendet'
         ]);
         expect(steps[0].classList).toContain('done');
         expect(steps[1].classList).toContain('current');
@@ -219,8 +219,8 @@ describe('OrderStatusComponent', () => {
         await setup({ nr: 'POD-1000', email: 'anna@example.com' });
 
         const rows = element().querySelectorAll('.items-table tbody tr');
-        expect(rows[0].textContent).toContain('Qualitaet Standard 0.20 mm');
-        expect(rows[1].textContent).toContain('Qualitaet Fein 0.12 mm');
+        expect(rows[0].textContent).toContain('Qualität Standard 0.20 mm');
+        expect(rows[1].textContent).toContain('Qualität Fein 0.12 mm');
         expect(element().textContent).not.toContain('medium');
     });
 
@@ -229,7 +229,7 @@ describe('OrderStatusComponent', () => {
         await setup({ nr: 'POD-1000', email: 'anna@example.com' });
 
         const rows = element().querySelectorAll('.items-table tbody tr');
-        expect(rows[0].textContent).toContain('Qualitaet Standard 0.20 mm');
+        expect(rows[0].textContent).toContain('Qualität Standard 0.20 mm');
         expect(element().textContent).not.toContain('medium');
     });
 

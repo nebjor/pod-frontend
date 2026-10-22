@@ -23,7 +23,7 @@
                             <p class="config">
                                 {{ item.filament }} ·
                                 <span class="swatch-dot" [style.background]="item.color.hex" aria-hidden="true"></span>{{ item.color.label }} ·
-                                Qualitaet {{ qualityLabel(item) }}
+                                Qualität {{ qualityLabel(item) }}
                             </p>
                             <p class="meta">
                                 Druckzeit {{ printTimeLabel(item) }} · Lieferzeit ca. {{ item.quote.leadTimeDays }} Tage ·
@@ -35,7 +35,7 @@
                             <label class="quantity">
                                 Menge
                                 <input type="number" min="1" [max]="maxQuantity()" [value]="item.quantity"
-                                    [attr.aria-label]="'Menge fuer ' + item.fileName"
+                                    [attr.aria-label]="'Menge für ' + item.fileName"
                                     (change)="onQuantityChange(item.id, $event)" />
                             </label>
                             <p class="line-total" aria-live="polite">
@@ -69,8 +69,8 @@
                     <p class="note">Keine MWST, da nicht MWST-pflichtig.</p>
                 }
                 <p class="note">
-                    Versand nur innerhalb der Schweiz. Beim Bestellen pruefen wir den Preis noch einmal; danach bleibt er
-                    {{ settings().quoteValidityDays }} Tage gueltig.
+                    Versand nur innerhalb der Schweiz. Beim Bestellen prüfen wir den Preis noch einmal; danach bleibt er
+                    {{ settings().quoteValidityDays }} Tage gültig.
                 </p>
 
                 <a class="order-btn link-btn" routerLink="/checkout">Zur Kasse</a>

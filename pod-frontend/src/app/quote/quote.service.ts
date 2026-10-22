@@ -81,10 +81,10 @@ export function describeQuoteError(error: unknown): string {
         const problem = (error.error ?? null) as QuoteProblem | null;
 
         if (error.status === 0) {
-            return 'Der Shop ist gerade nicht erreichbar. Bitte pruefe deine Verbindung und versuche es noch einmal.';
+            return 'Der Shop ist gerade nicht erreichbar. Bitte prüfe deine Verbindung und versuche es noch einmal.';
         }
         if (error.status === 413) {
-            return 'Die Datei ist zu gross fuer eine Online-Berechnung (max. 50 MB).';
+            return 'Die Datei ist zu gross für eine Online-Berechnung (max. 50 MB).';
         }
         if (error.status === 429) {
             return `Limit erreicht. Probier es ${formatRetry(problem?.retryAfterSeconds)} noch einmal.${supportHint(problem?.supportEmail)}`;
@@ -105,7 +105,7 @@ export function describeQuoteError(error: unknown): string {
 function formatRetry(retryAfterSeconds: unknown): string {
     const seconds = typeof retryAfterSeconds === 'number' ? Math.ceil(retryAfterSeconds) : 0;
     if (seconds <= 0) {
-        return 'spaeter';
+        return 'später';
     }
     if (seconds < 90) {
         return `in ${seconds} Sekunden`;

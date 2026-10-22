@@ -13,10 +13,10 @@
                 <h2>Schau in dein Postfach.</h2>
                 <p class="note">
                     Mit dem Link in der E-Mail an <strong>{{ sentTo() }}</strong> legst du dein Passwort fest und bist
-                    angemeldet. Er ist {{ linkMinutes }} Minuten gueltig und funktioniert nur einmal.
+                    angemeldet. Er ist {{ linkMinutes }} Minuten gültig und funktioniert nur einmal.
                 </p>
                 <p class="note">
-                    Nichts erhalten? Die Mail kann eine Minute brauchen. Pruefe den Spam-Ordner oder fordere eine neue an.
+                    Nichts erhalten? Die Mail kann eine Minute brauchen. Prüfe den Spam-Ordner oder fordere eine neue an.
                 </p>
                 <button type="button" class="order-btn ghost-btn" (click)="reset()">Neue E-Mail anfordern</button>
             }
@@ -24,12 +24,12 @@
                 <h2>Wir haben dir eine E-Mail geschickt.</h2>
                 <p class="note">
                     Mit dem Link darin legst du ein neues Passwort fest. Die E-Mail geht an <strong>{{ sentTo() }}</strong>;
-                    der Link ist {{ linkMinutes }} Minuten gueltig und funktioniert nur einmal.
+                    der Link ist {{ linkMinutes }} Minuten gültig und funktioniert nur einmal.
                 </p>
                 <p class="note">
-                    Nichts erhalten? Die Mail kann eine Minute brauchen. Pruefe den Spam-Ordner oder fordere eine neue an.
+                    Nichts erhalten? Die Mail kann eine Minute brauchen. Prüfe den Spam-Ordner oder fordere eine neue an.
                 </p>
-                <button type="button" class="order-btn ghost-btn" (click)="reset()">Zurueck zur Anmeldung</button>
+                <button type="button" class="order-btn ghost-btn" (click)="reset()">Zurück zur Anmeldung</button>
             }
             @default {
                 @if (state() === 'invalid') {
@@ -47,7 +47,7 @@
                             E-Mail
                             <input formControlName="email" type="email" autocomplete="email" />
                             @if (passwordForm.controls.email.touched && passwordForm.controls.email.invalid) {
-                                <span class="field-error">Bitte gib eine gueltige E-Mail-Adresse ein.</span>
+                                <span class="field-error">Bitte gib eine gültige E-Mail-Adresse ein.</span>
                             }
                         </label>
                         <label class="wide">
@@ -81,7 +81,7 @@
                             E-Mail
                             <input formControlName="email" type="email" autocomplete="email" />
                             @if (registerForm.controls.email.touched && registerForm.controls.email.invalid) {
-                                <span class="field-error">Bitte gib eine gueltige E-Mail-Adresse ein.</span>
+                                <span class="field-error">Bitte gib eine gültige E-Mail-Adresse ein.</span>
                             }
                         </label>
                         <button type="submit" class="order-btn" [disabled]="state() === 'sending'">

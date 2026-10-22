@@ -6,7 +6,7 @@ export const ORDER_STATUS_STEPS: readonly OrderStatus[] = ['NEW', 'PAID', 'IN_RE
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
     NEW: 'Neu',
     PAID: 'Bezahlt',
-    IN_REVIEW: 'In Pruefung',
+    IN_REVIEW: 'In Prüfung',
     APPROVED: 'Freigegeben',
     PRINTING: 'Im Druck',
     SHIPPED: 'Versendet',

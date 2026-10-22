@@ -201,7 +201,7 @@ export class CheckoutComponent {
                 break;
             case 'field-errors':
                 this.fieldErrors.set(failure.errors);
-                this.errorMessage.set('Bitte pruefe die markierten Felder.');
+                this.errorMessage.set('Bitte prüfe die markierten Felder.');
                 this.state.set('idle');
                 break;
             default:

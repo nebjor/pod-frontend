@@ -14,7 +14,7 @@ const anna: AccountResponse = {
     name: 'Anna Muster',
     street: 'Bahnhofstrasse 1',
     postalCode: '8001',
-    city: 'Zuerich',
+    city: 'Zürich',
     country: 'CH',
     createdAt: '2026-10-01T09:00:00Z',
     lastLoginAt: '2026-10-20T09:00:00Z'
@@ -163,7 +163,7 @@ describe('AccountComponent', () => {
             name: 'Anna Muster',
             street: 'Bahnhofstrasse 1',
             postalCode: '8001',
-            city: 'Zuerich',
+            city: 'Zürich',
             country: 'CH'
         });
 
@@ -172,7 +172,7 @@ describe('AccountComponent', () => {
         component.save();
         fixture.detectChanges();
 
-        expect(update).toHaveBeenCalledWith({ name: 'Anna Muster', street: 'Seestrasse 2', postalCode: '8002', city: 'Zuerich', country: 'CH' });
+        expect(update).toHaveBeenCalledWith({ name: 'Anna Muster', street: 'Seestrasse 2', postalCode: '8002', city: 'Zürich', country: 'CH' });
         expect(component.saved()).toBe(true);
         expect(element().textContent).toContain('Adresse gespeichert');
     });
@@ -206,7 +206,7 @@ describe('AccountComponent', () => {
 
         const section = element().querySelector('.login-method');
         expect(section?.querySelector('h2')?.textContent?.trim()).toBe('Anmeldung');
-        expect(section?.textContent).toContain('Du hast noch kein Passwort. Lege eines fest, um dich kuenftig direkt anzumelden.');
+        expect(section?.textContent).toContain('Du hast noch kein Passwort. Lege eines fest, um dich künftig direkt anzumelden.');
         expect(section?.textContent).not.toContain('E-Mail und Passwort');
         const link = section?.querySelector<HTMLAnchorElement>('a[href="/konto/passwort"]');
         expect(link?.textContent?.trim()).toBe('Passwort festlegen');
@@ -219,7 +219,7 @@ describe('AccountComponent', () => {
         const section = element().querySelector('.login-method');
         expect(section?.textContent).toContain('Du meldest dich mit E-Mail und Passwort an.');
         expect(section?.textContent).not.toContain('noch kein Passwort');
-        expect(section?.querySelector<HTMLAnchorElement>('a[href="/konto/passwort"]')?.textContent?.trim()).toBe('Passwort aendern');
+        expect(section?.querySelector<HTMLAnchorElement>('a[href="/konto/passwort"]')?.textContent?.trim()).toBe('Passwort ändern');
     });
 
     it('logs out and goes to the start page', async () => {
@@ -236,15 +236,15 @@ describe('AccountComponent', () => {
 
         // Deletion sits behind a plain text control, not next to the primary actions.
         const trigger = element().querySelector<HTMLButtonElement>('.account-footer .text-btn');
-        expect(trigger?.textContent?.trim()).toBe('Konto loeschen');
+        expect(trigger?.textContent?.trim()).toBe('Konto löschen');
         expect(element().querySelector('.danger-zone')).toBeNull();
 
         component.askDelete();
         fixture.detectChanges();
         expect(deleteAccount).not.toHaveBeenCalled();
         const confirmation = element().querySelector('.danger-zone')?.textContent ?? '';
-        expect(confirmation).toContain('Dein Konto und deine gespeicherte Adresse werden geloescht');
-        expect(confirmation).toContain('Deine Bestellungen bleiben als Geschaeftsunterlagen gespeichert');
+        expect(confirmation).toContain('Dein Konto und deine gespeicherte Adresse werden gelöscht');
+        expect(confirmation).toContain('Deine Bestellungen bleiben als Geschäftsunterlagen gespeichert');
         expect(confirmation).toContain('unter "Meine Bestellung" weiterhin einsehen');
 
         component.cancelDelete();
@@ -256,7 +256,7 @@ describe('AccountComponent', () => {
 
         expect(deleteAccount).toHaveBeenCalledTimes(1);
         expect(component.pageState()).toBe('deleted');
-        expect(element().textContent).toContain('Dein Konto ist geloescht');
+        expect(element().textContent).toContain('Dein Konto ist gelöscht');
         expect(element().querySelector('.error')).toBeNull();
         expect(element().querySelector('a[href="/bestellung"]')).not.toBeNull();
         expect(navigateByUrl).not.toHaveBeenCalled();

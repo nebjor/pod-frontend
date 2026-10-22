@@ -117,7 +117,7 @@ export class PasswordComponent {
                     const failure = describeAccountError(error);
                     if (failure.kind === 'field-errors') {
                         this.fieldError.set(failure.errors['password'] ?? '');
-                        this.errorMessage.set('Bitte pruefe das Passwort.');
+                        this.errorMessage.set('Bitte prüfe das Passwort.');
                     } else {
                         this.errorMessage.set(
                             failure.kind === 'error' ? failure.message : 'Das Passwort konnte nicht gespeichert werden.'

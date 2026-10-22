@@ -226,8 +226,8 @@ describe('CheckoutComponent', () => {
         expect(lines[1].textContent).toContain('1 x cube.stl');
         expect(lines[1].textContent).toContain('PETG White');
         // Quality tiers are shown by their catalogue label, never by the code the cart stores.
-        expect(lines[0].textContent).toContain('Qualitaet Standard 0.20 mm');
-        expect(lines[1].textContent).toContain('Qualitaet Fein 0.12 mm');
+        expect(lines[0].textContent).toContain('Qualität Standard 0.20 mm');
+        expect(lines[1].textContent).toContain('Qualität Fein 0.12 mm');
         expect(lines[0].textContent).not.toContain('medium');
         expect((fixture.nativeElement as HTMLElement).querySelector('a[href="/warenkorb"]')).not.toBeNull();
     });

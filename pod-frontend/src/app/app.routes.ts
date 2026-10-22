@@ -17,7 +17,7 @@ export const shopRoutes: Routes = [
     {
         path: 'upload',
         title: 'Modell hochladen und Sofortpreis',
-        data: { description: 'STL oder 3MF hochladen, Material, Farbe und Qualitaet waehlen und den Preis aus einem echten Slicer-Durchlauf sofort sehen.' },
+        data: { description: 'STL oder 3MF hochladen, Material, Farbe und Qualität wählen und den Preis aus einem echten Slicer-Durchlauf sofort sehen.' },
         loadComponent: () => import('./upload/upload.component').then((m) => m.UploadComponent)
     },
     {
@@ -76,7 +76,7 @@ export const shopRoutes: Routes = [
         loadComponent: admin
     },
     {
-        path: 'ueber-uns',
+        path: 'über-uns',
         title: 'Über uns | 3DBurg',
         data: { description: '3D-Druck in der Schweiz: in Winterthur gedruckt, von Studenten der ZHAW lanciert. Sofortpreis aus dem Slicer, Festpreis, Versand in die ganze Schweiz.' },
         loadComponent: () => import('./about/about.component').then((m) => m.AboutComponent)
@@ -89,13 +89,13 @@ export const shopRoutes: Routes = [
     {
         path: 'agb',
         title: 'AGB',
-        data: { description: 'Allgemeine Geschaeftsbedingungen von 3DBurg: Bestellung, Preise, Zahlung, Lieferung und Widerruf bei individuell gefertigten 3D-Drucken.' },
+        data: { description: 'Allgemeine Geschäftsbedingungen von 3DBurg: Bestellung, Preise, Zahlung, Lieferung und Widerruf bei individuell gefertigten 3D-Drucken.' },
         loadComponent: () => import('./legal/terms.component').then((m) => m.TermsComponent)
     },
     {
         path: 'datenschutz',
         title: 'Datenschutz',
-        data: { description: 'Datenschutzerklaerung von 3DBurg: welche Daten wir fuer Angebot, Bestellung und Versand verarbeiten und wann wir sie loeschen.' },
+        data: { description: 'Datenschutzerklärung von 3DBurg: welche Daten wir für Angebot, Bestellung und Versand verarbeiten und wann wir sie löschen.' },
         loadComponent: () => import('./legal/privacy.component').then((m) => m.PrivacyComponent)
     },
     { path: '**', redirectTo: '' }

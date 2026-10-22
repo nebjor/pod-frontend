@@ -127,7 +127,7 @@ export type MeshState = 'ok' | 'open' | 'unchecked';
 export const MESH_LABELS: Record<MeshState, string> = {
     ok: 'ok',
     open: 'nicht wasserdicht',
-    unchecked: 'ungeprueft'
+    unchecked: 'ungeprüft'
 };
 
 export function meshState(manifold: boolean | null): MeshState {

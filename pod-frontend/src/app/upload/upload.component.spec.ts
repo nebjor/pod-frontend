@@ -274,7 +274,7 @@ describe('UploadComponent', () => {
         expect(screen.textContent).toContain(formatPrintDuration(2239));
         expect(screen.textContent).toContain('11.6 g PLA');
         expect(screen.textContent).toContain('Standard 0.20 mm');
-        expect(screen.textContent).toContain('1 Stueck');
+        expect(screen.textContent).toContain('1 Stück');
         expect(screen.querySelector('.add-btn')?.textContent?.trim()).toBe('In den Warenkorb');
         expect(screen.querySelector('.adjust-btn')?.textContent?.trim()).toBe('Anpassen');
         expect(host.querySelector('.upload-page')?.hasAttribute('inert')).toBe(true);
@@ -554,7 +554,7 @@ describe('UploadComponent', () => {
         expect(component.quoteRequested()).toBe(false);
         expect(loadingOverlay()).toBeNull();
         expect(component.canSubmitOrder()).toBe(false);
-        expect(host.querySelector('.field-error')?.textContent?.trim()).toBe('Bitte 1 bis 20 Stueck');
+        expect(host.querySelector('.field-error')?.textContent?.trim()).toBe('Bitte 1 bis 20 Stück');
     });
 
     it('explains an invalid quantity once the field has been touched', () => {
@@ -569,7 +569,7 @@ describe('UploadComponent', () => {
         quantity.markAsDirty();
         fixture.detectChanges();
 
-        expect(host.querySelector('.field-error')?.textContent?.trim()).toBe('Bitte 1 bis 20 Stueck');
+        expect(host.querySelector('.field-error')?.textContent?.trim()).toBe('Bitte 1 bis 20 Stück');
         expect(input.classList.contains('invalid')).toBe(true);
         expect(input.getAttribute('aria-invalid')).toBe('true');
         expect(input.getAttribute('aria-describedby')).toBe('quantity-error');
@@ -597,7 +597,7 @@ describe('UploadComponent', () => {
 
         component.orderForm.controls.quantity.markAsTouched();
         fixture.detectChanges();
-        expect(host.querySelector('.field-error')?.textContent?.trim()).toBe('Bitte 1 bis 20 Stueck');
+        expect(host.querySelector('.field-error')?.textContent?.trim()).toBe('Bitte 1 bis 20 Stück');
     });
 
     it('treats a quote in hand as current only while the form still matches it', () => {
@@ -608,7 +608,7 @@ describe('UploadComponent', () => {
         fixture.detectChanges();
         expect(component.quoteMatchesForm()).toBe(true);
         expect(component.canSubmitOrder()).toBe(true);
-        expect(host.querySelector('.quote-hint')?.textContent).toContain('Preis fuer diese Konfiguration');
+        expect(host.querySelector('.quote-hint')?.textContent).toContain('Preis für diese Konfiguration');
 
         component.orderForm.controls.quantity.setValue(2);
         fixture.detectChanges();
