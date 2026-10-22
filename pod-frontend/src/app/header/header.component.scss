@@ -131,16 +131,8 @@
 // Phone width: the language switcher joins the row, so the header gives up some padding and the
 // upload button its long label (the short one keeps the same destination and meaning).
 @media (max-width: 480px) {
-    .sticky-header {
-        padding: 0 0.75rem;
-    }
-
     .logo {
         font-size: 1.25rem;
-    }
-
-    .actions {
-        gap: 0.35rem;
     }
 
     .upload-btn {
@@ -410,9 +402,9 @@
     }
 }
 
-// Phones: the brand, the account link, the cart and the upload button do not fit in 390 px
-// side by side; the page would scroll sideways. The hero and the footer carry the upload
-// call to action, so the header drops it and tightens its gaps.
+// Phones: the brand, the language switcher, the account link, the cart and the upload button
+// do not fit in 390 px side by side; the page would scroll sideways. The header tightens its
+// padding and gaps, and below 480 px the upload button gets its short label (see above).
 @media (max-width: 560px) {
     .sticky-header {
         padding: 0 1rem;
@@ -420,9 +412,5 @@
 
     .actions {
         gap: 0.5rem;
-    }
-
-    .upload-btn {
-        display: none;
     }
 }

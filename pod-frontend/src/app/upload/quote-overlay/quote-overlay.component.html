@@ -2,6 +2,48 @@
     @let q = quote();
     <section class="panel">
         <header class="panel-header">
+            <p class="file-name">{{ fileName() }}</p>
+        </header>
+
+        <p class="price" aria-live="polite">
+            <span class="price-label">{{ 'quote.totalLabel' | t }}</span>
+            <strong class="price-value">{{ q.currency }} {{ q.totalPriceChf | number:'1.2-2' }}</strong>
+            <span class="price-sub">
+                {{ 'quote.breakdown' | t:{
+                    quantity: q.quantity,
+                    unit: q.currency + ' ' + (q.unitPriceChf | number:'1.2-2'),
+                    setup: q.currency + ' ' + (q.setupFeeChf | number:'1.2-2')
+                } }}
+            </span>
+        </p>
+
+        <dl class="facts">
+            <div>
+                <dt>{{ 'quote.printTime' | t }}</dt>
+                <dd>{{ totalPrintTimeLabel() }}@if (q.quantity > 1) {<span class="muted"> {{ 'quote.perPiece' | t:{ time: unitPrintTimeLabel() } }}</span>}</dd>
+            </div>
+            <div>
+                <dt>{{ 'quote.material' | t }}</dt>
+                <dd>{{ q.totalFilamentGrams | number:'1.0-1' }} g {{ q.filament }}</dd>
+            </div>
+            <div>
+                <dt>{{ 'quote.color' | t }}</dt>
+                <dd class="color-value">
+                    <span class="swatch-dot" [style.background]="color()?.hex" aria-hidden="true"></span>
+                    {{ color()?.label }}
+                </dd>
+            </div>
+            <div>
+                <dt>{{ 'quote.quality' | t }}</dt>
+                <dd>{{ qualityLabel() }}</dd>
+            </div>
+            <div>
+                <dt>{{ 'quote.quantity' | t }}</dt>
+                <dd>{{ 'common.pieces' | t:{ count: q.quantity } }}</dd>
+            </div>
+            <div>
+                <dt>{{ 'quote.leadTime' | t }}</dt>
+                <dd class="lead-time">{{ 'quote.leadTimeValue' | t:{ days: q.leadTimeDays } }}</dd>
             </div>
         </dl>
 
