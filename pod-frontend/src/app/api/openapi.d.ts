@@ -845,6 +845,11 @@ export interface components {
             triangleCount: number;
             /** Format: double */
             unitPriceChf: number;
+            /**
+             * Format: double
+             * @description Price per piece the same model would cost at quantity 1; the quantity discount is 1 - unitPriceChf / unitPriceSingleChf
+             */
+            unitPriceSingleChf: number;
             /** @description Slicer warnings about the model, as the slicer printed them */
             warnings: string[];
         };

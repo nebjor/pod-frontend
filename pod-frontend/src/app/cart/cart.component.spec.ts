@@ -32,6 +32,7 @@ const quote: QuoteResponse = {
     machineCostChf: 4.35,
     materialCostChf: 0.8,
     unitPriceChf: 3,
+        unitPriceSingleChf: 3,
     totalPriceChf: 6,
     currency: 'CHF',
     leadTimeDays: 3,

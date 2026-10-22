@@ -32,8 +32,8 @@
                                 <span class="swatch-dot" [style.background]="item.color.hex" aria-hidden="true"></span>{{ item.color.label }} ·
                                 {{ 'cart.qualityLine' | t:{ quality: qualityLabel(item) } }}
                             </p>
-                            <p class="meta">
-                                {{ 'cart.printTime' | t:{ time: printTimeLabel(item) } }} ·
+                            <p class="meta">{{ 'cart.printTime' | t:{ time: printTimeLabel(item) } }}</p>
+                            <p class="lead-time-line">
                                 <strong class="lead-time">{{ 'cart.leadTime' | t:{ days: item.quote.leadTimeDays } }}</strong>
                             </p>
                         </div>
@@ -52,6 +52,11 @@
                                 <span class="unit">{{ item.quantity }} x {{ item.quote.currency }} {{ item.quote.unitPriceChf | number:'1.2-2' }}</span>
                                 <strong>{{ item.quote.currency }} {{ item.quote.totalPriceChf | number:'1.2-2' }}</strong>
                             </p>
+                            @if (discountPercent(item) > 0) {
+                                <p class="discount">
+                                    <strong>{{ 'cart.quantityDiscount' | t:{ percent: discountPercent(item) } }}</strong>
+                                </p>
+                            }
                             <button type="button" class="remove-btn" (click)="remove(item.id)"
                                 [attr.aria-label]="'cart.removeAria' | t:{ name: item.fileName }">
                                 {{ 'cart.remove' | t }}

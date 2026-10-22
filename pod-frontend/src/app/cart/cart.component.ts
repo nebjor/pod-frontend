@@ -9,7 +9,7 @@ import { TranslatePipe } from '../i18n/translate.pipe';
 import { FALLBACK_ORDER_SETTINGS, OrderSettings, setupFeeFor } from '../order/order.models';
 import { OrderService } from '../order/order.service';
 import { formatPrintDuration } from '../quote/print-duration';
-import { qualityLabel } from '../quote/quality-labels';
+import { qualityLabel, quantityDiscountPercent } from '../quote/quality-labels';
 import { QualityOption } from '../quote/quote.models';
 import { QuoteService, describeQuoteError } from '../quote/quote.service';
 import { CartSyncService } from './cart-sync.service';
@@ -100,6 +100,11 @@ export class CartComponent {
 
     qualityLabel(item: CartItem): string {
         return qualityLabel(item.quality, this.qualities(), this.i18n.t);
+    }
+
+    /** Percent saved per piece in this batch, 0 when nothing worth showing. */
+    discountPercent(item: CartItem): number {
+        return quantityDiscountPercent(item.quote);
     }
 
     printTimeLabel(item: CartItem): string {

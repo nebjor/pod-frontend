@@ -54,3 +54,14 @@ export function qualityLabel(code: string, qualities: ReadonlyArray<QualityOptio
     const layerHeight = QUALITY_LAYER_HEIGHT_FALLBACK[code];
     return layerHeight === undefined ? code : `${qualityName(code, undefined, t)} ${layerHeight.toFixed(2)} mm`;
 }
+
+/**
+ * Percent a piece is cheaper in this batch than printed alone, from the single-piece price the
+ * backend sends next to the batch unit price; 0 when there is no saving worth showing.
+ */
+export function quantityDiscountPercent(quote: { quantity: number; unitPriceChf: number; unitPriceSingleChf: number }): number {
+    if (quote.quantity <= 1 || !(quote.unitPriceSingleChf > quote.unitPriceChf)) {
+        return 0;
+    }
+    return Math.round((1 - quote.unitPriceChf / quote.unitPriceSingleChf) * 100);
+}

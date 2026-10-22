@@ -20,6 +20,7 @@ import { OrderService } from '../../order/order.service';
 import { I18nService } from '../../i18n/i18n.service';
 import { TranslatePipe } from '../../i18n/translate.pipe';
 import { CART_MAX_ITEMS, CartItem, CartService } from '../../cart/cart.service';
+import { quantityDiscountPercent } from '../../quote/quality-labels';
 import { formatPrintDuration } from '../../quote/print-duration';
 import { ColorOption, QuoteResponse } from '../../quote/quote.models';
 
@@ -84,6 +85,8 @@ export class QuoteOverlayComponent {
         return this.i18n.t(count === 1 ? 'common.modelOne' : 'common.modelMany', { count });
     });
 
+    /** Percent saved per piece against a single print; 0 for one piece or no saving. */
+    readonly discountPercent = computed(() => quantityDiscountPercent(this.quote()));
     readonly unitPrintTimeLabel = computed(() => formatPrintDuration(this.quote().printTimeSeconds));
     readonly totalPrintTimeLabel = computed(() => formatPrintDuration(this.quote().totalPrintTimeSeconds));
     /** The slicer's warnings are collapsed by default; most customers do not need them. */
