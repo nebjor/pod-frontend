@@ -15,8 +15,19 @@
             }
             @default {
                 @if (orders().length === 0) {
-                    <p class="note">Noch keine Bestellungen.</p>
-                    <a class="order-btn link-btn" routerLink="/upload">Modell hochladen und Preis erhalten</a>
+                    @if (cartCount() > 0) {
+                        <p class="note">
+                            Noch keine Bestellungen. In deinem Warenkorb {{ cartCount() === 1 ? 'liegt 1 Stück' : 'liegen ' + cartCount() + ' Stück' }}
+                            für {{ cartCurrency() }} {{ cartTotal() | number:'1.2-2' }} zzgl. Versand.
+                        </p>
+                        <div class="empty-actions">
+                            <a class="order-btn link-btn" routerLink="/checkout">Jetzt bestellen</a>
+                            <a class="order-btn ghost-btn link-btn" routerLink="/warenkorb">Zum Warenkorb</a>
+                        </div>
+                    } @else {
+                        <p class="note">Noch keine Bestellungen.</p>
+                        <a class="order-btn link-btn" routerLink="/upload">Modell hochladen und Preis erhalten</a>
+                    }
                 } @else {
                     <ul class="order-list" aria-label="Deine Bestellungen">
                         @for (order of orders(); track order.orderNumber) {

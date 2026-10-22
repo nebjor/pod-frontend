@@ -269,3 +269,9 @@
     text-decoration: none;
     box-sizing: border-box;
 }
+
+// The delivery date is what customers look for first; it stands out from the other details.
+.lead-time {
+    color: var(--text-100);
+    font-weight: 700;
+}

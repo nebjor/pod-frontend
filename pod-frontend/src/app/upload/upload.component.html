@@ -1,7 +1,15 @@
-<section class="upload-page" [attr.inert]="overlayOpen() ? '' : null">
+<section class="upload-page">
     <header class="upload-header">
-        <p class="kicker">UPLOAD</p>
-        <h1>Modell hochladen</h1>
+        <p class="kicker">{{ currentStep() === 3 ? 'PREIS' : 'UPLOAD' }}</p>
+        <h1>
+            @if (loadingOverlayOpen()) {
+                Preis wird berechnet
+            } @else if (currentStep() === 3) {
+                Dein Angebot
+            } @else {
+                Modell hochladen
+            }
+        </h1>
         <ol class="steps" aria-label="Schritte">
             <li [class.active]="currentStep() === 1" [class.done]="currentStep() > 1"
                 [attr.aria-current]="currentStep() === 1 ? 'step' : null">Upload</li>
@@ -11,7 +19,7 @@
         </ol>
         @if (!modelUrl()) {
             <p class="subtext">Zieh deine STL- oder 3MF-Datei in das Feld oder klick hinein, um eine Datei auszuwählen.</p>
-        } @else {
+        } @else if (currentStep() === 2) {
             <p class="subtext">Wähle Material, Farbe, Qualität und Menge. Der Preis wird erst berechnet, wenn du ihn anforderst.</p>
         }
     </header>
@@ -72,104 +80,144 @@
                 <button type="button" class="text-btn" (click)="onUploadAnother()">Andere Datei wählen</button>
             </section>
 
-            <section class="order-card order-card-animated">
-                <h2>Konfiguration</h2>
+            @if (loadingOverlayOpen()) {
+            <!-- Step 3 while the slicer runs: the progress card takes the place of the configuration. -->
+            <section class="loading-panel" aria-live="polite" aria-busy="true" tabindex="-1" #loadingOverlay>
+                <p class="loading-file">{{ selectedFileName() }}</p>
 
-                @switch (catalogState()) {
-                    @case ('loading') {
-                        <p class="status-line" aria-live="polite">
-                            <span class="spinner" aria-hidden="true"></span>
-                            Materialien werden geladen...
-                        </p>
-                    }
-                    @case ('error') {
-                        <p class="status-line status-error" role="alert">
-                            Die Materialliste konnte nicht geladen werden.
-                        </p>
-                        <button type="button" class="retry-btn" (click)="loadCatalog()">Erneut laden</button>
-                    }
-                }
-
-                <form [formGroup]="orderForm" class="order-form" [hidden]="catalogState() !== 'ready'"
-                    (ngSubmit)="onCalculatePrice()">
-                    <label>
-                        Material
-                        <select formControlName="filament">
-                            @for (option of filamentOptions(); track option.code) {
-                                <option [value]="option.code">{{ option.label }}</option>
-                            }
-                        </select>
-                    </label>
-
-                    <label>
-                        Qualität
-                        <select formControlName="quality">
-                            @for (option of qualityOptions(); track option.code) {
-                                <option [value]="option.code">{{ qualityOptionLabel(option) }}</option>
-                            }
-                        </select>
-                    </label>
-
-                    <label>
-                        Menge
-                        <input formControlName="quantity" type="number" min="1" [max]="maxQuantity()"
-                            [class.invalid]="quantityErrorVisible" [attr.aria-invalid]="quantityErrorVisible"
-                            [attr.aria-describedby]="quantityErrorVisible ? 'quantity-error' : null" />
-                        @if (quantityErrorVisible) {
-                            <span id="quantity-error" class="field-error" role="alert">
-                                @if (orderForm.controls.quantity.hasError('required')) {
-                                    Bitte eine Menge eingeben
-                                } @else {
-                                    Bitte 1 bis {{ maxQuantity() }} Stück
-                                }
-                            </span>
-                        }
-                    </label>
-
-                    <fieldset class="color-field">
-                        <legend>Farbe</legend>
-                        <div class="swatches">
-                            @for (color of availableColors(); track color.code) {
-                                <label class="swatch" [class.selected]="selectedColor()?.code === color.code">
-                                    <input type="radio" formControlName="color" [value]="color.code" />
-                                    <span class="swatch-dot" [style.background]="color.hex" aria-hidden="true"></span>
-                                    <span class="swatch-label">{{ color.label }}</span>
-                                    <span class="swatch-price">CHF {{ color.pricePerKgChf | number:'1.0-0' }}/kg</span>
-                                </label>
-                            }
-                        </div>
-                    </fieldset>
-
-                    <div class="quote-cta" aria-live="polite">
-                        @if (quotePhase() === 'error') {
-                            <p class="status-line status-error" role="alert">{{ quoteError() }}</p>
-                        } @else if (quoteCurrent() && quote(); as q) {
-                            <p class="status-line quote-hint">
-                                Preis für diese Konfiguration:
-                                <strong>{{ q.currency }} {{ q.totalPriceChf | number:'1.2-2' }}</strong>
-                            </p>
+                <!-- One bar for all pending phases: it keeps its width transition when the
+                     upload hands over to the slicer, and only the label fades. -->
+                <div class="quote-phase" [attr.data-phase]="quoteDoneFlash() ? 'done' : quotePhase()">
+                    <p class="status-line">
+                        @if (quoteDoneFlash()) {
+                            <span class="check" aria-hidden="true"></span>
                         } @else {
-                            <p class="status-line quote-hint">
-                                Die Datei wird dafür einmal für die Bambu Lab A1 gesliced; das dauert ein paar Sekunden.
+                            <span class="spinner" aria-hidden="true"></span>
+                        }
+                        @if (quotePhase() === 'uploading') {
+                            Modell wird hochgeladen... {{ uploadProgress() }}%
+                        } @else {
+                            <!-- Keyed by its text: every stage is a fresh node, so the fade replays. -->
+                            @for (text of [quoteStatusText()]; track text) {
+                                <span class="phase-text">{{ text }}</span>
+                            }
+                        }
+                    </p>
+                    <div class="loading-track" [class.indeterminate]="quoteBarPercent() === null" role="progressbar"
+                        aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="quoteBarPercent()">
+                        <div class="loading-fill" [style.width.%]="quoteBarPercent()"></div>
+                    </div>
+                </div>
+
+                <p class="loading-reassurance">
+                    Wir slicen deine Datei wirklich, so wie sie später gedruckt wird. Das dauert meist nur
+                    ein paar Sekunden.
+                </p>
+            </section>
+            } @else if (quoteOnScreen(); as q) {
+            <app-quote-overlay [quote]="q" [fileName]="selectedFileName()" [color]="selectedColor()"
+                [qualityLabel]="selectedQualityLabel()" [addedItem]="addedItem()" [canAddToCart]="canAddToCart()"
+                (addToCart)="onAddToCart()" (adjust)="onAdjust()" (uploadAnother)="onUploadAnother()" />
+            } @else {
+                <section class="order-card order-card-animated">
+                    <h2>Konfiguration</h2>
+
+                    @switch (catalogState()) {
+                        @case ('loading') {
+                            <p class="status-line" aria-live="polite">
+                                <span class="spinner" aria-hidden="true"></span>
+                                Materialien werden geladen...
                             </p>
                         }
-                        <button type="submit" class="order-btn calculate-btn" #calculateButton>
-                            Preis berechnen
-                        </button>
-                    </div>
-                </form>
+                        @case ('error') {
+                            <p class="status-line status-error" role="alert">
+                                Die Materialliste konnte nicht geladen werden.
+                            </p>
+                            <button type="button" class="retry-btn" (click)="loadCatalog()">Erneut laden</button>
+                        }
+                    }
 
-                @if (cartIsFull()) {
-                    <p class="cart-note">
-                        Der Warenkorb ist voll: maximal {{ maxCartItems }} Modelle pro Bestellung.
-                        <a routerLink="/warenkorb">Zum Warenkorb</a>
-                    </p>
-                } @else if (cartItemCount() > 0) {
-                    <p class="cart-note">
-                        {{ cartModelsLabel() }} im Warenkorb. <a routerLink="/warenkorb">Zum Warenkorb</a>
-                    </p>
-                }
-            </section>
+                    <form [formGroup]="orderForm" class="order-form" [hidden]="catalogState() !== 'ready'"
+                        (ngSubmit)="onCalculatePrice()">
+                        <label>
+                            Material
+                            <select formControlName="filament">
+                                @for (option of filamentOptions(); track option.code) {
+                                    <option [value]="option.code">{{ option.label }}</option>
+                                }
+                            </select>
+                        </label>
+
+                        <label>
+                            Qualität
+                            <select formControlName="quality">
+                                @for (option of qualityOptions(); track option.code) {
+                                    <option [value]="option.code">{{ qualityOptionLabel(option) }}</option>
+                                }
+                            </select>
+                        </label>
+
+                        <label>
+                            Menge
+                            <input formControlName="quantity" type="number" min="1" [max]="maxQuantity()"
+                                [class.invalid]="quantityErrorVisible" [attr.aria-invalid]="quantityErrorVisible"
+                                [attr.aria-describedby]="quantityErrorVisible ? 'quantity-error' : null" />
+                            @if (quantityErrorVisible) {
+                                <span id="quantity-error" class="field-error" role="alert">
+                                    @if (orderForm.controls.quantity.hasError('required')) {
+                                        Bitte eine Menge eingeben
+                                    } @else {
+                                        Bitte 1 bis {{ maxQuantity() }} Stück
+                                    }
+                                </span>
+                            }
+                        </label>
+
+                        <fieldset class="color-field">
+                            <legend>Farbe</legend>
+                            <div class="swatches">
+                                @for (color of availableColors(); track color.code) {
+                                    <label class="swatch" [class.selected]="selectedColor()?.code === color.code">
+                                        <input type="radio" formControlName="color" [value]="color.code" />
+                                        <span class="swatch-dot" [style.background]="color.hex" aria-hidden="true"></span>
+                                        <span class="swatch-label">{{ color.label }}</span>
+                                        <span class="swatch-price">CHF {{ color.pricePerKgChf | number:'1.0-0' }}/kg</span>
+                                    </label>
+                                }
+                            </div>
+                        </fieldset>
+
+                        <div class="quote-cta" aria-live="polite">
+                            @if (quotePhase() === 'error') {
+                                <p class="status-line status-error" role="alert">{{ quoteError() }}</p>
+                            } @else if (quoteCurrent() && quote(); as q) {
+                                <p class="status-line quote-hint">
+                                    Preis für diese Konfiguration:
+                                    <strong>{{ q.currency }} {{ q.totalPriceChf | number:'1.2-2' }}</strong>
+                                </p>
+                            } @else {
+                                <p class="status-line quote-hint">
+                                    Die Datei wird dafür einmal für die Bambu Lab A1 gesliced; das dauert ein paar Sekunden.
+                                </p>
+                            }
+                            <button type="submit" class="order-btn calculate-btn" #calculateButton>
+                                Preis berechnen
+                            </button>
+                        </div>
+                    </form>
+
+                    @if (cartIsFull()) {
+                        <p class="cart-note">
+                            Der Warenkorb ist voll: maximal {{ maxCartItems }} Modelle pro Bestellung.
+                            <a routerLink="/warenkorb">Zum Warenkorb</a>
+                        </p>
+                    } @else if (cartItemCount() > 0) {
+                        <p class="cart-note">
+                            {{ cartModelsLabel() }} im Warenkorb. <a routerLink="/warenkorb">Zum Warenkorb</a>
+                        </p>
+                    }
+                </section>
+            }
         </section>
     }
 
@@ -177,50 +225,3 @@
         <p class="error" role="alert">{{ errorMessage() }}</p>
     }
 </section>
-
-<!-- Both overlays hang on quoteRequested(), which is false on the server and before the click. -->
-@if (loadingOverlayOpen()) {
-    <div class="overlay" role="dialog" aria-modal="true" aria-labelledby="quote-loading-title" tabindex="-1"
-        #loadingOverlay>
-        <section class="loading-panel" aria-live="polite" aria-busy="true">
-            <p class="kicker">PREIS</p>
-            <h2 id="quote-loading-title">Preis wird berechnet</h2>
-            <p class="loading-file">{{ selectedFileName() }}</p>
-
-            <!-- One bar for all pending phases: it keeps its width transition when the
-                 upload hands over to the slicer, and only the label fades. -->
-            <div class="quote-phase" [attr.data-phase]="quoteDoneFlash() ? 'done' : quotePhase()">
-                <p class="status-line">
-                    @if (quoteDoneFlash()) {
-                        <span class="check" aria-hidden="true"></span>
-                    } @else {
-                        <span class="spinner" aria-hidden="true"></span>
-                    }
-                    @if (quotePhase() === 'uploading') {
-                        Modell wird hochgeladen... {{ uploadProgress() }}%
-                    } @else {
-                        <!-- Keyed by its text: every stage is a fresh node, so the fade replays. -->
-                        @for (text of [quoteStatusText()]; track text) {
-                            <span class="phase-text">{{ text }}</span>
-                        }
-                    }
-                </p>
-                <div class="loading-track" [class.indeterminate]="quoteBarPercent() === null" role="progressbar"
-                    aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="quoteBarPercent()">
-                    <div class="loading-fill" [style.width.%]="quoteBarPercent()"></div>
-                </div>
-            </div>
-
-            <p class="loading-reassurance">
-                Wir slicen deine Datei wirklich, so wie sie später gedruckt wird. Das dauert meist nur
-                ein paar Sekunden.
-            </p>
-        </section>
-    </div>
-}
-
-@if (quoteOnScreen(); as q) {
-    <app-quote-overlay [quote]="q" [fileName]="selectedFileName()" [color]="selectedColor()"
-        [qualityLabel]="selectedQualityLabel()" [addedItem]="addedItem()" [canAddToCart]="canAddToCart()"
-        (addToCart)="onAddToCart()" (adjust)="onAdjust()" (uploadAnother)="onUploadAnother()" />
-}

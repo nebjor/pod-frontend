@@ -374,3 +374,20 @@
         outline-offset: 2px;
     }
 }
+
+// Phones: the brand, the account link, the cart and the upload button do not fit in 390 px
+// side by side; the page would scroll sideways. The hero and the footer carry the upload
+// call to action, so the header drops it and tightens its gaps.
+@media (max-width: 560px) {
+    .sticky-header {
+        padding: 0 1rem;
+    }
+
+    .actions {
+        gap: 0.5rem;
+    }
+
+    .upload-btn {
+        display: none;
+    }
+}

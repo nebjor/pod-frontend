@@ -7,6 +7,7 @@ import { OrderResponse } from '../order/order.models';
 import { AccountComponent } from './account.component';
 import { AccountResponse, AccountState } from './account.models';
 import { AccountService } from './account.service';
+import { CartService } from '../cart/cart.service';
 
 const anna: AccountResponse = {
     email: 'anna@example.com',
@@ -53,11 +54,14 @@ describe('AccountComponent', () => {
         orders = vi.fn(() => of([older, newer]));
     });
 
+    const cartCount = signal(0);
+
     async function setup() {
         await TestBed.configureTestingModule({
             imports: [AccountComponent],
             providers: [
                 provideRouter([]),
+                { provide: CartService, useValue: { count: cartCount, itemsTotal: signal(17.5), currency: signal('CHF') } },
                 {
                     provide: AccountService,
                     useValue: {
@@ -115,6 +119,21 @@ describe('AccountComponent', () => {
 
         expect(element().textContent).toContain('Noch keine Bestellungen');
         expect(element().querySelector('a[href="/upload"]')).not.toBeNull();
+    });
+
+    it('points to the checkout when nothing was ordered yet but the cart is filled', async () => {
+        orders.mockReturnValue(of([]));
+        cartCount.set(2);
+        await setup();
+
+        const text = element().textContent ?? '';
+        expect(text).toContain('Noch keine Bestellungen');
+        expect(text).toContain('2 Stück');
+        expect(text).toContain('CHF 17.50');
+        expect(element().querySelector('a[href="/checkout"]')?.textContent?.trim()).toBe('Jetzt bestellen');
+        expect(element().querySelector('a[href="/warenkorb"]')?.textContent?.trim()).toBe('Zum Warenkorb');
+        expect(element().querySelector('a[href="/upload"]')).toBeNull();
+        cartCount.set(0);
     });
 
     it('offers to retry when the orders cannot be loaded', async () => {

@@ -150,7 +150,7 @@ describe('UploadComponent', () => {
         fixture.detectChanges();
     }
 
-    const loadingOverlay = () => host.querySelector<HTMLElement>('.overlay[aria-labelledby="quote-loading-title"]');
+    const loadingOverlay = () => host.querySelector<HTMLElement>('.loading-panel');
     const quoteScreen = () => host.querySelector<HTMLElement>('app-quote-overlay');
 
     it('takes filaments, qualities and the quantity limit from the backend', () => {
@@ -245,17 +245,18 @@ describe('UploadComponent', () => {
         expect(component.currentStep()).toBe(3);
         const overlay = loadingOverlay()!;
         expect(overlay).not.toBeNull();
-        expect(overlay.getAttribute('role')).toBe('dialog');
-        expect(overlay.getAttribute('aria-modal')).toBe('true');
+        expect(overlay.getAttribute('aria-busy')).toBe('true');
+        expect(host.querySelector('h1')?.textContent).toContain('Preis wird berechnet');
+        expect(host.querySelector('.order-card')).toBeNull();
         expect(overlay.textContent).toContain('benchy.stl');
         expect(overlay.textContent).toContain(SLICING_STEPS[0].text);
         expect(overlay.textContent).toContain('Wir slicen deine Datei wirklich');
-        expect(overlay.querySelector('[aria-live="polite"]')).not.toBeNull();
+        expect(overlay.getAttribute('aria-live')).toBe('polite');
         expect(overlay.querySelector('.loading-track')?.classList.contains('indeterminate')).toBe(true);
         expect(overlay.querySelector('button, a, input')).toBeNull();
         expect(quoteScreen()).toBeNull();
-        // The page behind is inert and the focus is in the overlay.
-        expect(host.querySelector('.upload-page')?.hasAttribute('inert')).toBe(true);
+        // The progress card is page content; focus moves into it for screen readers.
+        expect(host.querySelector('.upload-page')?.hasAttribute('inert')).toBe(false);
         expect(document.activeElement).toBe(overlay);
 
         pending.next(quoteFor({ filament: 'PLA', color: 'black', quality: 'medium', quantity: 1 }));
@@ -277,8 +278,10 @@ describe('UploadComponent', () => {
         expect(screen.textContent).toContain('1 Stück');
         expect(screen.querySelector('.add-btn')?.textContent?.trim()).toBe('In den Warenkorb');
         expect(screen.querySelector('.adjust-btn')?.textContent?.trim()).toBe('Anpassen');
-        expect(host.querySelector('.upload-page')?.hasAttribute('inert')).toBe(true);
-        expect(document.activeElement).toBe(screen.querySelector('[role="dialog"]'));
+        expect(host.querySelector('h1')?.textContent).toContain('Dein Angebot');
+        expect(host.querySelector('.order-card')).toBeNull();
+        expect(screen.querySelector('[role="dialog"]')).toBeNull();
+        expect(document.activeElement).toBe(screen.querySelector('.quote-screen'));
     });
 
     it('returns to the configuration on "Anpassen" and keeps the model and the choices', () => {

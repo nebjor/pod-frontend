@@ -42,3 +42,10 @@
 .forgot {
     margin: 0.9rem 0 0;
 }
+
+.sent-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.25rem;
+}
