@@ -1,5 +1,7 @@
 .shell {
     display: grid;
+    /* minmax(0, ...): the tab row scrolls inside its column instead of widening the page. */
+    grid-template-columns: minmax(0, 1fr);
     gap: 1.25rem;
     max-width: 1080px;
 
