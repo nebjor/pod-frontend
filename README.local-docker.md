@@ -45,7 +45,7 @@ of the build so they do not ship in the production image.
 ## API contract and generated models
 
 The backend publishes its OpenAPI document at `/v3/api-docs` (browsable at `/api-docs`).
-The frontend's response models are aliases of `src/app/api/openapi.d.ts`, which is generated
+The frontend's response models are aliases of `src/app/core/api/openapi.d.ts`, which is generated
 and committed. After a backend DTO change, regenerate it against a running backend and review
 the diff; a changed shape then fails the Angular build where it matters:
 
@@ -149,7 +149,7 @@ the state is known. `/konto` lists the orders newest first (linking to the statu
 the address form, logout and "Konto loeschen" with a confirm step; an anonymous visitor is sent
 to the login. The checkout prefills empty address fields from the account and shows "Angemeldet
 als"; a visitor sees "Schon Kunde? Anmelden" with `returnTo=/checkout`. The account types are
-hand-written in `src/app/account/account.models.ts` until the generated contract carries them.
+hand-written in `src/app/core/account/account.models.ts` until the generated contract carries them.
 
 ### Protection against runaway slicing
 - At most two slicer processes run at once (`slicer.capacity.max-concurrent`); a request that

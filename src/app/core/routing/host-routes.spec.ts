@@ -1,8 +1,12 @@
 import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ROUTES, Routes } from '@angular/router';
-import { adminRoutes, shopRoutes } from '../../app.routes';
 import { isAdminHost, provideHostRoutes } from './host-routes';
+
+// Stub tables: this spec checks which table the host selects, not what the app's tables hold
+// (see app.routes.spec.ts). Core must not import the feature layer.
+const shopRoutes: Routes = [{ path: '' }, { path: 'upload' }, { path: 'admin' }];
+const adminRoutes: Routes = [{ path: '' }];
 
 describe('host routes', () => {
     it('recognises the admin host and nothing else', () => {
@@ -26,12 +30,5 @@ describe('host routes', () => {
         TestBed.configureTestingModule({ providers: [provideHostRoutes({ shop: shopRoutes, admin: adminRoutes }), { provide: PLATFORM_ID, useValue: 'server' }] });
         const [routes] = TestBed.inject(ROUTES) as Routes[];
         expect(routes).toBe(shopRoutes);
-    });
-
-    it('serves the panel at the root of the admin table and keeps the shop out of it', () => {
-        expect(adminRoutes.find((route) => route.path === '')?.loadComponent).toBeDefined();
-        expect(adminRoutes.map((route) => route.path)).not.toContain('upload');
-        // Still in the shop table so it is prerendered; the shop host redirects it to the admin host.
-        expect(shopRoutes.map((route) => route.path)).toContain('admin');
     });
 });
