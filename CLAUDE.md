@@ -1,8 +1,9 @@
 # pod-frontend — working conventions
 
-Angular 21 frontend of the 3DBurg print-on-demand shop (3dburg.ch). The app lives in
-`pod-frontend/` (run npm there); `deploy/` holds the production compose stack for both
-repositories. The backend is the sibling repository `cad-slicer-engine`; its
+Angular 21 frontend of the 3DBurg print-on-demand shop (3dburg.ch). The Angular workspace is
+the repository root (`src/`, `public/`, `e2e/`); `deploy/` holds the production compose stack
+for both repositories and `docker-compose.local.yml` the local development stack. `AGENTS.md`
+is the Angular team's general best-practice list; this file holds the project's own rules. The backend is the sibling repository `cad-slicer-engine`; its
 `docs/ROADMAP.md`, `docs/architecture.md` and `docs/adr/` are the source of truth for scope
 and decisions. Read an ADR before changing what it decided.
 
