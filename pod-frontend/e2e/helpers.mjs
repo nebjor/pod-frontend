@@ -17,10 +17,12 @@ export async function configureMock(settings) {
 }
 
 /** Opens the language switcher and picks the option whose visible name contains `name`. */
+const LANGUAGE_CODES = { Deutsch: 'de', Français: 'fr', Italiano: 'it', English: 'en' };
+
 export async function switchLanguage(page, name) {
     await page.locator('app-language-switcher button').first().click();
     await page.locator('app-language-switcher [role=option]', { hasText: name }).click();
-    await page.waitForFunction((expected) => document.documentElement.lang === expected, name === 'Français' ? 'fr' : name);
+    await page.waitForFunction((expected) => document.documentElement.lang === expected, LANGUAGE_CODES[name]);
 }
 
 /** Signed-in customer: the mock answers GET /api/account with a profile until reset. */
@@ -74,8 +76,20 @@ export function auditPage({ german }) {
         if (!visible(el) || !(el.textContent ?? '').trim()) continue;
         const style = getComputedStyle(el);
         const clips = style.whiteSpace.startsWith('nowrap') || style.overflowX === 'hidden';
-        if (clips && el.scrollWidth > el.clientWidth + 1) {
-            problems.push(`clipped text (${el.scrollWidth} > ${el.clientWidth}): ${label(el)}`);
+        if (!clips) continue;
+        if (style.display === 'inline') {
+            // Inline boxes report clientWidth 0: compare their rects with the nearest block ancestor's content box.
+            let block = el.parentElement;
+            while (block && getComputedStyle(block).display === 'inline') block = block.parentElement;
+            if (!block) continue;
+            const box = block.getBoundingClientRect();
+            const pad = parseFloat(getComputedStyle(block).paddingRight) || 0;
+            const right = Math.max(...[...el.getClientRects()].map((r) => r.right));
+            if (right > box.right - pad + 1 && getComputedStyle(block).overflowX !== 'visible') {
+                problems.push(`clipped inline text (right ${Math.round(right)} > ${Math.round(box.right - pad)}): ${label(el)}`);
+            }
+        } else if (el.scrollWidth > Math.ceil(el.getBoundingClientRect().width) + 1) {
+            problems.push(`clipped text (${el.scrollWidth} > ${Math.round(el.getBoundingClientRect().width)}): ${label(el)}`);
         }
     }
 
@@ -118,10 +132,23 @@ export async function canvasHasPixels(page) {
     await canvas.waitFor();
     await canvas.scrollIntoViewIfNeeded();
     const box = await canvas.boundingBox();
-    if (!box) return false;
-    const withCanvas = await page.screenshot({ clip: box });
+    const viewport = page.viewportSize();
+    if (!box || !viewport) return false;
+    const x = Math.max(box.x, 0);
+    const y = Math.max(box.y, 0);
+    const clip = {
+        x,
+        y,
+        width: Math.min(box.x + box.width, viewport.width) - x,
+        height: Math.min(box.y + box.height, viewport.height) - y
+    };
+    if (clip.width <= 0 || clip.height <= 0) return false;
+    const withCanvas = await page.screenshot({ clip });
     await canvas.evaluate((el) => (el.style.visibility = 'hidden'));
-    const without = await page.screenshot({ clip: box });
-    await canvas.evaluate((el) => (el.style.visibility = ''));
-    return !withCanvas.equals(without);
+    try {
+        const without = await page.screenshot({ clip });
+        return !withCanvas.equals(without);
+    } finally {
+        await canvas.evaluate((el) => (el.style.visibility = ''));
+    }
 }

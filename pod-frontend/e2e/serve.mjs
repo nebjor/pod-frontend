@@ -38,33 +38,43 @@ export async function startStack() {
         throw new Error(`${serverEntry} is missing; run "npm run build" first`);
     }
     const mock = createMockServer();
-    await new Promise((done) => mock.listen(PORTS.mock, '127.0.0.1', done));
-
-    const ssr = spawn(process.execPath, [serverEntry], {
-        cwd: root,
-        env: { ...process.env, PORT: String(PORTS.ssr) },
-        stdio: ['ignore', 'inherit', 'inherit']
-    });
-    const toApi = proxy(PORTS.mock);
-    const toSsr = proxy(PORTS.ssr);
-    const front = http.createServer((req, res) => (req.url.startsWith('/api/') ? toApi(req, res) : toSsr(req, res)));
-    await new Promise((done) => front.listen(PORTS.front, '127.0.0.1', done));
-
-    for (let attempt = 0; ; attempt++) {
-        const ready = await fetch(`http://127.0.0.1:${PORTS.ssr}/`).then(
-            (r) => r.ok,
-            () => false
-        );
-        if (ready) break;
-        if (attempt >= 100) throw new Error('SSR server did not start');
-        await new Promise((r) => setTimeout(r, 300));
-    }
-
-    return () => {
-        ssr.kill();
+    const front = http.createServer();
+    let ssr;
+    let stopped = false;
+    const stop = () => {
+        if (stopped) return;
+        stopped = true;
+        ssr?.kill();
         front.close();
         mock.close();
     };
+
+    try {
+        await new Promise((done) => mock.listen(PORTS.mock, '127.0.0.1', done));
+        ssr = spawn(process.execPath, [serverEntry], {
+            cwd: root,
+            env: { ...process.env, PORT: String(PORTS.ssr) },
+            stdio: ['ignore', 'inherit', 'inherit']
+        });
+        const toApi = proxy(PORTS.mock);
+        const toSsr = proxy(PORTS.ssr);
+        front.on('request', (req, res) => (req.url.startsWith('/api/') ? toApi(req, res) : toSsr(req, res)));
+        await new Promise((done) => front.listen(PORTS.front, '127.0.0.1', done));
+
+        for (let attempt = 0; ; attempt++) {
+            const ready = await fetch(`http://127.0.0.1:${PORTS.ssr}/`).then(
+                (r) => r.ok,
+                () => false
+            );
+            if (ready) break;
+            if (attempt >= 100) throw new Error('SSR server did not start');
+            await new Promise((r) => setTimeout(r, 300));
+        }
+    } catch (error) {
+        stop();
+        throw error;
+    }
+    return stop;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

@@ -46,25 +46,31 @@ const PAGES = [
     {
         name: 'upload-loading',
         open: async (page) => {
-            await configureMock({ quoteDelayMs: 1500 });
+            await configureMock({ quoteDelayMs: 4000 });
             await chooseModel(page);
             await calculate(page).click();
             await page.getByRole('heading', { name: 'Preis wird berechnet' }).waitFor();
+            await page.locator('.loading-panel').waitFor();
         },
+        // The loading card is only there until the quote arrives: audit it immediately, then
+        // let the quote finish so nothing is left in flight.
+        loading: true,
+        finish: (page) => page.getByRole('button', { name: 'In den Warenkorb' }).waitFor({ timeout: 15_000 }),
         cleanup: () => configureMock({ quoteDelayMs: 0 }),
         german: true
     },
     { name: 'upload-quote', open: (page) => reachQuote(page), german: true, viewer: true },
-    { name: 'upload-quote-qty4', open: (page) => reachQuote(page, 4), german: true, viewer: true, expectText: /%/ },
+    { name: 'upload-quote-qty4', open: (page) => reachQuote(page, 4), german: true, viewer: true, discount: '.price .discount' },
     {
         name: 'cart',
         open: async (page) => {
-            await reachQuote(page);
+            await reachQuote(page, 4);
             await page.getByRole('button', { name: 'In den Warenkorb' }).click();
             await page.goto('/warenkorb');
             await page.getByText('3DBenchy.stl').first().waitFor();
         },
-        german: true
+        german: true,
+        discount: '.discount'
     },
     {
         name: 'checkout',
@@ -113,11 +119,13 @@ for (const { width, height } of WIDTHS) {
                 if (entry.account) await signInViaStub();
                 try {
                     await entry.open(page);
-                    await settle(page);
-                    await page.waitForTimeout(400);
+                    if (!entry.loading) {
+                        await settle(page);
+                        await page.waitForTimeout(400);
+                    }
 
-                    if (entry.expectText) {
-                        await expect(page.locator('main, app-root').first()).toContainText(entry.expectText);
+                    if (entry.discount) {
+                        await expect(page.locator(entry.discount).first()).toHaveText(/\d+ % Mengenrabatt/);
                     }
                     if (entry.viewer) {
                         await expect.poll(() => canvasHasPixels(page), { message: 'viewer canvas draws', timeout: 20_000 }).toBe(true);
@@ -126,6 +134,7 @@ for (const { width, height } of WIDTHS) {
                     await screenshot(page, entry.name, width);
                     const problems = await page.evaluate(auditPage, { german: entry.german });
                     expect([...errors, ...problems]).toEqual([]);
+                    await entry.finish?.(page);
                 } finally {
                     if (entry.account) await signOutViaStub();
                     await entry.cleanup?.();
