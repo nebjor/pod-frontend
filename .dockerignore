@@ -5,3 +5,9 @@ docker/
 docker-compose.local.yml
 .git/
 *.md
+deploy/
+e2e/
+.github/
+.claude/
+test-results/
+playwright.config.mjs
