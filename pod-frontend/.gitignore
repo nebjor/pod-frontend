@@ -42,3 +42,8 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# E2E smoke output
+/e2e/screenshots/
+/e2e/report/
+/test-results/

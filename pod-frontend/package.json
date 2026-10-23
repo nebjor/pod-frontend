@@ -8,7 +8,8 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "serve:ssr:pod-frontend": "node dist/pod-frontend/server/server.mjs",
-    "api:types": "node scripts/generate-api-types.mjs"
+    "api:types": "node scripts/generate-api-types.mjs",
+    "e2e:smoke": "node e2e/run.mjs"
   },
   "private": true,
   "packageManager": "npm@11.11.0",
@@ -32,6 +33,7 @@
     "@angular/build": "^21.2.27",
     "@angular/cli": "^21.2.27",
     "@angular/compiler-cli": "^21.2.0",
+    "@playwright/test": "^1.64.1",
     "@types/express": "^5.0.1",
     "@types/node": "^20.17.19",
     "@types/three": "^0.186.0",
