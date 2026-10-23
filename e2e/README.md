@@ -34,7 +34,7 @@ written to `e2e/report/` (`npx playwright show-report e2e/report`). A full run t
 three minutes, most of it software-rendered WebGL.
 
 The run uses three local ports (override with `E2E_PORT`, `E2E_SSR_PORT`, `E2E_MOCK_PORT`):
-`mock-api.mjs` answers `/api/*` with fixtures shaped like `src/app/api/openapi.d.ts`, the SSR
+`mock-api.mjs` answers `/api/*` with fixtures shaped like `src/app/core/api/openapi.d.ts`, the SSR
 build serves the pages, and `serve.mjs` is the front proxy joining both. The run builds first when `dist/` is missing or
 older than anything in `src/`, `public/` or `angular.json`; `E2E_SKIP_BUILD=1` never builds (CI
 tests the build artifact of the previous job).

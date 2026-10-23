@@ -1,4 +1,4 @@
-// Dependency-free stand-in for the backend API, with fixtures shaped like src/app/api/openapi.d.ts.
+// Dependency-free stand-in for the backend API, with fixtures shaped like src/app/core/api/openapi.d.ts.
 // Runtime switches (so one process serves every page of the smoke test):
 //   STUB_ACCOUNT=1 or POST /api/__mock/config {"account":true}  -> GET /api/account returns a customer
 //   POST /api/__mock/config {"quoteDelayMs":1500}                -> POST /api/quotes answers late

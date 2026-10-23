@@ -1,4 +1,4 @@
-// Generates src/app/api/openapi.d.ts from the backend's OpenAPI document.
+// Generates src/app/core/api/openapi.d.ts from the backend's OpenAPI document.
 //
 //   npm run api:types                 (backend on http://localhost:8080)
 //   BACKEND_URL=https://3dburg.ch npm run api:types
@@ -15,7 +15,7 @@ import openapiTS, { astToString } from 'openapi-typescript';
 const backendUrl = (process.env['BACKEND_URL'] ?? 'http://localhost:8080').replace(/\/$/, '');
 const specFile = process.env['OPENAPI_FILE'];
 const specUrl = specFile ? pathToFileURL(resolve(specFile)) : new URL(`${backendUrl}/v3/api-docs`);
-const outputPath = resolve('src/app/api/openapi.d.ts');
+const outputPath = resolve('src/app/core/api/openapi.d.ts');
 
 const ast = await openapiTS(specUrl, {
     // Spring does not mark response fields as required; treat them as present unless nullable.
