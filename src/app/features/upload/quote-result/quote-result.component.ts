@@ -14,7 +14,6 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
-import { AccountService } from '@core/account/account.service';
 import { FALLBACK_ORDER_SETTINGS, OrderSettings } from '@core/order/order.models';
 import { OrderService } from '@core/order/order.service';
 import { I18nService } from '@core/i18n/i18n.service';
@@ -57,7 +56,6 @@ export class QuoteResultComponent {
     private readonly i18n = inject(I18nService);
     private readonly orderService = inject(OrderService);
     private readonly destroyRef = inject(DestroyRef);
-    protected readonly account = inject(AccountService);
     private readonly dialog = viewChild.required<ElementRef<HTMLElement>>('dialog');
 
     readonly quote = input.required<QuoteResponse>();

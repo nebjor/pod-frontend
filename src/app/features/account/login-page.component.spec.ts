@@ -106,7 +106,7 @@ describe('LoginPageComponent', () => {
 
             expect(redeemToken).toHaveBeenCalledTimes(1);
             expect(redeemToken).toHaveBeenCalledWith('tok-123');
-            expect(navigateByUrl).toHaveBeenCalledWith('/konto');
+            expect(navigateByUrl).toHaveBeenCalledWith('/konto/bestellungen');
         });
 
         it('waits for the account cart before it leaves the page', async () => {
@@ -139,12 +139,12 @@ describe('LoginPageComponent', () => {
 
         it('ignores a next path on another origin', async () => {
             await setup({ token: 'tok-123', next: 'https://evil.example/' });
-            expect(navigateByUrl).toHaveBeenCalledWith('/konto');
+            expect(navigateByUrl).toHaveBeenCalledWith('/konto/bestellungen');
         });
 
         it('ignores a return target on another origin', async () => {
             await setup({ token: 'tok-123', returnTo: '//evil.example/' });
-            expect(navigateByUrl).toHaveBeenCalledWith('/konto');
+            expect(navigateByUrl).toHaveBeenCalledWith('/konto/bestellungen');
         });
 
         it('uses the return path remembered when the mail was requested', async () => {
@@ -222,7 +222,7 @@ describe('LoginPageComponent', () => {
             component.submitPassword();
             await settled();
 
-            expect(navigateByUrl).toHaveBeenCalledWith('/konto');
+            expect(navigateByUrl).toHaveBeenCalledWith('/konto/bestellungen');
         });
 
         it('does not sign in without e-mail and password', async () => {

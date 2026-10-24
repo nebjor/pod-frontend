@@ -33,8 +33,7 @@
                     <ul class="order-list" [attr.aria-label]="'orders.listAria' | t">
                         @for (order of orders(); track order.orderNumber) {
                             <li>
-                                <a class="order-row" routerLink="/bestellung"
-                                    [queryParams]="{ nr: order.orderNumber, email: order.customerEmail }"
+                                <a class="order-row" [routerLink]="orderLink(order)"
                                     [attr.aria-label]="'orders.rowAria' | t:{ number: order.orderNumber, status: statusLabel(order), total: order.totals.currency + ' ' + (order.totals.total | number:'1.2-2') }">
                                     <span class="order-number">{{ order.orderNumber }}</span>
                                     <span class="order-date">{{ order.createdAt | date:'dd.MM.yyyy' }}</span>

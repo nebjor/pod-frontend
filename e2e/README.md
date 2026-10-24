@@ -17,7 +17,8 @@ Each page in `smoke.spec.mjs` runs at 1366 px and 390 px:
 7. A full-page screenshot per page and width lands in `e2e/screenshots/` (git-ignored; CI uploads it).
 
 Pages: landing, upload (dropzone, configuration, loading, quote, quote with quantity 4), cart,
-checkout, order lookup, login, account (orders, address, password, signed in through the stub),
+checkout (signed in through the stub, and signed out: redirect to the login), login, account (orders,
+one order, address, password, signed in through the stub),
 about, imprint and the French landing page.
 
 ## Run it

@@ -21,7 +21,8 @@ describe('FooterComponent', () => {
         const hrefs = Array.from(element.querySelectorAll('a')).map((a) => a.getAttribute('href'));
 
         expect(hrefs).toEqual(expect.arrayContaining(['/impressum', '/agb', '/datenschutz']));
-        expect(hrefs).toEqual(expect.arrayContaining(['/upload', '/bestellung', '/konto']));
+        expect(hrefs).toEqual(expect.arrayContaining(['/upload', '/konto/bestellungen']));
+        expect(hrefs).not.toContain('/bestellung');
         expect(element.textContent).toContain('3DBurg');
         expect(element.textContent).toContain('info@3dburg.ch');
     });

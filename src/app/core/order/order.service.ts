@@ -32,13 +32,6 @@ export class OrderService {
         return this.http.get<OrderSettings>(`${ORDER_API_URL}/settings`);
     }
 
-    /** Looks an order up; the backend only answers with the matching customer e-mail. */
-    find(orderNumber: string, email: string): Observable<OrderResponse> {
-        return this.http.get<OrderResponse>(`${ORDER_API_URL}/${encodeURIComponent(orderNumber)}`, {
-            params: { email }
-        });
-    }
-
     /** Mock provider only: confirms the payment the way a real provider's webhook would. */
     completeMockPayment(sessionId: string): Observable<{ orderNumber: string; status: string }> {
         return this.http.post<{ orderNumber: string; status: string }>(
@@ -48,12 +41,12 @@ export class OrderService {
     }
 }
 
-/** Remembers which order the customer is paying for, so the success page can look it up. */
+/** Remembers which order the customer is paying for, so the success page can load it. */
 export function rememberLastOrder(reference: LastOrderReference) {
     try {
         sessionStorage.setItem(LAST_ORDER_STORAGE_KEY, JSON.stringify(reference));
     } catch {
-        // Storage can be unavailable (private mode); the success page then asks for the e-mail.
+        // Storage can be unavailable (private mode); the success page then points to the order list.
     }
 }
 
@@ -79,6 +72,9 @@ export function describeOrderError(error: unknown, t: Translate = translateDe): 
         if (isModelExpired(error)) {
             const itemIndex = problem?.itemIndex;
             return { kind: 'model-expired', itemIndex: typeof itemIndex === 'number' ? itemIndex : null };
+        }
+        if (error.status === 401) {
+            return { kind: 'not-logged-in' };
         }
         if (error.status === 409 && Array.isArray(problem?.currentQuotes) && problem?.totals) {
             return {

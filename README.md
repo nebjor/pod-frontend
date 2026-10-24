@@ -28,7 +28,7 @@ src/app/
   layout/      the frame around every page: header (menu, language switcher), footer
   shared/      reusable UI and style sheets: model-viewer, styles/
   features/    one folder per routed area: landing, about, upload (with quote-result), cart,
-               checkout, payment, order-status, account, admin, legal
+               checkout, payment, account (orders, order detail), admin, legal
 ```
 
 Imports go one way: `features` -> `layout` / `shared` -> `core`. A feature never imports another

@@ -85,7 +85,7 @@ describe('OrdersPageComponent', () => {
         return fixture.nativeElement as HTMLElement;
     }
 
-    it('lists the orders newest first with status, total and a link to the status page', async () => {
+    it('lists the orders newest first with status, total and a link to each order', async () => {
         await setup();
 
         expect(element().querySelector('h1')?.textContent?.trim()).toBe('Bestellungen');
@@ -95,9 +95,8 @@ describe('OrdersPageComponent', () => {
         expect(rows[0].querySelector('.status-badge')?.textContent?.trim()).toBe('Bezahlt');
         expect(rows[0].textContent).toContain('CHF 20.00');
         expect(rows[0].textContent).toContain('19.10.2026');
-        expect(rows[0].getAttribute('href')).toContain('/bestellung?');
-        expect(rows[0].getAttribute('href')).toContain('nr=POD-1001');
-        expect(rows[0].getAttribute('href')).toContain('email=anna');
+        expect(rows[0].getAttribute('href')).toBe('/konto/bestellungen/POD-1001');
+        expect(rows[1].getAttribute('href')).toBe('/konto/bestellungen/POD-1000');
         expect(rows[1].textContent).toContain('POD-1000');
         expect(rows[1].querySelector('.status-badge')?.textContent?.trim()).toBe('Versendet');
     });
@@ -156,6 +155,6 @@ describe('OrdersPageComponent', () => {
         });
         await setup();
 
-        expect(navigate).toHaveBeenCalledWith(['/konto/anmelden'], { queryParams: { returnTo: '/konto' } });
+        expect(navigate).toHaveBeenCalledWith(['/konto/anmelden'], { queryParams: { returnTo: '/konto/bestellungen' } });
     });
 });

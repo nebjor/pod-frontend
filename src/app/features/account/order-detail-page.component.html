@@ -1,41 +1,26 @@
-<section class="customer-page">
+<section class="customer-page embedded">
     <header class="page-header">
-        <p class="kicker">{{ 'common.kickerOrder' | t }}</p>
-        <h1>{{ 'common.myOrder' | t }}</h1>
+        <p class="kicker">{{ 'common.kickerAccount' | t }}</p>
+        <h1>{{ 'meta.orderDetail.title' | t }}</h1>
     </header>
 
-    @if (formVisible()) {
-        <section class="card">
-            <p class="intro">
-                {{ 'order.intro' | t }}
-            </p>
-            <form [formGroup]="form" class="customer-form lookup-form" (ngSubmit)="lookup()" novalidate>
-                <label>
-                    {{ 'common.orderNumber' | t }}
-                    <input formControlName="orderNumber" type="text" autocomplete="off" [placeholder]="'order.numberPlaceholder' | t" />
-                    @if (form.controls.orderNumber.touched && form.controls.orderNumber.invalid) {
-                        <span class="field-error">{{ 'order.numberError' | t }}</span>
-                    }
-                </label>
-                <label>
-                    {{ 'common.email' | t }}
-                    <input formControlName="email" type="email" autocomplete="email" />
-                    @if (form.controls.email.touched && form.controls.email.invalid) {
-                        <span class="field-error">{{ 'common.validEmail' | t }}</span>
-                    }
-                </label>
-                <button type="submit" class="order-btn" [disabled]="state() === 'loading'">
-                    @if (state() === 'loading') { {{ 'order.searching' | t }} } @else { {{ 'order.show' | t }} }
-                </button>
-            </form>
-            @if (state() === 'not-found') {
-                <p class="error" role="alert">
-                    {{ 'order.notFound' | t }}
-                </p>
-            } @else if (state() === 'error') {
+    @switch (state()) {
+        @case ('loading') {
+            <section class="card">
+                <p class="status"><span class="spinner" aria-hidden="true"></span> {{ 'success.loading' | t }}</p>
+            </section>
+        }
+        @case ('not-found') {
+            <section class="card">
+                <p class="error" role="alert">{{ 'order.notFound' | t }}</p>
+            </section>
+        }
+        @case ('error') {
+            <section class="card">
                 <p class="error" role="alert">{{ errorMessage() }}</p>
-            }
-        </section>
+                <button type="button" class="order-btn ghost-btn" (click)="load()">{{ 'orders.retry' | t }}</button>
+            </section>
+        }
     }
 
     @if (order(); as o) {
@@ -106,12 +91,7 @@
             </dl>
 
             <p class="order-links">
-                @if (isOwnOrder()) {
-                    <a routerLink="/konto">{{ 'order.allOrders' | t }}</a>
-                }
-                @if (!formVisible()) {
-                    <button type="button" class="text-btn" (click)="showForm()">{{ 'order.other' | t }}</button>
-                }
+                <a [routerLink]="ordersPath">{{ 'order.allOrders' | t }}</a>
             </p>
         </section>
     }

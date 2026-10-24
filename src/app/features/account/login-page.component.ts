@@ -6,6 +6,7 @@ import { map } from 'rxjs';
 import { CartSyncService } from '@core/cart/cart-sync.service';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
+import { ORDERS_PATH } from '@core/account/account.models';
 import {
     AccountService,
     describeAccountError,
@@ -35,7 +36,7 @@ const EMAIL_VALIDATORS = [Validators.required, Validators.email, Validators.maxL
  * `?mode=register`) and "Passwort vergessen?" both ask the backend for a mail whose link comes
  * back here with `?token=` and `?next=/konto/passwort`: opening it signs the customer in and
  * lands on the password page. `?returnTo=` (a path of this app) says where to go afterwards;
- * the account page otherwise.
+ * the customer's orders otherwise.
  */
 @Component({
     selector: 'app-login-page',
@@ -236,6 +237,6 @@ export class LoginPageComponent {
             void this.router.navigateByUrl(returnTo);
             return;
         }
-        void this.router.navigateByUrl(next ?? takeLoginReturnPath() ?? '/konto');
+        void this.router.navigateByUrl(next ?? takeLoginReturnPath() ?? ORDERS_PATH);
     }
 }

@@ -186,6 +186,17 @@ describe('AccountService', () => {
         expect(received).toHaveBeenCalledWith([{ orderNumber: 'POD-1000' }]);
     });
 
+    it('loads one order under the account, never through the public API', () => {
+        const received = vi.fn();
+        service.order('POD-1000').subscribe(received);
+
+        const request = http.expectOne(`${ACCOUNT_API_URL}/orders/POD-1000`);
+        expect(request.request.method).toBe('GET');
+        request.flush({ orderNumber: 'POD-1000' });
+
+        expect(received).toHaveBeenCalledWith({ orderNumber: 'POD-1000' });
+    });
+
     it('forgets the account when a call finds the session expired', () => {
         service.redeemToken('tok-123').subscribe();
         http.expectOne(`${ACCOUNT_API_URL}/sessions`).flush(anna);

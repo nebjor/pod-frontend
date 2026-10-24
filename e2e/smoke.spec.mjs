@@ -78,13 +78,26 @@ const PAGES = [
             await reachQuote(page);
             await page.getByRole('button', { name: 'In den Warenkorb' }).click();
             await page.goto('/checkout');
-            await page.locator('form.customer-form, form').first().waitFor();
+            await page.locator('form.customer-form').waitFor();
+        },
+        german: true,
+        account: true
+    },
+    {
+        // Ordering needs an account: an anonymous customer lands on the login with the way back.
+        name: 'checkout-signed-out',
+        open: async (page) => {
+            await reachQuote(page);
+            await page.getByRole('button', { name: 'In den Warenkorb' }).click();
+            await page.goto('/checkout');
+            await page.waitForURL(/\/konto\/anmelden\?returnTo=%2Fcheckout/);
+            await page.getByRole('button', { name: 'Anmelden' }).first().waitFor();
         },
         german: true
     },
-    { name: 'order', open: (page) => page.goto('/bestellung?nr=POD-1001&email=anna@example.com'), german: true },
     { name: 'login', open: (page) => page.goto('/konto/anmelden'), german: true },
-    { name: 'account', open: (page) => page.goto('/konto'), german: true, account: true },
+    { name: 'account-orders', open: (page) => page.goto('/konto/bestellungen'), german: true, account: true },
+    { name: 'account-order', open: (page) => page.goto('/konto/bestellungen/POD-1001'), german: true, account: true },
     { name: 'account-address', open: (page) => page.goto('/konto/adresse'), german: true, account: true },
     { name: 'account-password', open: (page) => page.goto('/konto/passwort'), german: true, account: true },
     { name: 'about', open: (page) => page.goto('/ueber-uns'), german: true },

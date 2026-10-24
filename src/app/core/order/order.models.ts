@@ -13,30 +13,23 @@ export type OrderSettings = Schemas['OrderSettingsResponse'];
 /** The order as the backend expects it; each item references the id `POST /api/models` returned. */
 export type OrderRequest = Schemas['OrderRequest'];
 export type OrderTotals = Schemas['OrderTotals'];
-/** The order as `POST /api/orders` and `GET /api/orders/{orderNumber}?email=` return it. */
+/** The order as `POST /api/orders` and `GET /api/account/orders/{orderNumber}` return it. */
 export type OrderResponse = Schemas['OrderResponse'];
 
 /** Used until `/api/orders/settings` has answered, and if it never does. */
 export const FALLBACK_ORDER_SETTINGS: OrderSettings = {
     currency: 'CHF',
     shippingFlatChf: 9,
-    setupFeeChf: 5,
-    setupFeeAccountChf: 3,
+    setupFeeChf: 3,
     vatEnabled: false,
     vatRate: 0.081,
     quoteValidityDays: 14,
     shipToCountries: ['CH']
 };
 
-/** The setup fee is charged once per order; a signed-in customer pays the reduced one. */
-export function setupFeeFor(settings: OrderSettings, signedIn: boolean): number {
-    return signedIn ? settings.setupFeeAccountChf : settings.setupFeeChf;
-}
-
 /** Remembered in sessionStorage between checkout, payment page and success page. */
 export interface LastOrderReference {
     orderNumber: string;
-    email: string;
 }
 
 export const LAST_ORDER_STORAGE_KEY = 'pod.lastOrder';
@@ -64,9 +57,14 @@ export interface FieldErrors {
     errors: Record<string, string>;
 }
 
+/** 401 `not-logged-in`: the session ended before the order was sent. */
+export interface NotLoggedIn {
+    kind: 'not-logged-in';
+}
+
 export interface OtherOrderError {
     kind: 'error';
     message: string;
 }
 
-export type OrderFailure = PriceChanged | ModelExpired | FieldErrors | OtherOrderError;
+export type OrderFailure = PriceChanged | ModelExpired | FieldErrors | NotLoggedIn | OtherOrderError;

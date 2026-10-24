@@ -83,6 +83,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/account/orders/{orderNumber}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["order"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/account/password": {
         parameters: {
             query?: never;
@@ -365,22 +381,6 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["placeOrder"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/orders/{orderNumber}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["find"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -762,7 +762,6 @@ export interface components {
             currency: string;
             /** Format: int32 */
             quoteValidityDays: number;
-            setupFeeAccountChf: number;
             setupFeeChf: number;
             shippingFlatChf: number;
             shipToCountries: string[];
@@ -1094,6 +1093,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["OrderResponse"][];
+                };
+            };
+        };
+    };
+    order: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderNumber: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrderResponse"];
                 };
             };
         };
@@ -1535,30 +1556,6 @@ export interface operations {
                 "application/json": components["schemas"]["OrderRequest"];
             };
         };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["OrderResponse"];
-                };
-            };
-        };
-    };
-    find: {
-        parameters: {
-            query: {
-                email: string;
-            };
-            header?: never;
-            path: {
-                orderNumber: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
         responses: {
             /** @description OK */
             200: {

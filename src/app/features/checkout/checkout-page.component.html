@@ -41,6 +41,10 @@
         <section class="card" aria-live="polite">
             <p class="status">{{ 'cart.loading' | t }}</p>
         </section>
+    } @else if (accountState() !== 'signedIn') {
+        <section class="card" aria-live="polite">
+            <p class="status"><span class="spinner" aria-hidden="true"></span> {{ 'account.loading' | t }}</p>
+        </section>
     } @else if (isEmpty()) {
         <section class="card empty">
             <p>{{ 'cart.empty' | t }}</p>
@@ -86,15 +90,8 @@
 
             <section class="card">
                 <h2>{{ 'checkout.step2' | t }}</h2>
-                @if (accountState() === 'signedIn' && customer(); as c) {
+                @if (customer(); as c) {
                     <p class="account-hint signed-in">{{ 'checkout.signedInAs' | t }} <strong>{{ c.email }}</strong></p>
-                } @else if (accountState() === 'anonymous') {
-                    <p class="account-hint">
-                        {{ 'checkout.alreadyCustomer' | t }}
-                        <a routerLink="/konto/anmelden" [queryParams]="{ returnTo: '/checkout' }">{{ 'common.login' | t }}</a>
-                        &middot; {{ 'checkout.newHere' | t }}
-                        <a routerLink="/konto/anmelden" [queryParams]="{ mode: 'register', returnTo: '/checkout' }">{{ 'common.register' | t }}</a>
-                    </p>
                 }
                 <form [formGroup]="customerForm" class="customer-form" (ngSubmit)="submit()" novalidate>
                     <label>

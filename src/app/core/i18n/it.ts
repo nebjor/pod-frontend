@@ -13,7 +13,6 @@ export const it: Record<TranslationKey, string> = {
     'common.login': 'Accedi',
     'common.register': 'Registrati',
     'common.logout': 'Esci',
-    'common.myOrder': 'Il mio ordine',
     'common.myAccount': 'Il mio account',
     'common.pieces': '{count} pz.',
     'common.modelOne': '{count} modello',
@@ -68,9 +67,9 @@ export const it: Record<TranslationKey, string> = {
     'meta.cart.title': 'Carrello',
     'meta.checkout.title': 'Ordine',
     'meta.payment.title': 'Pagamento',
-    'meta.order.title': 'Il mio ordine',
     'meta.login.title': 'Accesso',
     'meta.orders.title': 'Ordini',
+    'meta.orderDetail.title': 'Ordine',
     'meta.address.title': 'Indirizzo di consegna',
     'meta.password.title': 'Account',
     'meta.about.title': 'Chi siamo',
@@ -211,8 +210,7 @@ export const it: Record<TranslationKey, string> = {
     'quote.totalLabel': 'Prezzo totale',
     'quote.breakdown': '{quantity} x {unit}, spedizione esclusa',
     'quote.quantityDiscount': '{percent} % di sconto quantità: {single} al pezzo se singolo',
-    'quote.setupNote': 'Allestimento {fee} una tantum per ordine, {accountFee} con un account.',
-    'quote.setupNoteAccount': 'Allestimento {fee} una tantum per ordine.',
+    'quote.setupNote': 'Allestimento {fee} una tantum per ordine.',
     'quote.printTime': 'Tempo di stampa',
     'quote.perPiece': '({time} per pezzo)',
     'quote.material': 'Materiale',
@@ -241,7 +239,6 @@ export const it: Record<TranslationKey, string> = {
     'cart.printTime': 'Tempo di stampa {time}',
     'cart.leadTime': 'Consegna ca. {days} giorni',
     'cart.quantityDiscount': '{percent} % di sconto quantità per pezzo',
-    'cart.accountFeeHint': 'Con un account l\'allestimento costa solo {fee}.',
     'cart.quantityFor': 'Quantità per {name}',
     'cart.remove': 'Rimuovi',
     'cart.removeAria': 'Rimuovi {name}',
@@ -267,8 +264,6 @@ export const it: Record<TranslationKey, string> = {
         'Spedizione solo in Svizzera. Dopo l’ordine il prezzo resta valido per {days} giorni; fino ad allora puoi pagare.',
     'checkout.step2': '2. Contatto e indirizzo di consegna',
     'checkout.signedInAs': 'Accesso effettuato come',
-    'checkout.alreadyCustomer': 'Sei già cliente?',
-    'checkout.newHere': 'Sei nuovo?',
     'checkout.termsStart': 'Accetto le',
     'checkout.termsMiddle': 'e ho letto',
     'checkout.privacyLink': 'l’informativa sulla privacy',
@@ -296,9 +291,7 @@ export const it: Record<TranslationKey, string> = {
     'success.paid1': 'Una conferma con tutti i dettagli viene inviata a',
     'success.paid2': 'Controlliamo i tuoi modelli e poi avviamo la stampa.',
     'success.paid3': 'Puoi vedere lo stato in qualsiasi momento in',
-    'success.registerStart': 'Con la tua e-mail puoi in qualsiasi momento',
-    'success.registerLink': 'registrarti',
-    'success.registerEnd': 'e vedere tutti gli ordini in un unico posto.',
+    'success.orderLink': 'Ordine {number}',
     'success.unpaidTitle': 'Il pagamento non è ancora confermato.',
     'success.unpaidNote':
         'La conferma del fornitore di pagamenti non è ancora arrivata. Può volerci qualche minuto; appena arriva, ricevi un’e-mail a',
@@ -309,7 +302,7 @@ export const it: Record<TranslationKey, string> = {
     'success.cancelledValid':
         'Il prezzo resta valido fino al {date}; fino ad allora puoi pagare, dopodiché cancelliamo l’ordine.',
     'success.missingTitle': 'Ordine non trovato.',
-    'success.missingNote': 'Con numero d’ordine e indirizzo e-mail lo trovi in',
+    'success.missingNote': 'La trovi nel tuo account in',
     'success.status': 'Stato',
 
     // Mock payment page
@@ -323,15 +316,8 @@ export const it: Record<TranslationKey, string> = {
     'pay.simulate': 'Simula il pagamento',
     'pay.error': 'Non è stato possibile confermare il pagamento.',
 
-    // Order status page
-    'order.intro':
-        'Inserisci il numero d’ordine e l’indirizzo e-mail come compaiono nella tua e-mail di conferma e vedrai lo stato del tuo ordine.',
-    'order.numberPlaceholder': 'ad es. POD-1000',
-    'order.numberError': 'Inserisci il tuo numero d’ordine.',
-    'order.searching': 'Ricerca dell’ordine...',
-    'order.show': 'Mostra l’ordine',
-    'order.notFound':
-        'Nessun ordine trovato con questo numero e questa e-mail. Controlla entrambi nella tua e-mail di conferma.',
+    // Order detail page (account area)
+    'order.notFound': 'Questo ordine non esiste o non appartiene al tuo account.',
     'order.unpaidNote': 'L’ordine non è ancora pagato. Il prezzo è valido fino al {date}.',
     'order.col.position': 'Pos.',
     'order.col.model': 'Modello',
@@ -343,16 +329,13 @@ export const it: Record<TranslationKey, string> = {
     'order.paidAt': 'Pagato il',
     'order.validUntil': 'Prezzo valido fino al',
     'order.customer': 'Cliente',
-    'order.allOrders': 'Tutti gli ordini nel tuo account',
-    'order.other': 'Mostra un altro ordine',
-    'order.error.tooMany': 'Troppe richieste. Attendi un momento e riprova.',
+    'order.allOrders': 'Tutti gli ordini',
     'order.error.load': 'Al momento non è stato possibile caricare l’ordine. Riprova più tardi.',
 
     // Account area
     'account.deletedTitle': 'Il tuo account è stato eliminato.',
-    'account.deletedStart':
-        'I tuoi ordini restano conservati come documenti contabili; con numero d’ordine ed e-mail puoi continuare a consultarli alla voce',
-    'account.deletedEnd': ' (se accedi di nuovo, verrà creato un nuovo account).',
+    'account.deletedStart': 'I tuoi ordini restano conservati come documenti contabili. Se accedi di nuovo con la stessa e-mail, viene creato un nuovo account e li ritrovi in',
+    'account.deletedEnd': '.',
     'account.loading': 'Caricamento dell’account...',
     'account.navAria': 'Account',
     'account.nav.orders': 'Ordini',

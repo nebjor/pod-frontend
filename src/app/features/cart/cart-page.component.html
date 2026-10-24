@@ -78,11 +78,6 @@
                     <div><dt>{{ 'common.shippingFlat' | t }}</dt><dd>{{ currency() }} {{ shipping() | number:'1.2-2' }}</dd></div>
                     <div class="total"><dt>{{ 'common.total' | t }}</dt><dd>{{ currency() }} {{ total() | number:'1.2-2' }}</dd></div>
                 </dl>
-                @if (!isSignedIn()) {
-                    <p class="note account-hint">
-                        <a routerLink="/konto/anmelden">{{ 'cart.accountFeeHint' | t:{ fee: currency() + ' ' + (accountSetupFee() | number:'1.2-2') } }}</a>
-                    </p>
-                }
                 @if (!settings().vatEnabled) {
                     <p class="note">{{ 'common.noVat' | t }}</p>
                 }
@@ -90,7 +85,7 @@
                     {{ 'cart.shippingNote' | t:{ days: settings().quoteValidityDays } }}
                 </p>
 
-                <a class="order-btn link-btn" routerLink="/checkout">{{ 'common.toCheckout' | t }}</a>
+                <a class="order-btn link-btn" [routerLink]="checkoutPath()" [queryParams]="checkoutQuery()">{{ 'common.toCheckout' | t }}</a>
                 @if (isFull()) {
                     <p class="note">{{ 'cart.maxReached' | t:{ max: maxItems } }}</p>
                 } @else {
