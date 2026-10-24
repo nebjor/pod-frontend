@@ -264,6 +264,8 @@ export const it: Record<TranslationKey, string> = {
         'Spedizione solo in Svizzera. Dopo l’ordine il prezzo resta valido per {days} giorni; fino ad allora puoi pagare.',
     'checkout.step2': '2. Contatto e indirizzo di consegna',
     'checkout.signedInAs': 'Accesso effettuato come',
+    'checkout.loginRequired': 'Per ordinare serve un account. Dopo l’accesso torni qui e il carrello resta com’è.',
+    'checkout.loginRequiredTitle': 'Accedi per continuare',
     'checkout.termsStart': 'Accetto le',
     'checkout.termsMiddle': 'e ho letto',
     'checkout.privacyLink': 'l’informativa sulla privacy',
@@ -287,6 +289,8 @@ export const it: Record<TranslationKey, string> = {
     'success.loading': 'Caricamento dell’ordine...',
     'success.confirming': 'Conferma del pagamento...',
     'success.confirmingNote': 'Di solito ci vogliono solo pochi secondi.',
+    'success.checking': 'Verifica dell’ordine in corso...',
+    'success.checkingNote': 'Al momento non raggiungiamo lo shop. Il tuo pagamento non va perso; riproviamo e la conferma arriva per e-mail.',
     'success.paidTitle': 'Grazie, il tuo pagamento è stato ricevuto.',
     'success.paid1': 'Una conferma con tutti i dettagli viene inviata a',
     'success.paid2': 'Controlliamo i tuoi modelli e poi avviamo la stampa.',
@@ -334,8 +338,7 @@ export const it: Record<TranslationKey, string> = {
 
     // Account area
     'account.deletedTitle': 'Il tuo account è stato eliminato.',
-    'account.deletedStart': 'I tuoi ordini restano conservati come documenti contabili. Se accedi di nuovo con la stessa e-mail, viene creato un nuovo account e li ritrovi in',
-    'account.deletedEnd': '.',
+    'account.deletedNote': 'I tuoi ordini restano conservati presso lo shop come documenti contabili. Se accedi di nuovo con la stessa e-mail, viene creato un nuovo account e li ritrovi lì.',
     'account.loading': 'Caricamento dell’account...',
     'account.navAria': 'Account',
     'account.nav.orders': 'Ordini',

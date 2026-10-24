@@ -21,6 +21,7 @@ describe('route tables', () => {
 
         expect(redirect({ nr: 'POD-1001', email: 'anna@example.com' })).toBe('/konto/bestellungen/POD-1001');
         expect(redirect({})).toBe('/konto/bestellungen');
+        expect(redirect({ nr: ['POD-1002', 'POD-9'] as unknown as string })).toBe('/konto/bestellungen/POD-1002');
     });
 
     it('keeps the order list, one order, the address and the password inside the account shell', () => {

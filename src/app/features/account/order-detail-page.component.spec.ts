@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { AccountService } from '@core/account/account.service';
 import { OrderResponse } from '@core/order/order.models';
 import { QuoteOptions } from '@core/quote/quote.models';
@@ -229,5 +229,43 @@ describe('OrderDetailPageComponent', () => {
         element().querySelector<HTMLButtonElement>('.card button')?.click();
         fixture.detectChanges();
         expect(component.state()).toBe('found');
+    });
+
+    it('loads again when the order number in the URL changes and drops the answer of the old one', async () => {
+        const params = new BehaviorSubject({ get: (_key: string) => 'POD-1000' as string | null });
+        const slow = new Subject<OrderResponse>();
+        order.mockImplementation((number: string) => (number === 'POD-1000' ? slow : of({ ...paid, orderNumber: 'POD-1001' })));
+        TestBed.resetTestingModule();
+        await TestBed.configureTestingModule({
+            imports: [OrderDetailPageComponent],
+            providers: [
+                provideRouter([]),
+                { provide: QuoteService, useValue: { loadOptions } },
+                { provide: AccountService, useValue: { order, isSignedIn: () => true } },
+                { provide: ActivatedRoute, useValue: { paramMap: params } }
+            ]
+        }).compileComponents();
+        fixture = TestBed.createComponent(OrderDetailPageComponent);
+        component = fixture.componentInstance;
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        params.next({ get: () => 'POD-1001' });
+        slow.next({ ...paid, orderNumber: 'POD-1000' });
+        fixture.detectChanges();
+
+        expect(order).toHaveBeenCalledWith('POD-1001');
+        expect(component.order()?.orderNumber).toBe('POD-1001');
+        expect(component.state()).toBe('found');
+    });
+
+    it('shows an error with a retry, not a spinner, when the session ended', async () => {
+        signedIn = false;
+        order.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 401 })));
+        await setup('POD-1000');
+
+        expect(component.state()).toBe('error');
+        expect(element().querySelector('.spinner')).toBeNull();
+        expect(element().textContent).toContain('nicht mehr angemeldet');
     });
 });

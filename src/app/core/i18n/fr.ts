@@ -264,6 +264,8 @@ export const fr: Record<TranslationKey, string> = {
         "Livraison en Suisse uniquement. Après la commande, le prix reste valable {days} jours ; vous pouvez payer pendant ce délai.",
     'checkout.step2': '2. Contact et adresse de livraison',
     'checkout.signedInAs': 'Connecté en tant que',
+    'checkout.loginRequired': 'Pour commander, il faut un compte. Après la connexion, vous revenez ici et votre panier est conservé.',
+    'checkout.loginRequiredTitle': 'Veuillez vous connecter',
     'checkout.termsStart': "J'accepte les",
     'checkout.termsMiddle': "et j'ai lu la",
     'checkout.privacyLink': 'déclaration de confidentialité',
@@ -287,6 +289,8 @@ export const fr: Record<TranslationKey, string> = {
     'success.loading': 'Chargement de la commande...',
     'success.confirming': 'Confirmation du paiement...',
     'success.confirmingNote': 'Cela ne prend généralement que quelques secondes.',
+    'success.checking': 'Vérification de la commande...',
+    'success.checkingNote': 'Nous n’arrivons pas à joindre le shop pour le moment. Votre paiement n’est pas perdu ; nous réessayons et la confirmation arrive par e-mail.',
     'success.paidTitle': 'Merci, votre paiement a bien été reçu.',
     'success.paid1': 'Une confirmation avec tous les détails est envoyée à',
     'success.paid2': "Nous contrôlons vos modèles, puis nous lançons l'impression.",
@@ -334,8 +338,7 @@ export const fr: Record<TranslationKey, string> = {
 
     // Account area
     'account.deletedTitle': 'Votre compte est supprimé.',
-    'account.deletedStart': 'Vos commandes restent conservées comme pièces comptables. Si vous vous reconnectez avec le même e-mail, un nouveau compte est créé et vous les retrouvez sous',
-    'account.deletedEnd': '.',
+    'account.deletedNote': 'Vos commandes restent conservées chez le shop comme pièces comptables. Si vous vous reconnectez avec le même e-mail, un nouveau compte est créé et vous les y retrouvez.',
     'account.loading': 'Chargement du compte...',
     'account.navAria': 'Compte',
     'account.nav.orders': 'Commandes',

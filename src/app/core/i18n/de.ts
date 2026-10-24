@@ -269,6 +269,8 @@ export const de = {
         'Versand nur innerhalb der Schweiz. Nach der Bestellung bleibt der Preis {days} Tage gültig; so lange kannst du bezahlen.',
     'checkout.step2': '2. Kontakt und Lieferadresse',
     'checkout.signedInAs': 'Angemeldet als',
+    'checkout.loginRequired': 'Bestellen kannst du mit einem Konto. Nach der Anmeldung kommst du hierher zurück, dein Warenkorb bleibt erhalten.',
+    'checkout.loginRequiredTitle': 'Bitte anmelden',
     'checkout.termsStart': 'Ich akzeptiere die',
     'checkout.termsMiddle': 'und habe die',
     'checkout.privacyLink': 'Datenschutzerklärung',
@@ -292,6 +294,8 @@ export const de = {
     'success.loading': 'Bestellung wird geladen...',
     'success.confirming': 'Zahlung wird bestätigt...',
     'success.confirmingNote': 'Das dauert meist nur ein paar Sekunden.',
+    'success.checking': 'Bestellstatus wird geprüft...',
+    'success.checkingNote': 'Wir erreichen den Shop gerade nicht. Deine Zahlung ist dadurch nicht verloren; wir versuchen es weiter, und die Bestätigung kommt per E-Mail.',
     'success.paidTitle': 'Danke, deine Zahlung ist eingegangen.',
     'success.paid1': 'Eine Bestätigung mit allen Details geht an',
     'success.paid2': 'Wir prüfen deine Modelle und starten dann den Druck.',
@@ -339,8 +343,7 @@ export const de = {
 
     // Account area
     'account.deletedTitle': 'Dein Konto ist gelöscht.',
-    'account.deletedStart': 'Deine Bestellungen bleiben als Geschäftsunterlagen gespeichert. Meldest du dich mit derselben E-Mail wieder an, entsteht ein neues Konto und du siehst sie wieder unter',
-    'account.deletedEnd': '.',
+    'account.deletedNote': 'Deine Bestellungen bleiben als Geschäftsunterlagen beim Shop gespeichert. Meldest du dich mit derselben E-Mail wieder an, entsteht ein neues Konto und du siehst sie dort wieder.',
     'account.loading': 'Konto wird geladen...',
     'account.navAria': 'Konto',
     'account.nav.orders': 'Bestellungen',

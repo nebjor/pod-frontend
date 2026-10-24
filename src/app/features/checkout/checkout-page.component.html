@@ -41,6 +41,12 @@
         <section class="card" aria-live="polite">
             <p class="status">{{ 'cart.loading' | t }}</p>
         </section>
+    } @else if (accountState() === 'anonymous') {
+        <section class="card login-required" aria-live="polite">
+            <h2>{{ 'checkout.loginRequiredTitle' | t }}</h2>
+            <p class="note">{{ 'checkout.loginRequired' | t }}</p>
+            <a class="order-btn link-btn" routerLink="/konto/anmelden" [queryParams]="{ returnTo: '/checkout' }">{{ 'common.login' | t }}</a>
+        </section>
     } @else if (accountState() !== 'signedIn') {
         <section class="card" aria-live="polite">
             <p class="status"><span class="spinner" aria-hidden="true"></span> {{ 'account.loading' | t }}</p>

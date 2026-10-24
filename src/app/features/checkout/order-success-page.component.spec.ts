@@ -1,6 +1,7 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { ActivatedRoute, Router, provideRouter } from '@angular/router';
+import { Subject, of, throwError } from 'rxjs';
 import { AccountService } from '@core/account/account.service';
 import { LAST_ORDER_STORAGE_KEY, OrderResponse } from '@core/order/order.models';
 import { QuoteOptions } from '@core/quote/quote.models';
@@ -177,11 +178,58 @@ describe('OrderSuccessPageComponent', () => {
         expect(element().querySelector('a[href="/konto/bestellungen"]')).not.toBeNull();
     });
 
-    it('treats a backend error as a missing order', async () => {
-        find.mockReturnValue(throwError(() => new Error('404')));
+    it('sends a customer whose session ended to the login and stops asking', async () => {
+        find.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 401 })));
+        await setup({ order: 'POD-1000' });
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+        loadAndFlush();
+
+        expect(navigate).toHaveBeenCalledWith(['/konto/anmelden'], { queryParams: { returnTo: expect.any(String) } });
+        vi.advanceTimersByTime(CONFIRMATION_POLL_MS * 5);
+        expect(find).toHaveBeenCalledTimes(1);
+    });
+
+    it('treats a 404 as a missing order', async () => {
+        find.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
         await setup({ order: 'POD-1000' });
         loadAndFlush();
 
         expect(component.state()).toBe('missing');
+        vi.advanceTimersByTime(CONFIRMATION_POLL_MS * 5);
+        expect(find).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps polling with growing pauses through a network or server error and says it is checking', async () => {
+        find.mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 0 })))
+            .mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 503 })))
+            .mockReturnValue(of(paid));
+        await setup({ order: 'POD-1000' });
+        loadAndFlush();
+        fixture.detectChanges();
+
+        expect(component.state()).toBe('checking');
+        expect(element().textContent).toContain('Bestellstatus wird geprüft');
+        // The pause doubles with every failure: 2 intervals, then 4.
+        vi.advanceTimersByTime(CONFIRMATION_POLL_MS);
+        expect(find).toHaveBeenCalledTimes(1);
+        vi.advanceTimersByTime(CONFIRMATION_POLL_MS);
+        expect(find).toHaveBeenCalledTimes(2);
+        vi.advanceTimersByTime(CONFIRMATION_POLL_MS * 3);
+        expect(find).toHaveBeenCalledTimes(2);
+        vi.advanceTimersByTime(CONFIRMATION_POLL_MS);
+        expect(find).toHaveBeenCalledTimes(3);
+        expect(component.state()).toBe('paid');
+    });
+
+    it('lets a later load replace the running one so an old answer cannot overwrite the state', async () => {
+        const first = new Subject<OrderResponse>();
+        find.mockReturnValueOnce(first).mockReturnValue(of(paid));
+        await setup({ order: 'POD-1000' });
+        loadAndFlush();
+        loadAndFlush();
+        first.next(unpaid);
+
+        expect(component.state()).toBe('paid');
+        expect(component.order()?.status).toBe('PAID');
     });
 });

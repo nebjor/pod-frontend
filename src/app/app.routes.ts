@@ -3,7 +3,8 @@ import { ORDERS_PATH, orderPath } from '@core/account/account.models';
 
 /** `/bestellung?nr=X` (an old order mail) opens that order; without a number the order list. */
 export const legacyOrderLinkRedirect: RedirectFunction = (route) => {
-    const orderNumber = route.queryParams['nr'];
+    const raw: unknown = route.queryParams['nr'];
+    const orderNumber = Array.isArray(raw) ? raw[0] : raw;
     return typeof orderNumber === 'string' && orderNumber ? orderPath(orderNumber) : ORDERS_PATH;
 };
 

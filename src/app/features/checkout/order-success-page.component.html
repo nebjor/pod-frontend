@@ -13,6 +13,10 @@
                 <p class="status"><span class="spinner" aria-hidden="true"></span> {{ 'success.confirming' | t }}</p>
                 <p class="note">{{ 'success.confirmingNote' | t }}</p>
             }
+            @case ('checking') {
+                <p class="status"><span class="spinner" aria-hidden="true"></span> {{ 'success.checking' | t }}</p>
+                <p class="note">{{ 'success.checkingNote' | t }}</p>
+            }
             @case ('paid') {
                 <h2>{{ 'success.paidTitle' | t }}</h2>
                 <ol class="next-steps">

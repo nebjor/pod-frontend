@@ -85,7 +85,7 @@
                     {{ 'cart.shippingNote' | t:{ days: settings().quoteValidityDays } }}
                 </p>
 
-                <a class="order-btn link-btn" [routerLink]="checkoutPath()" [queryParams]="checkoutQuery()">{{ 'common.toCheckout' | t }}</a>
+                <a class="order-btn link-btn" routerLink="/checkout">{{ 'common.toCheckout' | t }}</a>
                 @if (isFull()) {
                     <p class="note">{{ 'cart.maxReached' | t:{ max: maxItems } }}</p>
                 } @else {

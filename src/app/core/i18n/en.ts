@@ -264,6 +264,8 @@ export const en: Record<TranslationKey, string> = {
         'Shipping within Switzerland only. After you order, the price stays valid for {days} days; you can pay during that time.',
     'checkout.step2': '2. Contact and delivery address',
     'checkout.signedInAs': 'Signed in as',
+    'checkout.loginRequired': 'You need an account to order. After signing in you come back here and your cart stays as it is.',
+    'checkout.loginRequiredTitle': 'Please sign in',
     'checkout.termsStart': 'I accept the',
     'checkout.termsMiddle': 'and have read the',
     'checkout.privacyLink': 'privacy policy',
@@ -287,6 +289,8 @@ export const en: Record<TranslationKey, string> = {
     'success.loading': 'Loading order...',
     'success.confirming': 'Confirming payment...',
     'success.confirmingNote': 'This usually takes only a few seconds.',
+    'success.checking': 'Checking your order status...',
+    'success.checkingNote': 'We cannot reach the shop right now. Your payment is not lost; we keep trying and the confirmation arrives by email.',
     'success.paidTitle': 'Thank you, your payment has been received.',
     'success.paid1': 'A confirmation with all details is sent to',
     'success.paid2': 'We check your models and then start printing.',
@@ -334,8 +338,7 @@ export const en: Record<TranslationKey, string> = {
 
     // Account area
     'account.deletedTitle': 'Your account has been deleted.',
-    'account.deletedStart': 'Your orders are kept as business records. If you sign in again with the same email, a new account is created and you see them again under',
-    'account.deletedEnd': '.',
+    'account.deletedNote': 'Your orders stay with the shop as business records. If you sign in again with the same email, a new account is created and you see them there again.',
     'account.loading': 'Loading account...',
     'account.navAria': 'Account',
     'account.nav.orders': 'Orders',

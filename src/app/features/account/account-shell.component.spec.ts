@@ -199,7 +199,8 @@ describe('AccountShellComponent', () => {
         harness.detectChanges();
 
         expect(element().textContent).toContain('Dein Konto ist gelöscht');
-        expect(element().querySelector('a[href="/konto/bestellungen"]')).not.toBeNull();
+        expect(element().textContent).toContain('Meldest du dich mit derselben E-Mail wieder an');
+        expect(element().querySelector('.customer-page a[href^="/konto"]')).toBeNull();
         expect(element().querySelector('.nav-link')).toBeNull();
     });
 });

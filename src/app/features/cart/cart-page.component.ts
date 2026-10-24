@@ -3,8 +3,6 @@ import { ChangeDetectionStrategy, Component, DestroyRef, afterNextRender, comput
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { Subject, catchError, debounceTime, groupBy, map, mergeMap, of, switchMap } from 'rxjs';
-import { LOGIN_PATH } from '@core/account/account.models';
-import { AccountService } from '@core/account/account.service';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { FALLBACK_ORDER_SETTINGS, OrderSettings } from '@core/order/order.models';
@@ -41,7 +39,6 @@ export class CartPageComponent {
     private readonly quoteService = inject(QuoteService);
     private readonly orderService = inject(OrderService);
     private readonly i18n = inject(I18nService);
-    private readonly account = inject(AccountService);
     private readonly destroyRef = inject(DestroyRef);
     private readonly quantityChanges = new Subject<QuantityChange>();
 
@@ -64,9 +61,6 @@ export class CartPageComponent {
 
     readonly shipping = computed(() => this.settings().shippingFlatChf);
     readonly setupFee = computed(() => this.settings().setupFeeChf);
-    /** Ordering needs an account: an anonymous customer signs in first and comes back to the checkout. */
-    readonly checkoutPath = computed(() => (this.account.state() === 'anonymous' ? LOGIN_PATH : '/checkout'));
-    readonly checkoutQuery = computed(() => (this.account.state() === 'anonymous' ? { returnTo: '/checkout' } : {}));
     readonly total = computed(() => Math.round((this.itemsTotal() + this.setupFee() + this.shipping()) * 100) / 100);
 
     constructor() {

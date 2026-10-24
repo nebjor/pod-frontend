@@ -115,6 +115,30 @@ const PAGES = [
 /** The anonymous probe of GET /api/account is part of every page load and expected to fail. */
 const isExpected401 = (message) => message.type() === 'error' && message.location().url.includes('/api/account') && /401/.test(message.text());
 
+/**
+ * What a crawler gets: the served HTML must be the prerendered page with its own title and
+ * robots tag, not the bare client shell (the fault behind a missing proxy header, see serve.mjs).
+ */
+test.describe('served HTML', () => {
+    const html = async (path) => (await fetch(`http://127.0.0.1:${process.env.E2E_PORT ?? 4310}${path}`)).text();
+    const titleOf = (source) => /<title>([^<]+)<\/title>/.exec(source)?.[1] ?? '';
+
+    test('indexable pages carry their own title and "index, follow"', async () => {
+        const titles = [];
+        for (const path of ['/', '/upload', '/agb']) {
+            const source = await html(path);
+            expect(source, path).toContain('<meta name="robots" content="index, follow">');
+            titles.push(titleOf(source));
+        }
+        expect(titles.every(Boolean)).toBe(true);
+        expect(new Set(titles).size, `titles differ per page: ${titles.join(' | ')}`).toBe(titles.length);
+    });
+
+    test('the cart is noindex', async () => {
+        expect(await html('/warenkorb')).toMatch(/<meta name="robots" content="noindex/);
+    });
+});
+
 for (const { width, height } of WIDTHS) {
     test.describe(`at ${width} px`, () => {
         test.use({ viewport: { width, height } });

@@ -254,7 +254,12 @@ describe('CheckoutPageComponent', () => {
         fixture.detectChanges();
 
         expect(navigate).toHaveBeenCalledWith(['/konto/anmelden'], { queryParams: { returnTo: '/checkout' } });
-        expect((fixture.nativeElement as HTMLElement).querySelector('form')).toBeNull();
+        const host = fixture.nativeElement as HTMLElement;
+        expect(host.querySelector('form')).toBeNull();
+        // Until the redirect lands the visitor sees why, with a link, not a spinner.
+        expect(host.querySelector('.login-required')?.textContent).toContain('Bitte anmelden');
+        expect(host.querySelector('.login-required a')?.getAttribute('href')).toBe('/konto/anmelden?returnTo=%2Fcheckout');
+        expect(host.querySelector('.spinner')).toBeNull();
     });
 
     it('sends the customer to the login when the session ended before the order went out', async () => {

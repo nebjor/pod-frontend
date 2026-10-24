@@ -16,10 +16,22 @@ export const PORTS = {
     mock: Number(process.env.E2E_MOCK_PORT ?? 4312)
 };
 
-function proxy(target) {
+/**
+ * `forwarded` adds what Caddy adds in production. Angular 21 refuses a request without them
+ * and serves the bare client shell instead of the prerendered page, which this stack must catch.
+ */
+function proxy(target, forwarded = false) {
     return (req, res) => {
+        const headers = forwarded
+            ? {
+                  ...req.headers,
+                  'x-forwarded-for': req.socket.remoteAddress ?? '127.0.0.1',
+                  'x-forwarded-proto': 'http',
+                  'x-forwarded-host': req.headers.host ?? `127.0.0.1:${PORTS.front}`
+              }
+            : req.headers;
         const upstream = http.request(
-            { host: '127.0.0.1', port: target, path: req.url, method: req.method, headers: req.headers },
+            { host: '127.0.0.1', port: target, path: req.url, method: req.method, headers },
             (up) => {
                 res.writeHead(up.statusCode ?? 502, up.headers);
                 up.pipe(res);
@@ -57,7 +69,7 @@ export async function startStack() {
             stdio: ['ignore', 'inherit', 'inherit']
         });
         const toApi = proxy(PORTS.mock);
-        const toSsr = proxy(PORTS.ssr);
+        const toSsr = proxy(PORTS.ssr, true);
         front.on('request', (req, res) => (req.url.startsWith('/api/') ? toApi(req, res) : toSsr(req, res)));
         await new Promise((done) => front.listen(PORTS.front, '127.0.0.1', done));
 

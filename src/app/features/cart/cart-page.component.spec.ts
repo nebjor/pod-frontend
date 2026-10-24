@@ -8,8 +8,6 @@ import { OrderService } from '@core/order/order.service';
 import { QuoteOptions, QuoteResponse } from '@core/quote/quote.models';
 import { QuoteService } from '@core/quote/quote.service';
 import { CART_REQUOTE_DEBOUNCE_MS, CartPageComponent } from './cart-page.component';
-import { AccountState } from '@core/account/account.models';
-import { AccountService } from '@core/account/account.service';
 import { AccountCartApi } from '@core/cart/account-cart.api';
 import { CartSyncService } from '@core/cart/cart-sync.service';
 import { CartService, NewCartItem } from '@core/cart/cart.service';
@@ -68,13 +66,11 @@ describe('CartPageComponent', () => {
     let component: CartPageComponent;
     let cart: CartService;
     const notice = signal<{ dropped: number } | null>(null);
-    const accountState = signal<AccountState>('anonymous');
     let requestQuote: ReturnType<typeof vi.fn>;
 
     beforeEach(async () => {
         vi.useFakeTimers();
         requestQuote = vi.fn(() => of(quote));
-        accountState.set('anonymous');
 
         await TestBed.configureTestingModule({
             imports: [CartPageComponent],
@@ -82,7 +78,6 @@ describe('CartPageComponent', () => {
                 provideRouter([]),
                 { provide: QuoteService, useValue: { requestQuote, uploadModel: vi.fn(), loadOptions: () => of(options) } },
                 { provide: AccountCartApi, useValue: {} },
-                { provide: AccountService, useValue: { state: accountState.asReadonly() } },
                 { provide: CartSyncService, useValue: { notice, dismissNotice: () => notice.set(null) } },
                 { provide: OrderService, useValue: { loadSettings: () => of(FALLBACK_ORDER_SETTINGS) } }
             ]
@@ -235,22 +230,12 @@ describe('CartPageComponent', () => {
         expect(text()).toContain('Limit erreicht');
     });
 
-    it('links a signed-in customer to the checkout and to the upload page', async () => {
-        accountState.set('signedIn');
+    it('links to the checkout and to the upload page', async () => {
         cart.add(item('benchy.stl'));
         await create();
 
         const host = fixture.nativeElement as HTMLElement;
         expect(host.querySelector('a[href="/checkout"]')?.textContent).toContain('Zur Kasse');
         expect(host.querySelector('a[href="/upload"]')?.textContent).toContain('Weiteres Modell hochladen');
-    });
-
-    it('sends an anonymous customer to sign in first and back to the checkout', async () => {
-        cart.add(item('benchy.stl'));
-        await create();
-
-        const link = (fixture.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>('.summary a.order-btn');
-        expect(link?.textContent).toContain('Zur Kasse');
-        expect(link?.getAttribute('href')).toBe('/konto/anmelden?returnTo=%2Fcheckout');
     });
 });
