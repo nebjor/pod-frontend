@@ -10,7 +10,12 @@ import { join } from 'node:path';
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
 const app = express();
-const angularApp = new AngularNodeAppEngine();
+// Caddy is the only way in (the container port is not published) and sets these headers.
+// Angular 21 distrusts proxy headers by default and then serves the bare client shell instead
+// of the prerendered page, so crawlers saw one generic title and no robots tag on every URL.
+const angularApp = new AngularNodeAppEngine({
+  trustProxyHeaders: ['x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto'],
+});
 
 /**
  * Example Express Rest API endpoints can be defined here.
