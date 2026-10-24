@@ -13,19 +13,19 @@ and decisions. Read an ADR before changing what it decided.
 - `npx ng build` — production build with the budgets in `angular.json`; no new warnings.
 - `npm run e2e:smoke` — visual smoke against the prerendered build with the mock API
   (`e2e/`); run it after any template or style change.
-- `OPENAPI_FILE=<path>/openapi.json npm run -s api:types` — regenerate `src/app/api/openapi.d.ts`
+- `OPENAPI_FILE=<path>/openapi.json npm run -s api:types` — regenerate `src/app/core/api/openapi.d.ts`
   from the backend contract. Never edit that file by hand; hand-written overlays live next to
   the models that need them (`account.models.ts`).
 
 ## Language and text
 
 - Code, comments, commit messages, PR texts, docs: English. No German words in identifiers.
-- Everything a customer reads goes through the i18n dictionaries `src/app/i18n/{de,fr,it,en}.ts`
+- Everything a customer reads goes through the i18n dictionaries `src/app/core/i18n/{de,fr,it,en}.ts`
   via the `t` pipe or `I18nService.t`. German is the source and uses real umlauts (ä ö ü) and
   `ss`, never `ae/oe/ue` or `ß`. French uses "vous", Italian "tu", English "you".
 - Every key exists in all four dictionaries; the completeness spec fails otherwise. No empty
   strings. Product names (3DBurg, Bambu Lab A1, PLA, PETG, PCTG, STL, 3MF) stay as they are.
-- The admin area (`src/app/admin/`), `public/llms.txt`, `sitemap.xml` and the legal page bodies
+- The admin area (`src/app/features/admin/`), `public/llms.txt`, `sitemap.xml` and the legal page bodies
   stay German on purpose.
 - Dates are `dd.MM.yyyy` and prices `CHF 8.15` in every language.
 
@@ -35,10 +35,17 @@ and decisions. Read an ADR before changing what it decided.
   services with signals, templates read signals. No `zone.js`, no `BehaviorSubject` for UI state.
 - Every route prerenders (`app.routes.server.ts` uses `**`). Browser-only work (storage,
   WebGL, `window`) runs after the first render (`afterNextRender`) and is guarded for SSR.
-- Feature folders own their code: `upload/`, `cart/`, `checkout/`, `account/`, `order/`,
-  `admin/`, `header/`, `landing/`, `legal/`, `about/`, `i18n/`, `seo/`. `admin/` and `account/`
-  never import each other. Shared helpers live in `quote/` (labels, durations) and `order/`
-  (models, settings).
+- `src/app` has four layers: `core/` (app-wide singletons: api types, config, i18n, seo, routing,
+  quote, order, account, cart), `layout/` (header, footer), `shared/` (reusable UI such as the
+  model viewer, shared style sheets) and `features/` (one folder per routed area, grouped by
+  feature).
+- Import direction: `features` may use `core`, `layout` and `shared`; `layout` and `shared` use
+  only `core`; `core` imports none of the other three; no feature imports another feature (a
+  piece two features need moves to `core` or `shared`). Cross-layer imports use `@core/*`,
+  `@layout/*`, `@shared/*`, `@features/*`; inside a folder they stay relative. The root files
+  (`app.*`) wire the layers together.
+- Routed components are `<name>-page.component.ts` (class `<Name>PageComponent`, selector
+  `app-<name>-page`); non-routed components keep `.component` without `-page`.
 - Facts live once: prices, limits and status names come from the backend (`/api/orders/settings`,
   `/api/quotes/options`, generated types), never from literals in templates.
 - Customer-facing pages are page content, not modal dialogs. Steps replace content inside the

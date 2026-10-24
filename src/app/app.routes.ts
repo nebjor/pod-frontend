@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 
-const admin = () => import('./admin/admin.component').then((m) => m.AdminComponent);
+const admin = () => import('@features/admin/admin-page.component').then((m) => m.AdminPageComponent);
 
 /**
  * Page titles and descriptions are dictionary keys in `data` (`titleKey`, `descriptionKey`), not
@@ -13,63 +13,63 @@ export const shopRoutes: Routes = [
     {
         path: '',
         data: { titleKey: 'meta.home.title', descriptionKey: 'meta.home.description' },
-        loadComponent: () => import('./landing/landing.component').then((m) => m.LandingComponent)
+        loadComponent: () => import('@features/landing/landing-page.component').then((m) => m.LandingPageComponent)
     },
     {
         path: 'upload',
         data: { titleKey: 'meta.upload.title', descriptionKey: 'meta.upload.description' },
-        loadComponent: () => import('./upload/upload.component').then((m) => m.UploadComponent)
+        loadComponent: () => import('@features/upload/upload-page.component').then((m) => m.UploadPageComponent)
     },
     {
         path: 'warenkorb',
         data: { titleKey: 'meta.cart.title', noindex: true },
-        loadComponent: () => import('./cart/cart.component').then((m) => m.CartComponent)
+        loadComponent: () => import('@features/cart/cart-page.component').then((m) => m.CartPageComponent)
     },
     {
         path: 'checkout/success',
         data: { titleKey: 'meta.checkout.title', noindex: true },
-        loadComponent: () => import('./checkout/order-success.component').then((m) => m.OrderSuccessComponent)
+        loadComponent: () => import('@features/checkout/order-success-page.component').then((m) => m.OrderSuccessPageComponent)
     },
     {
         path: 'checkout',
         data: { titleKey: 'meta.checkout.title', noindex: true },
-        loadComponent: () => import('./checkout/checkout.component').then((m) => m.CheckoutComponent)
+        loadComponent: () => import('@features/checkout/checkout-page.component').then((m) => m.CheckoutPageComponent)
     },
     {
         path: 'pay/mock',
         data: { titleKey: 'meta.payment.title', noindex: true },
-        loadComponent: () => import('./payment/mock-payment.component').then((m) => m.MockPaymentComponent)
+        loadComponent: () => import('@features/payment/mock-payment-page.component').then((m) => m.MockPaymentPageComponent)
     },
     {
         path: 'bestellung',
         data: { titleKey: 'meta.order.title' },
-        loadComponent: () => import('./order/order-status.component').then((m) => m.OrderStatusComponent)
+        loadComponent: () => import('@features/order-status/order-status-page.component').then((m) => m.OrderStatusPageComponent)
     },
     {
         path: 'konto/anmelden',
         data: { titleKey: 'meta.login.title', noindex: true },
-        loadComponent: () => import('./account/login.component').then((m) => m.LoginComponent)
+        loadComponent: () => import('@features/account/login-page.component').then((m) => m.LoginPageComponent)
     },
     {
         path: 'konto',
         data: { noindex: true },
-        loadComponent: () => import('./account/account-shell.component').then((m) => m.AccountShellComponent),
+        loadComponent: () => import('@features/account/account-shell.component').then((m) => m.AccountShellComponent),
         children: [
             {
                 path: '',
                 pathMatch: 'full',
                 data: { titleKey: 'meta.orders.title', noindex: true },
-                loadComponent: () => import('./account/account.component').then((m) => m.AccountComponent)
+                loadComponent: () => import('@features/account/orders-page.component').then((m) => m.OrdersPageComponent)
             },
             {
                 path: 'adresse',
                 data: { titleKey: 'meta.address.title', noindex: true },
-                loadComponent: () => import('./account/address.component').then((m) => m.AddressComponent)
+                loadComponent: () => import('@features/account/address-page.component').then((m) => m.AddressPageComponent)
             },
             {
                 path: 'passwort',
                 data: { titleKey: 'meta.password.title', noindex: true },
-                loadComponent: () => import('./account/password.component').then((m) => m.PasswordComponent)
+                loadComponent: () => import('@features/account/password-page.component').then((m) => m.PasswordPageComponent)
             }
         ]
     },
@@ -84,22 +84,22 @@ export const shopRoutes: Routes = [
     {
         path: 'ueber-uns',
         data: { titleKey: 'meta.about.title', descriptionKey: 'meta.about.description' },
-        loadComponent: () => import('./about/about.component').then((m) => m.AboutComponent)
+        loadComponent: () => import('@features/about/about-page.component').then((m) => m.AboutPageComponent)
     },
     {
         path: 'impressum',
         data: { titleKey: 'meta.imprint.title' },
-        loadComponent: () => import('./legal/imprint.component').then((m) => m.ImprintComponent)
+        loadComponent: () => import('@features/legal/imprint-page.component').then((m) => m.ImprintPageComponent)
     },
     {
         path: 'agb',
         data: { titleKey: 'meta.terms.title', descriptionKey: 'meta.terms.description' },
-        loadComponent: () => import('./legal/terms.component').then((m) => m.TermsComponent)
+        loadComponent: () => import('@features/legal/terms-page.component').then((m) => m.TermsPageComponent)
     },
     {
         path: 'datenschutz',
         data: { titleKey: 'meta.privacy.title', descriptionKey: 'meta.privacy.description' },
-        loadComponent: () => import('./legal/privacy.component').then((m) => m.PrivacyComponent)
+        loadComponent: () => import('@features/legal/privacy-page.component').then((m) => m.PrivacyPageComponent)
     },
     { path: '**', redirectTo: '' }
 ];

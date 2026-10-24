@@ -16,6 +16,25 @@ roadmap and architecture notes cover the whole shop.
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.27.
 
+### Source layout
+
+`src/app` is layered; routed areas are grouped by feature.
+
+```
+src/app/
+  app.*        root component, config and routes
+  core/        app-wide singletons: api (generated types), config, i18n, seo, routing,
+               quote, order, account, cart (services, models, pure helpers)
+  layout/      the frame around every page: header (menu, language switcher), footer
+  shared/      reusable UI and style sheets: model-viewer, styles/
+  features/    one folder per routed area: landing, about, upload (with quote-result), cart,
+               checkout, payment, order-status, account, admin, legal
+```
+
+Imports go one way: `features` -> `layout` / `shared` -> `core`. A feature never imports another
+feature. Cross-layer imports use the aliases `@core/*`, `@layout/*`, `@shared/*`, `@features/*`;
+inside a folder they stay relative. Routed components are `<name>-page.component.ts`.
+
 ## Development server
 
 To start a local development server, run:
