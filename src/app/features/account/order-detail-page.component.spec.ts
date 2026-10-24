@@ -78,7 +78,7 @@ describe('OrderDetailPageComponent', () => {
         await TestBed.configureTestingModule({
             imports: [OrderDetailPageComponent],
             providers: [
-                provideRouter([]),
+                provideRouter([{ path: '**', children: [] }]),
                 { provide: QuoteService, useValue: { loadOptions } },
                 { provide: AccountService, useValue: { order, isSignedIn: () => signedIn } },
                 {
@@ -239,7 +239,7 @@ describe('OrderDetailPageComponent', () => {
         await TestBed.configureTestingModule({
             imports: [OrderDetailPageComponent],
             providers: [
-                provideRouter([]),
+                provideRouter([{ path: '**', children: [] }]),
                 { provide: QuoteService, useValue: { loadOptions } },
                 { provide: AccountService, useValue: { order, isSignedIn: () => true } },
                 { provide: ActivatedRoute, useValue: { paramMap: params } }
