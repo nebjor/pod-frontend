@@ -107,6 +107,13 @@ export class AccountService {
         return this.http.get<OrderResponse[]>(`${ACCOUNT_API_URL}/orders`).pipe(this.forgetOnUnauthorized());
     }
 
+    /** One order of the account; 404 when it is not the account's. */
+    order(orderNumber: string): Observable<OrderResponse> {
+        return this.http
+            .get<OrderResponse>(`${ACCOUNT_API_URL}/orders/${encodeURIComponent(orderNumber)}`)
+            .pipe(this.forgetOnUnauthorized());
+    }
+
     logout(): Observable<void> {
         return this.http.delete<void>(`${ACCOUNT_API_URL}/sessions`).pipe(tap(() => this.anonymous()));
     }
@@ -119,6 +126,11 @@ export class AccountService {
                 this.anonymous();
             })
         );
+    }
+
+    /** The backend refused the session (a 401 elsewhere); treat the customer as signed out. */
+    sessionExpired() {
+        this.anonymous();
     }
 
     private signedIn(account: AccountResponse) {

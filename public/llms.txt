@@ -18,7 +18,7 @@
 - Filament, Farbe, Qualität (Schichthöhe 0.12 bis 0.24 mm) und Menge wählen; der Preis wird aus Druckzeit und Materialverbrauch berechnet und sofort angezeigt
 - Mehrere Modelle in den Warenkorb legen, bestellen und online bezahlen (Karte, weitere Methoden über Stripe); Versandpauschale CHF 9 innerhalb der Schweiz
 - Lieferzeit in der Regel 3 bis 5 Werktage, abhaengig von Druckzeit und Qualität
-- Bestellstatus jederzeit unter https://3dburg.ch/bestellung, optional mit Kundenkonto
+- Bestellen setzt ein Kundenkonto voraus (Anmeldung per E-Mail-Link oder Passwort); den Bestellstatus siehst du jederzeit unter https://3dburg.ch/konto/bestellungen
 
 ## Seiten
 

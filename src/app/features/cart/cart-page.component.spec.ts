@@ -8,7 +8,6 @@ import { OrderService } from '@core/order/order.service';
 import { QuoteOptions, QuoteResponse } from '@core/quote/quote.models';
 import { QuoteService } from '@core/quote/quote.service';
 import { CART_REQUOTE_DEBOUNCE_MS, CartPageComponent } from './cart-page.component';
-import { AccountService } from '@core/account/account.service';
 import { AccountCartApi } from '@core/cart/account-cart.api';
 import { CartSyncService } from '@core/cart/cart-sync.service';
 import { CartService, NewCartItem } from '@core/cart/cart.service';
@@ -67,13 +66,11 @@ describe('CartPageComponent', () => {
     let component: CartPageComponent;
     let cart: CartService;
     const notice = signal<{ dropped: number } | null>(null);
-    const signedIn = signal(false);
     let requestQuote: ReturnType<typeof vi.fn>;
 
     beforeEach(async () => {
         vi.useFakeTimers();
         requestQuote = vi.fn(() => of(quote));
-        signedIn.set(false);
 
         await TestBed.configureTestingModule({
             imports: [CartPageComponent],
@@ -81,7 +78,6 @@ describe('CartPageComponent', () => {
                 provideRouter([]),
                 { provide: QuoteService, useValue: { requestQuote, uploadModel: vi.fn(), loadOptions: () => of(options) } },
                 { provide: AccountCartApi, useValue: {} },
-                { provide: AccountService, useValue: { isSignedIn: signedIn.asReadonly() } },
                 { provide: CartSyncService, useValue: { notice, dismissNotice: () => notice.set(null) } },
                 { provide: OrderService, useValue: { loadSettings: () => of(FALLBACK_ORDER_SETTINGS) } }
             ]
@@ -153,28 +149,14 @@ describe('CartPageComponent', () => {
 
         expect(component.itemsTotal()).toBe(7.85);
         expect(component.shipping()).toBe(9);
-        expect(component.setupFee()).toBe(5);
-        expect(component.total()).toBe(21.85);
+        expect(component.setupFee()).toBe(3);
+        expect(component.total()).toBe(19.85);
         expect(text()).toContain('Positionen (2)');
-        expect(text()).toContain('CHF 21.85');
+        expect(text()).toContain('CHF 19.85');
         expect(text()).not.toContain('(einmalig)');
     });
 
-    it('shows the guest setup fee once, between the items and the shipping, and points to the account fee', async () => {
-        cart.add(item('benchy.stl'));
-        await create();
-
-        const rows = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.summary .details > div')).map((row) =>
-            `${row.querySelector('dt')?.textContent?.trim()} ${row.querySelector('dd')?.textContent?.trim()}`
-        );
-        expect(rows).toEqual(['Positionen (1) CHF 6.00', 'Einrichtung CHF 5.00', 'Versand (Pauschale) CHF 9.00', 'Gesamt CHF 20.00']);
-        const hint = (fixture.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>('.account-hint a');
-        expect(hint?.textContent).toContain('Mit Konto nur CHF 3.00 Einrichtung');
-        expect(hint?.getAttribute('href')).toBe('/konto/anmelden');
-    });
-
-    it('charges the reduced setup fee to a signed-in customer and drops the account hint', async () => {
-        signedIn.set(true);
+    it('shows the one setup fee once, between the items and the shipping', async () => {
         cart.add(item('benchy.stl'));
         await create();
 
@@ -182,8 +164,7 @@ describe('CartPageComponent', () => {
             `${row.querySelector('dt')?.textContent?.trim()} ${row.querySelector('dd')?.textContent?.trim()}`
         );
         expect(rows).toEqual(['Positionen (1) CHF 6.00', 'Einrichtung CHF 3.00', 'Versand (Pauschale) CHF 9.00', 'Gesamt CHF 18.00']);
-        expect(component.total()).toBe(18);
-        expect((fixture.nativeElement as HTMLElement).querySelector('.account-hint')).toBeNull();
+        expect(text()).not.toContain('Mit Konto');
     });
 
     it('removes a line and recalculates', async () => {

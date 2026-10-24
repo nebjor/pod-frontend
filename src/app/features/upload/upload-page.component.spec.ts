@@ -1,9 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
-import { AccountService } from '@core/account/account.service';
 import { FALLBACK_ORDER_SETTINGS } from '@core/order/order.models';
 import { OrderService } from '@core/order/order.service';
 import { CART_MAX_ITEMS, CartService } from '@core/cart/cart.service';
@@ -104,7 +102,6 @@ describe('UploadPageComponent', () => {
     let requestQuote: ReturnType<typeof vi.fn>;
     let loadOptions: ReturnType<typeof vi.fn>;
     let uploadModel: ReturnType<typeof vi.fn>;
-    const signedIn = signal(false);
     const benchy = new File(['solid benchy endsolid benchy'], 'benchy.stl');
 
     beforeEach(async () => {
@@ -117,7 +114,6 @@ describe('UploadPageComponent', () => {
         requestQuote = vi.fn((_id: string, params: QuoteRequestParams) => of(quoteFor(params)));
         loadOptions = vi.fn(() => of(backendOptions));
         uploadModel = vi.fn(() => of(uploaded));
-        signedIn.set(false);
 
         await TestBed.configureTestingModule({
             imports: [UploadPageComponent],
@@ -125,7 +121,6 @@ describe('UploadPageComponent', () => {
                 provideRouter([]),
                 { provide: QuoteService, useValue: { requestQuote, loadOptions, uploadModel } },
                 { provide: OrderService, useValue: { loadSettings: () => of(FALLBACK_ORDER_SETTINGS) } },
-                { provide: AccountService, useValue: { isSignedIn: signedIn.asReadonly() } }
             ]
         }).compileComponents();
 
@@ -296,25 +291,14 @@ describe('UploadPageComponent', () => {
         expect(document.activeElement).toBe(screen.querySelector('.quote-screen'));
     });
 
-    it('states the setup fee once per order, with the account fee next to it for a guest', () => {
+    it('states the one setup fee once per order', () => {
         component.onDrop(dropEvent(benchy));
         calculate();
         finishFlash();
 
         const screen = quoteScreen()!;
         expect(screen.querySelector('.price-sub')?.textContent?.trim()).toBe('1 x CHF 3.00, zzgl. Versand');
-        expect(screen.querySelector('.setup-note')?.textContent?.trim()).toBe(
-            'Einrichtung CHF 5.00 einmalig pro Bestellung, mit Konto CHF 3.00.'
-        );
-    });
-
-    it('shows a signed-in customer only the account setup fee', () => {
-        signedIn.set(true);
-        component.onDrop(dropEvent(benchy));
-        calculate();
-        finishFlash();
-
-        expect(quoteScreen()!.querySelector('.setup-note')?.textContent?.trim()).toBe('Einrichtung CHF 3.00 einmalig pro Bestellung.');
+        expect(screen.querySelector('.setup-note')?.textContent?.trim()).toBe('Einrichtung CHF 3.00 einmalig pro Bestellung.');
     });
 
     it('returns to the configuration on "Anpassen" and keeps the model and the choices', () => {

@@ -1,11 +1,9 @@
-import { signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
-import { AccountState } from '@core/account/account.models';
+import { ActivatedRoute, Router, provideRouter } from '@angular/router';
+import { Subject, of, throwError } from 'rxjs';
 import { AccountService } from '@core/account/account.service';
 import { LAST_ORDER_STORAGE_KEY, OrderResponse } from '@core/order/order.models';
-import { OrderService } from '@core/order/order.service';
 import { QuoteOptions } from '@core/quote/quote.models';
 import { QuoteService } from '@core/quote/quote.service';
 import { CONFIRMATION_POLL_MS, OrderSuccessPageComponent } from './order-success-page.component';
@@ -63,16 +61,14 @@ describe('OrderSuccessPageComponent', () => {
     let fixture: ComponentFixture<OrderSuccessPageComponent>;
     let component: OrderSuccessPageComponent;
     let find: ReturnType<typeof vi.fn>;
-    let accountState: ReturnType<typeof signal<AccountState>>;
 
     async function setup(queryParams: Record<string, string>) {
         await TestBed.configureTestingModule({
             imports: [OrderSuccessPageComponent],
             providers: [
                 provideRouter([]),
-                { provide: OrderService, useValue: { find } },
                 { provide: QuoteService, useValue: { loadOptions: () => of(options) } },
-                { provide: AccountService, useValue: { state: accountState, load: () => Promise.resolve() } },
+                { provide: AccountService, useValue: { order: find, load: () => Promise.resolve() } },
                 { provide: ActivatedRoute, useValue: { queryParamMap: of({ get: (key: string) => queryParams[key] ?? null }) } }
             ]
         }).compileComponents();
@@ -83,9 +79,8 @@ describe('OrderSuccessPageComponent', () => {
 
     beforeEach(() => {
         vi.useFakeTimers();
-        sessionStorage.setItem(LAST_ORDER_STORAGE_KEY, JSON.stringify({ orderNumber: 'POD-1000', email: 'anna@example.com' }));
+        sessionStorage.setItem(LAST_ORDER_STORAGE_KEY, JSON.stringify({ orderNumber: 'POD-1000' }));
         find = vi.fn(() => of(paid));
-        accountState = signal<AccountState>('anonymous');
     });
 
     afterEach(() => {
@@ -107,7 +102,7 @@ describe('OrderSuccessPageComponent', () => {
         await setup({ order: 'POD-1000' });
         loadAndFlush();
 
-        expect(find).toHaveBeenCalledWith('POD-1000', 'anna@example.com');
+        expect(find).toHaveBeenCalledWith('POD-1000');
         expect(component.state()).toBe('paid');
         expect(component.order()?.totals.total).toBe(21.85);
 
@@ -134,7 +129,7 @@ describe('OrderSuccessPageComponent', () => {
         expect(element().textContent).not.toContain('medium');
     });
 
-    it('tells a guest what happens next and that the e-mail is all an account needs', async () => {
+    it('tells the customer what happens next and links the order under the account', async () => {
         await setup({ order: 'POD-1000' });
         loadAndFlush();
         fixture.detectChanges();
@@ -143,20 +138,9 @@ describe('OrderSuccessPageComponent', () => {
         expect(steps).toHaveLength(3);
         expect(steps[0].textContent).toContain('anna@example.com');
         const status = element().querySelector<HTMLAnchorElement>('.next-steps a');
-        expect(status?.getAttribute('href')).toBe('/bestellung?nr=POD-1000&email=anna@example.com');
-        expect(element().textContent).toContain('Mit deiner E-Mail kannst du dich jederzeit');
-        const register = element().querySelector<HTMLAnchorElement>('a[href="/konto/anmelden?mode=register"]');
-        expect(register?.textContent?.trim()).toBe('registrieren');
-    });
-
-    it('spares a signed-in customer the account hint', async () => {
-        accountState.set('signedIn');
-        await setup({ order: 'POD-1000' });
-        loadAndFlush();
-        fixture.detectChanges();
-
-        expect(element().querySelector('a[href="/konto/anmelden?mode=register"]')).toBeNull();
-        expect(element().querySelector('.next-steps a')).not.toBeNull();
+        expect(status?.getAttribute('href')).toBe('/konto/bestellungen/POD-1000');
+        expect(status?.textContent?.trim()).toBe('Bestellung POD-1000');
+        expect(element().querySelector('a[href^="/konto/anmelden"]')).toBeNull();
     });
 
     it('keeps asking while the confirmation is pending', async () => {
@@ -183,22 +167,69 @@ describe('OrderSuccessPageComponent', () => {
         expect(element().querySelector<HTMLAnchorElement>('a.order-btn[href="/pay/mock?session=mock_1"]')?.textContent).toContain('Jetzt bezahlen');
     });
 
-    it('cannot show an order without the remembered e-mail', async () => {
+    it('cannot show an order without a number in the link or the remembered order', async () => {
         sessionStorage.clear();
-        await setup({ order: 'POD-1000' });
+        await setup({});
         loadAndFlush();
         fixture.detectChanges();
 
         expect(find).not.toHaveBeenCalled();
         expect(component.state()).toBe('missing');
-        expect(element().querySelector('a[href="/bestellung"]')).not.toBeNull();
+        expect(element().querySelector('a[href="/konto/bestellungen"]')).not.toBeNull();
     });
 
-    it('treats a backend error as a missing order', async () => {
-        find.mockReturnValue(throwError(() => new Error('404')));
+    it('sends a customer whose session ended to the login and stops asking', async () => {
+        find.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 401 })));
+        await setup({ order: 'POD-1000' });
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+        loadAndFlush();
+
+        expect(navigate).toHaveBeenCalledWith(['/konto/anmelden'], { queryParams: { returnTo: expect.any(String) } });
+        vi.advanceTimersByTime(CONFIRMATION_POLL_MS * 5);
+        expect(find).toHaveBeenCalledTimes(1);
+    });
+
+    it('treats a 404 as a missing order', async () => {
+        find.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
         await setup({ order: 'POD-1000' });
         loadAndFlush();
 
         expect(component.state()).toBe('missing');
+        vi.advanceTimersByTime(CONFIRMATION_POLL_MS * 5);
+        expect(find).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps polling with growing pauses through a network or server error and says it is checking', async () => {
+        find.mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 0 })))
+            .mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 503 })))
+            .mockReturnValue(of(paid));
+        await setup({ order: 'POD-1000' });
+        loadAndFlush();
+        fixture.detectChanges();
+
+        expect(component.state()).toBe('checking');
+        expect(element().textContent).toContain('Bestellstatus wird geprüft');
+        // The pause doubles with every failure: 2 intervals, then 4.
+        vi.advanceTimersByTime(CONFIRMATION_POLL_MS);
+        expect(find).toHaveBeenCalledTimes(1);
+        vi.advanceTimersByTime(CONFIRMATION_POLL_MS);
+        expect(find).toHaveBeenCalledTimes(2);
+        vi.advanceTimersByTime(CONFIRMATION_POLL_MS * 3);
+        expect(find).toHaveBeenCalledTimes(2);
+        vi.advanceTimersByTime(CONFIRMATION_POLL_MS);
+        expect(find).toHaveBeenCalledTimes(3);
+        expect(component.state()).toBe('paid');
+    });
+
+    it('lets a later load replace the running one so an old answer cannot overwrite the state', async () => {
+        const first = new Subject<OrderResponse>();
+        find.mockReturnValueOnce(first).mockReturnValue(of(paid));
+        await setup({ order: 'POD-1000' });
+        loadAndFlush();
+        loadAndFlush();
+        first.next(unpaid);
+
+        expect(component.state()).toBe('paid');
+        expect(component.order()?.status).toBe('PAID');
     });
 });

@@ -14,10 +14,12 @@ Each page in `smoke.spec.mjs` runs at 1366 px and 390 px:
 4. German pages: no paragraph ends in a dangling preposition (` an`, ` zu`, ` per`, ` mit`, ` für`).
 5. No two identical buttons or links inside one card (header, footer and navigation are exempt).
 6. On the upload steps the viewer `<canvas>` draws something (compared with the page behind it).
-7. A full-page screenshot per page and width lands in `e2e/screenshots/` (git-ignored; CI uploads it).
+7. The served HTML of `/`, `/upload` and `/agb` has its own `<title>` and `index, follow`, `/warenkorb` is `noindex`; the front proxy sends `X-Forwarded-*` like Caddy, so the bare client shell fails this check.
+8. A full-page screenshot per page and width lands in `e2e/screenshots/` (git-ignored; CI uploads it).
 
 Pages: landing, upload (dropzone, configuration, loading, quote, quote with quantity 4), cart,
-checkout, order lookup, login, account (orders, address, password, signed in through the stub),
+checkout (signed in through the stub, and signed out: redirect to the login), login, account (orders,
+one order, address, password, signed in through the stub),
 about, imprint and the French landing page.
 
 ## Run it

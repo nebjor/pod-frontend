@@ -160,7 +160,7 @@ describe('HeaderComponent', () => {
         await fixture.whenStable();
 
         expect(accountLink()?.textContent?.trim()).toBe('Mein Konto');
-        expect(accountLink()?.getAttribute('href')).toBe('/konto');
+        expect(accountLink()?.getAttribute('href')).toBe('/konto/bestellungen');
     });
 
     it('drops the total and goes back to zero when the cart is cleared', async () => {
@@ -427,7 +427,7 @@ describe('HeaderComponent', () => {
 
             const entries = items();
             expect(entries.map((entry) => entry.textContent?.trim())).toEqual(['Bestellungen', 'Lieferadresse', 'Konto', 'Abmelden']);
-            expect(entries[0].getAttribute('href')).toBe('/konto');
+            expect(entries[0].getAttribute('href')).toBe('/konto/bestellungen');
             expect(entries[1].getAttribute('href')).toBe('/konto/adresse');
             expect(entries[2].getAttribute('href')).toBe('/konto/passwort');
             expect(entries[3].tagName).toBe('BUTTON');

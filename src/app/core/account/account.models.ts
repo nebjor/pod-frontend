@@ -72,6 +72,14 @@ export type AccountFailure = AccountFieldErrors | InvalidLoginToken | InvalidCre
 
 /** The account pages send a visitor without a session here (see app.routes.ts). */
 export const LOGIN_PATH = '/konto/anmelden';
+/** The signed-in customer's orders; the default page of the account area. */
+export const ORDERS_PATH = '/konto/bestellungen';
+/** The delivery address saved with the account. */
+export const ADDRESS_PATH = '/konto/adresse';
+/** The order mails and the success page link to one order here. */
+export function orderPath(orderNumber: string): string {
+    return `${ORDERS_PATH}/${encodeURIComponent(orderNumber)}`;
+}
 /** Where a password is set, changed or removed; the login mail links here with `?next=`. */
 export const PASSWORD_PATH = '/konto/passwort';
 

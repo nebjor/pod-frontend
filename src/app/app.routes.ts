@@ -1,4 +1,12 @@
-import { Routes } from '@angular/router';
+import { RedirectFunction, Routes } from '@angular/router';
+import { ORDERS_PATH, orderPath } from '@core/account/account.models';
+
+/** `/bestellung?nr=X` (an old order mail) opens that order; without a number the order list. */
+export const legacyOrderLinkRedirect: RedirectFunction = (route) => {
+    const raw: unknown = route.queryParams['nr'];
+    const orderNumber = Array.isArray(raw) ? raw[0] : raw;
+    return typeof orderNumber === 'string' && orderNumber ? orderPath(orderNumber) : ORDERS_PATH;
+};
 
 const admin = () => import('@features/admin/admin-page.component').then((m) => m.AdminPageComponent);
 
@@ -41,9 +49,10 @@ export const shopRoutes: Routes = [
         loadComponent: () => import('@features/payment/mock-payment-page.component').then((m) => m.MockPaymentPageComponent)
     },
     {
+        // The public lookup is gone (ADR 0011); old mail links land on the account's orders.
         path: 'bestellung',
-        data: { titleKey: 'meta.order.title' },
-        loadComponent: () => import('@features/order-status/order-status-page.component').then((m) => m.OrderStatusPageComponent)
+        pathMatch: 'full',
+        redirectTo: legacyOrderLinkRedirect
     },
     {
         path: 'konto/anmelden',
@@ -55,11 +64,18 @@ export const shopRoutes: Routes = [
         data: { noindex: true },
         loadComponent: () => import('@features/account/account-shell.component').then((m) => m.AccountShellComponent),
         children: [
+            { path: '', pathMatch: 'full', redirectTo: 'bestellungen' },
             {
-                path: '',
+                path: 'bestellungen',
                 pathMatch: 'full',
                 data: { titleKey: 'meta.orders.title', noindex: true },
                 loadComponent: () => import('@features/account/orders-page.component').then((m) => m.OrdersPageComponent)
+            },
+            {
+                path: 'bestellungen/:orderNumber',
+                data: { titleKey: 'meta.orderDetail.title', noindex: true },
+                loadComponent: () =>
+                    import('@features/account/order-detail-page.component').then((m) => m.OrderDetailPageComponent)
             },
             {
                 path: 'adresse',

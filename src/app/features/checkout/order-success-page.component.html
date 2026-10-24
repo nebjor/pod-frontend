@@ -13,6 +13,10 @@
                 <p class="status"><span class="spinner" aria-hidden="true"></span> {{ 'success.confirming' | t }}</p>
                 <p class="note">{{ 'success.confirmingNote' | t }}</p>
             }
+            @case ('checking') {
+                <p class="status"><span class="spinner" aria-hidden="true"></span> {{ 'success.checking' | t }}</p>
+                <p class="note">{{ 'success.checkingNote' | t }}</p>
+            }
             @case ('paid') {
                 <h2>{{ 'success.paidTitle' | t }}</h2>
                 <ol class="next-steps">
@@ -20,16 +24,9 @@
                     <li>{{ 'success.paid2' | t }}</li>
                     <li>
                         {{ 'success.paid3' | t }}
-                        <a routerLink="/bestellung" [queryParams]="statusLinkParams()">{{ 'common.myOrder' | t }}</a>.
+                        <a [routerLink]="orderLink()">{{ 'success.orderLink' | t:{ number: order()?.orderNumber ?? '' } }}</a>.
                     </li>
                 </ol>
-                @if (accountState() === 'anonymous') {
-                    <p class="note">
-                        {{ 'success.registerStart' | t }}
-                        <a routerLink="/konto/anmelden" [queryParams]="{ mode: 'register' }">{{ 'success.registerLink' | t }}</a>
-                        {{ 'success.registerEnd' | t }}
-                    </p>
-                }
             }
             @case ('unpaid') {
                 <h2>{{ 'success.unpaidTitle' | t }}</h2>
@@ -56,7 +53,7 @@
                 <h2>{{ 'success.missingTitle' | t }}</h2>
                 <p class="note">
                     {{ 'success.missingNote' | t }}
-                    <a routerLink="/bestellung">{{ 'common.myOrder' | t }}</a>.
+                    <a routerLink="/konto/bestellungen">{{ 'orders.title' | t }}</a>.
                 </p>
             }
         }

@@ -48,8 +48,7 @@ const options = {
 const settings = {
     currency: 'CHF',
     shippingFlatChf: 9,
-    setupFeeChf: 5,
-    setupFeeAccountChf: 3,
+    setupFeeChf: 3,
     vatEnabled: false,
     vatRate: 0.081,
     quoteValidityDays: 14,
@@ -91,7 +90,7 @@ const order = (status = 'PAID') => ({
     paymentUrl: null,
     quoteExpiresAt: '2026-11-03T09:30:00Z',
     status,
-    totals: { currency: 'CHF', itemsTotal: 3.15, setupFee: 5, shipping: 9, total: 17.15, vatAmount: 0, vatRate: 0 },
+    totals: { currency: 'CHF', itemsTotal: 3.15, setupFee: 3, shipping: 9, total: 15.15, vatAmount: 0, vatRate: 0 },
     vatNote: null
 });
 
@@ -198,9 +197,15 @@ export function createMockServer() {
             return json(204, {});
         }
         if (key === 'POST /api/orders') {
+            if (!config.account) return json(401, { code: 'not-logged-in', detail: 'Not logged in.' });
             return json(201, { ...order('NEW'), paymentUrl: '/pay/mock?order=POD-1001' });
         }
-        if (req.method === 'GET' && path.startsWith('/api/orders/POD-')) return json(200, order('PAID'));
+        if (req.method === 'GET' && path.startsWith('/api/account/orders/')) {
+            if (!config.account) return json(401, { code: 'not-logged-in', detail: 'Not logged in.' });
+            return path.endsWith('/POD-1001')
+                ? json(200, order('PRINTING'))
+                : json(404, { code: 'order-not-found', detail: 'Order not found.' });
+        }
         if (req.method === 'POST' && path.startsWith('/api/account/')) return json(204, {});
         return json(404, { code: 'not-found', detail: `No mock for ${key}` });
     });

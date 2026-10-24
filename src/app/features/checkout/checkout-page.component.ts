@@ -3,16 +3,18 @@ import { ChangeDetectionStrategy, Component, DestroyRef, afterNextRender, comput
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { AccountResponse } from '@core/account/account.models';
+import { AccountResponse, LOGIN_PATH } from '@core/account/account.models';
 import { AccountService } from '@core/account/account.service';
 import { CartItem, CartService } from '@core/cart/cart.service';
 import { I18nService } from '@core/i18n/i18n.service';
 import { BUSINESS } from '@core/config/business';
-import { FALLBACK_ORDER_SETTINGS, OrderFailure, OrderRequest, OrderResponse, OrderSettings, setupFeeFor } from '@core/order/order.models';
+import { FALLBACK_ORDER_SETTINGS, OrderFailure, OrderRequest, OrderResponse, OrderSettings } from '@core/order/order.models';
 import { OrderService, describeOrderError, rememberLastOrder } from '@core/order/order.service';
 import { formatPrintDuration } from '@core/quote/print-duration';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { QualityCatalog } from '@core/quote/quality-catalog';
+
+const CHECKOUT_PATH = '/checkout';
 
 type CheckoutState = 'idle' | 'submitting' | 'placed';
 
@@ -62,7 +64,7 @@ export class CheckoutPageComponent {
     readonly itemsTotal = this.cart.itemsTotal;
     readonly currency = this.cart.currency;
     readonly shipping = computed(() => this.settings().shippingFlatChf);
-    readonly setupFee = computed(() => setupFeeFor(this.settings(), this.account.isSignedIn()));
+    readonly setupFee = computed(() => this.settings().setupFeeChf);
     readonly total = computed(() => Math.round((this.itemsTotal() + this.setupFee() + this.shipping()) * 100) / 100);
     /** Calendar day until which the placed order keeps its price, as dd.mm.yyyy (timezone-neutral). */
     readonly priceValidUntil = computed(() => {
@@ -87,6 +89,8 @@ export class CheckoutPageComponent {
                 const customer = this.customer();
                 if (customer) {
                     this.prefillFrom(customer);
+                } else {
+                    this.requireLogin();
                 }
             });
             this.orderService
@@ -179,7 +183,7 @@ export class CheckoutPageComponent {
         this.order.set(order);
         this.state.set('placed');
         this.cart.clear();
-        rememberLastOrder({ orderNumber: order.orderNumber, email: order.customerEmail });
+        rememberLastOrder({ orderNumber: order.orderNumber });
         if (order.paymentUrl) {
             this.goToPayment(order.paymentUrl);
         }
@@ -211,6 +215,11 @@ export class CheckoutPageComponent {
                 this.priceChangedTo.set(failure.totals.total);
                 this.state.set('idle');
                 break;
+            case 'not-logged-in':
+                this.account.sessionExpired();
+                this.state.set('idle');
+                this.requireLogin();
+                break;
             case 'field-errors':
                 this.fieldErrors.set(failure.errors);
                 this.errorMessage.set(this.i18n.t('common.fieldsCheck'));
@@ -220,6 +229,11 @@ export class CheckoutPageComponent {
                 this.errorMessage.set(failure.message);
                 this.state.set('idle');
         }
+    }
+
+    /** Ordering needs an account (ADR 0011): the login page brings the customer back here. */
+    private requireLogin() {
+        void this.router.navigate([LOGIN_PATH], { queryParams: { returnTo: CHECKOUT_PATH } });
     }
 
     /** Fills in what the account knows, leaving anything the customer has typed already alone. */

@@ -4,7 +4,7 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { TranslationKey } from '@core/i18n/de';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
-import { LOGIN_PATH } from '@core/account/account.models';
+import { ADDRESS_PATH, LOGIN_PATH, ORDERS_PATH, PASSWORD_PATH } from '@core/account/account.models';
 import { AccountService } from '@core/account/account.service';
 
 type ShellState = 'loading' | 'ready';
@@ -35,9 +35,9 @@ export class AccountShellComponent {
     readonly errorMessage = signal('');
 
     readonly items: ReadonlyArray<{ labelKey: TranslationKey; path: string; exact: boolean }> = [
-        { labelKey: 'account.nav.orders', path: '/konto', exact: true },
-        { labelKey: 'account.nav.address', path: '/konto/adresse', exact: false },
-        { labelKey: 'account.nav.account', path: '/konto/passwort', exact: false }
+        { labelKey: 'account.nav.orders', path: ORDERS_PATH, exact: false },
+        { labelKey: 'account.nav.address', path: ADDRESS_PATH, exact: false },
+        { labelKey: 'account.nav.account', path: PASSWORD_PATH, exact: false }
     ];
 
     constructor() {

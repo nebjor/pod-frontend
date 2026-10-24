@@ -9,13 +9,13 @@
 
             @if (accountState() === 'signedIn') {
                 <div class="menu-widget account-widget" [appHoverMenu]="accountLink" #accountMenu="appHoverMenu">
-                    <a #accountLink class="account-link" routerLink="/konto" aria-haspopup="menu"
+                    <a #accountLink class="account-link" routerLink="/konto/bestellungen" aria-haspopup="menu"
                         [attr.aria-expanded]="accountMenu.isOpen()">{{ 'common.myAccount' | t }}</a>
 
                     @if (accountMenu.isOpen()) {
                         <div class="menu-panel account-menu" role="menu" [attr.aria-label]="'common.myAccount' | t">
                             <p class="account-email">{{ accountEmail() }}</p>
-                            <a class="menu-item" role="menuitem" routerLink="/konto">{{ 'header.orders' | t }}</a>
+                            <a class="menu-item" role="menuitem" routerLink="/konto/bestellungen">{{ 'header.orders' | t }}</a>
                             <a class="menu-item" role="menuitem" routerLink="/konto/adresse">{{ 'header.address' | t }}</a>
                             <a class="menu-item" role="menuitem" routerLink="/konto/passwort">{{ 'header.account' | t }}</a>
                             <button class="menu-item logout-item" role="menuitem" type="button" (click)="logout()"

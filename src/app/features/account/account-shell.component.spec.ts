@@ -10,6 +10,9 @@ import { AccountService } from '@core/account/account.service';
 @Component({ template: '<p class="page">orders</p>' })
 class OrdersStub {}
 
+@Component({ template: '<p class="page">order</p>' })
+class OrderStub {}
+
 @Component({ template: '<p class="page">address</p>' })
 class AddressStub {}
 
@@ -55,7 +58,9 @@ describe('AccountShellComponent', () => {
                         path: 'konto',
                         component: AccountShellComponent,
                         children: [
-                            { path: '', pathMatch: 'full', component: OrdersStub },
+                            { path: '', pathMatch: 'full', redirectTo: 'bestellungen' },
+                            { path: 'bestellungen', component: OrdersStub },
+                            { path: 'bestellungen/:orderNumber', component: OrderStub },
                             { path: 'adresse', component: AddressStub },
                             { path: 'passwort', component: PasswordStub }
                         ]
@@ -94,17 +99,25 @@ describe('AccountShellComponent', () => {
         await setup();
 
         expect(links().map((link) => link.textContent?.trim())).toEqual(['Bestellungen', 'Lieferadresse', 'Konto']);
-        expect(links().map((link) => link.getAttribute('href'))).toEqual(['/konto', '/konto/adresse', '/konto/passwort']);
+        expect(links().map((link) => link.getAttribute('href'))).toEqual(['/konto/bestellungen', '/konto/adresse', '/konto/passwort']);
         expect(element().querySelector('nav')?.getAttribute('aria-label')).toBe('Konto');
     });
 
-    it('marks only the orders item on /konto', async () => {
+    it('opens the orders from /konto and marks only that item', async () => {
         await setup('/konto');
+        expect(TestBed.inject(Router).url).toBe('/konto/bestellungen');
 
         expect(links().map((link) => link.classList.contains('active'))).toEqual([true, false, false]);
         expect(links()[0].getAttribute('aria-current')).toBe('page');
         expect(links()[1].hasAttribute('aria-current')).toBe(false);
         expect(element().querySelector('.page')?.textContent).toBe('orders');
+    });
+
+    it('keeps the orders item active on the detail of one order', async () => {
+        await setup('/konto/bestellungen/POD-1001');
+
+        expect(links().map((link) => link.classList.contains('active'))).toEqual([true, false, false]);
+        expect(element().querySelector('.page')?.textContent).toBe('order');
     });
 
     it('marks the address and account items on their own paths', async () => {
@@ -186,7 +199,8 @@ describe('AccountShellComponent', () => {
         harness.detectChanges();
 
         expect(element().textContent).toContain('Dein Konto ist gelöscht');
-        expect(element().querySelector('a[href="/bestellung"]')).not.toBeNull();
+        expect(element().textContent).toContain('Meldest du dich mit derselben E-Mail wieder an');
+        expect(element().querySelector('.customer-page a[href^="/konto"]')).toBeNull();
         expect(element().querySelector('.nav-link')).toBeNull();
     });
 });

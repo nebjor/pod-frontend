@@ -22,14 +22,7 @@
             }
         </p>
         <p class="setup-note">
-            @if (account.isSignedIn()) {
-                {{ 'quote.setupNoteAccount' | t:{ fee: q.currency + ' ' + (settings().setupFeeAccountChf | number:'1.2-2') } }}
-            } @else {
-                {{ 'quote.setupNote' | t:{
-                    fee: q.currency + ' ' + (settings().setupFeeChf | number:'1.2-2'),
-                    accountFee: q.currency + ' ' + (settings().setupFeeAccountChf | number:'1.2-2')
-                } }}
-            }
+            {{ 'quote.setupNote' | t:{ fee: q.currency + ' ' + (settings().setupFeeChf | number:'1.2-2') } }}
         </p>
 
         <dl class="facts">

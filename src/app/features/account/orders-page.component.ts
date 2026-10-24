@@ -6,7 +6,7 @@ import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { orderStatusLabel } from '@core/order/order-status-labels';
 import { OrderResponse } from '@core/order/order.models';
-import { LOGIN_PATH } from '@core/account/account.models';
+import { LOGIN_PATH, ORDERS_PATH, orderPath } from '@core/account/account.models';
 import { AccountService } from '@core/account/account.service';
 import { CartService } from '@core/cart/cart.service';
 
@@ -55,12 +55,16 @@ export class OrdersPageComponent {
                 },
                 error: () => {
                     if (!this.account.isSignedIn()) {
-                        void this.router.navigate([LOGIN_PATH], { queryParams: { returnTo: '/konto' } });
+                        void this.router.navigate([LOGIN_PATH], { queryParams: { returnTo: ORDERS_PATH } });
                         return;
                     }
                     this.ordersState.set('error');
                 }
             });
+    }
+
+    orderLink(order: OrderResponse): string {
+        return orderPath(order.orderNumber);
     }
 
     statusLabel(order: OrderResponse): string {

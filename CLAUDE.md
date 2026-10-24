@@ -33,7 +33,7 @@ and decisions. Read an ADR before changing what it decided.
 
 - Zoneless, standalone components, signals; `ChangeDetectionStrategy.OnPush`. State in
   services with signals, templates read signals. No `zone.js`, no `BehaviorSubject` for UI state.
-- Every route prerenders (`app.routes.server.ts` uses `**`). Browser-only work (storage,
+- Every route prerenders (`app.routes.server.ts` uses `**`), except the order detail, which has a parameter. Browser-only work (storage,
   WebGL, `window`) runs after the first render (`afterNextRender`) and is guarded for SSR.
 - `src/app` has four layers: `core/` (app-wide singletons: api types, config, i18n, seo, routing,
   quote, order, account, cart), `layout/` (header, footer), `shared/` (reusable UI such as the
@@ -75,7 +75,11 @@ and decisions. Read an ADR before changing what it decided.
 ## Things that look like bugs but are decisions
 
 - Quotes slice once per model and quality; quantity and material are arithmetic (ADR 0006/0007).
-- The setup fee is charged once per order, CHF 5 guest / CHF 3 signed-in (ADR 0009); quotes
-  show the model price only.
+- The setup fee is charged once per order, one CHF 3 fee (ADR 0009, 0011); quotes show the
+  model price only.
+- Ordering needs an account (ADR 0011): no guest checkout, no public order lookup. The cart works
+  anonymously, "Zur Kasse" and `/checkout` send anonymous customers to `/konto/anmelden?returnTo=/checkout`.
+  Orders live under `/konto/bestellungen` (list) and `/konto/bestellungen/:orderNumber` (detail, rendered
+  by the Node server on request because its parameter cannot be prerendered); `/bestellung` only redirects.
 - The cart lives in localStorage + IndexedDB and syncs to the account when signed in (ADR 0010).
 - The header hides nothing on phones; the upload button shows a short label below 480 px.

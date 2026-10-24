@@ -99,10 +99,10 @@ const placedOrder: OrderResponse = {
             filamentGrams: 11.5
         }
     ],
-    totals: { itemsTotal: 7.85, setupFee: 5, shipping: 9, vatRate: 0, vatAmount: 0, total: 21.85, currency: 'CHF' },
+    totals: { itemsTotal: 7.85, setupFee: 3, shipping: 9, vatRate: 0, vatAmount: 0, total: 19.85, currency: 'CHF' },
     vatNote: 'No VAT charged: the seller is not VAT registered.',
     paidAt: null,
-    paymentUrl: '/pay/mock?session=mock_1&order=POD-1000&amount=21.85&currency=CHF'
+    paymentUrl: '/pay/mock?session=mock_1&order=POD-1000&amount=19.85&currency=CHF'
 };
 
 const anna: AccountResponse = {
@@ -159,8 +159,8 @@ describe('CheckoutPageComponent', () => {
     beforeEach(async () => {
         placeOrder = vi.fn(() => of(placedOrder));
         uploadModel = vi.fn(() => of<UploadEvent>({ kind: 'done', model: { modelId: FRESH_MODEL_ID, fileName: 'benchy.stl', sizeBytes: 28 } }));
-        accountState = signal<AccountState>('anonymous');
-        account = signal<AccountResponse | null>(null);
+        accountState = signal<AccountState>('signedIn');
+        account = signal<AccountResponse | null>(anna);
 
         await TestBed.configureTestingModule({
             imports: [CheckoutPageComponent],
@@ -168,7 +168,7 @@ describe('CheckoutPageComponent', () => {
                 provideRouter([]),
                 { provide: OrderService, useValue: { placeOrder, loadSettings: () => of(FALLBACK_ORDER_SETTINGS) } },
                 { provide: QuoteService, useValue: { uploadModel, requestQuote: vi.fn(), loadOptions: () => of(options) } },
-                { provide: AccountService, useValue: { state: accountState, isSignedIn: computed(() => accountState() === 'signedIn'), account, load: () => Promise.resolve() } }
+                { provide: AccountService, useValue: { state: accountState, isSignedIn: computed(() => accountState() === 'signedIn'), account, load: () => Promise.resolve(), sessionExpired: vi.fn() } }
             ]
         }).compileComponents();
 
@@ -210,8 +210,7 @@ describe('CheckoutPageComponent', () => {
         expect((fixture.nativeElement as HTMLElement).textContent).toContain('Warenkorb ist leer');
     });
 
-    it('charges a signed-in customer the reduced setup fee', async () => {
-        accountState.set('signedIn');
+    it('charges the one setup fee', async () => {
         cart.add(benchy());
         await create();
 
@@ -227,10 +226,10 @@ describe('CheckoutPageComponent', () => {
 
         expect(component.itemsTotal()).toBe(7.85);
         expect(component.shipping()).toBe(9);
-        expect(component.setupFee()).toBe(5);
-        expect(component.total()).toBe(21.85);
+        expect(component.setupFee()).toBe(3);
+        expect(component.total()).toBe(19.85);
         const summary = (fixture.nativeElement as HTMLElement).querySelector('.details')?.textContent?.replace(/\s+/g, ' ').replace(/(\D)(CHF)/g, '$1 $2').replace(/(\d)([A-Z])/g, '$1 $2');
-        expect(summary).toContain('Positionen (2) CHF 7.85 Einrichtung CHF 5.00 Versand (Pauschale) CHF 9.00 Gesamt CHF 21.85');
+        expect(summary).toContain('Positionen (2) CHF 7.85 Einrichtung CHF 3.00 Versand (Pauschale) CHF 9.00 Gesamt CHF 19.85');
         const lines = (fixture.nativeElement as HTMLElement).querySelectorAll('.item-list li');
         expect(lines).toHaveLength(2);
         expect(lines[0].textContent).toContain('2 x benchy.stl');
@@ -244,23 +243,37 @@ describe('CheckoutPageComponent', () => {
         expect((fixture.nativeElement as HTMLElement).querySelector('a[href="/warenkorb"]')).not.toBeNull();
     });
 
-    it('invites a visitor to sign in or register and come back to the checkout', async () => {
+    it('sends an anonymous visitor to the login and back to the checkout instead of showing the form', async () => {
+        accountState.set('anonymous');
+        account.set(null);
+        cart.add(benchy());
+        const router = TestBed.inject(Router);
+        const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+        await create();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        expect(navigate).toHaveBeenCalledWith(['/konto/anmelden'], { queryParams: { returnTo: '/checkout' } });
+        const host = fixture.nativeElement as HTMLElement;
+        expect(host.querySelector('form')).toBeNull();
+        // Until the redirect lands the visitor sees why, with a link, not a spinner.
+        expect(host.querySelector('.login-required')?.textContent).toContain('Bitte anmelden');
+        expect(host.querySelector('.login-required a')?.getAttribute('href')).toBe('/konto/anmelden?returnTo=%2Fcheckout');
+        expect(host.querySelector('.spinner')).toBeNull();
+    });
+
+    it('sends the customer to the login when the session ended before the order went out', async () => {
         cart.add(benchy());
         await create();
+        fillAddress();
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+        placeOrder.mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 401, error: { code: 'not-logged-in' } })));
 
-        const hint = (fixture.nativeElement as HTMLElement).querySelector('.account-hint');
-        expect(hint?.textContent).toContain('Schon Kunde?');
-        expect(hint?.textContent).toContain('Neu hier?');
-        const [signIn, register] = Array.from(hint?.querySelectorAll('a') ?? []);
-        expect(signIn.textContent?.trim()).toBe('Anmelden');
-        expect(signIn.getAttribute('href')).toContain('/konto/anmelden?returnTo=');
-        expect(signIn.getAttribute('href')).toContain('checkout');
-        expect(signIn.getAttribute('href')).not.toContain('mode=');
-        expect(register.textContent?.trim()).toBe('Registrieren');
-        expect(register.getAttribute('href')).toContain('/konto/anmelden?');
-        expect(register.getAttribute('href')).toContain('mode=register');
-        expect(register.getAttribute('href')).toContain('returnTo=');
-        expect(register.getAttribute('href')).toContain('checkout');
+        component.submit();
+
+        expect(navigate).toHaveBeenCalledWith(['/konto/anmelden'], { queryParams: { returnTo: '/checkout' } });
+        expect(component.state()).toBe('idle');
+        expect(cart.isEmpty()).toBe(false);
     });
 
     it('prefills the address of a signed-in customer and says who is signed in', async () => {
@@ -355,16 +368,15 @@ describe('CheckoutPageComponent', () => {
         expect(component.state()).toBe('placed');
         expect(component.order()?.orderNumber).toBe('POD-1000');
         expect(cart.isEmpty()).toBe(true);
-        expect(navigateByUrl).toHaveBeenCalledWith('/pay/mock?session=mock_1&order=POD-1000&amount=21.85&currency=CHF');
+        expect(navigateByUrl).toHaveBeenCalledWith('/pay/mock?session=mock_1&order=POD-1000&amount=19.85&currency=CHF');
         expect(JSON.parse(sessionStorage.getItem(LAST_ORDER_STORAGE_KEY) ?? '{}')).toEqual({
-            orderNumber: 'POD-1000',
-            email: 'anna@example.com'
+            orderNumber: 'POD-1000'
         });
 
         fixture.detectChanges();
         const placed = (fixture.nativeElement as HTMLElement).querySelector('.placed');
         expect(placed?.querySelectorAll('.item-list li')).toHaveLength(2);
-        expect(placed?.textContent).toContain('CHF 21.85');
+        expect(placed?.textContent).toContain('CHF 19.85');
         expect(placed?.textContent).toContain('Einrichtung');
     });
 
@@ -399,13 +411,13 @@ describe('CheckoutPageComponent', () => {
                 error: {
                     code: 'price-changed',
                     currentQuotes: [{ ...quote, totalPriceChf: 7.5 }, cubeQuote],
-                    totals: { itemsTotal: 9.35, setupFee: 5, shipping: 9, vatRate: 0, vatAmount: 0, total: 23.35, currency: 'CHF' }
+                    totals: { itemsTotal: 9.35, setupFee: 3, shipping: 9, vatRate: 0, vatAmount: 0, total: 21.35, currency: 'CHF' }
                 }
             }))
         );
 
         component.submit();
-        expect(component.priceChangedTo()).toBe(23.35);
+        expect(component.priceChangedTo()).toBe(21.35);
         expect(component.itemsTotal()).toBe(9.35);
         expect(cart.items()[0].quote.totalPriceChf).toBe(7.5);
         expect(component.state()).toBe('idle');

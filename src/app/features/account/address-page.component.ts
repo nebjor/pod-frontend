@@ -6,7 +6,7 @@ import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { FALLBACK_ORDER_SETTINGS, OrderSettings } from '@core/order/order.models';
 import { OrderService } from '@core/order/order.service';
-import { AccountResponse, LOGIN_PATH } from '@core/account/account.models';
+import { ADDRESS_PATH, AccountResponse, LOGIN_PATH } from '@core/account/account.models';
 import { AccountService, describeAccountError } from '@core/account/account.service';
 
 /**
@@ -86,7 +86,7 @@ export class AddressPageComponent {
                 error: (error: unknown) => {
                     this.saving.set(false);
                     if (!this.account.isSignedIn()) {
-                        void this.router.navigate([LOGIN_PATH], { queryParams: { returnTo: '/konto/adresse' } });
+                        void this.router.navigate([LOGIN_PATH], { queryParams: { returnTo: ADDRESS_PATH } });
                         return;
                     }
                     const failure = describeAccountError(error, this.i18n.t);

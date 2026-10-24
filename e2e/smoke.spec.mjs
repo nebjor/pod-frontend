@@ -78,13 +78,26 @@ const PAGES = [
             await reachQuote(page);
             await page.getByRole('button', { name: 'In den Warenkorb' }).click();
             await page.goto('/checkout');
-            await page.locator('form.customer-form, form').first().waitFor();
+            await page.locator('form.customer-form').waitFor();
+        },
+        german: true,
+        account: true
+    },
+    {
+        // Ordering needs an account: an anonymous customer lands on the login with the way back.
+        name: 'checkout-signed-out',
+        open: async (page) => {
+            await reachQuote(page);
+            await page.getByRole('button', { name: 'In den Warenkorb' }).click();
+            await page.goto('/checkout');
+            await page.waitForURL(/\/konto\/anmelden\?returnTo=%2Fcheckout/);
+            await page.getByRole('button', { name: 'Anmelden' }).first().waitFor();
         },
         german: true
     },
-    { name: 'order', open: (page) => page.goto('/bestellung?nr=POD-1001&email=anna@example.com'), german: true },
     { name: 'login', open: (page) => page.goto('/konto/anmelden'), german: true },
-    { name: 'account', open: (page) => page.goto('/konto'), german: true, account: true },
+    { name: 'account-orders', open: (page) => page.goto('/konto/bestellungen'), german: true, account: true },
+    { name: 'account-order', open: (page) => page.goto('/konto/bestellungen/POD-1001'), german: true, account: true },
     { name: 'account-address', open: (page) => page.goto('/konto/adresse'), german: true, account: true },
     { name: 'account-password', open: (page) => page.goto('/konto/passwort'), german: true, account: true },
     { name: 'about', open: (page) => page.goto('/ueber-uns'), german: true },
@@ -101,6 +114,30 @@ const PAGES = [
 
 /** The anonymous probe of GET /api/account is part of every page load and expected to fail. */
 const isExpected401 = (message) => message.type() === 'error' && message.location().url.includes('/api/account') && /401/.test(message.text());
+
+/**
+ * What a crawler gets: the served HTML must be the prerendered page with its own title and
+ * robots tag, not the bare client shell (the fault behind a missing proxy header, see serve.mjs).
+ */
+test.describe('served HTML', () => {
+    const html = async (path) => (await fetch(`http://127.0.0.1:${process.env.E2E_PORT ?? 4310}${path}`)).text();
+    const titleOf = (source) => /<title>([^<]+)<\/title>/.exec(source)?.[1] ?? '';
+
+    test('indexable pages carry their own title and "index, follow"', async () => {
+        const titles = [];
+        for (const path of ['/', '/upload', '/agb']) {
+            const source = await html(path);
+            expect(source, path).toContain('<meta name="robots" content="index, follow">');
+            titles.push(titleOf(source));
+        }
+        expect(titles.every(Boolean)).toBe(true);
+        expect(new Set(titles).size, `titles differ per page: ${titles.join(' | ')}`).toBe(titles.length);
+    });
+
+    test('the cart is noindex', async () => {
+        expect(await html('/warenkorb')).toMatch(/<meta name="robots" content="noindex/);
+    });
+});
 
 for (const { width, height } of WIDTHS) {
     test.describe(`at ${width} px`, () => {
