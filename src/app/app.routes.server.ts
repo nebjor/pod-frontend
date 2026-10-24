@@ -7,6 +7,12 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Server
   },
   {
+    // Old confirmation mails link /bestellung?nr=...; a prerendered redirect would drop the
+    // query, so the server resolves it on request and keeps the order number.
+    path: 'bestellung',
+    renderMode: RenderMode.Server
+  },
+  {
     path: '**',
     renderMode: RenderMode.Prerender
   }
